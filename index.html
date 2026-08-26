@@ -71,11 +71,11 @@ Retry + Backoff        | const MAX_TRIES
   --card-2:rgba(255,255,255,.40);
   --line:rgba(120,105,80,.16);
   --ink:#211E1A;
-  --ink-dim:#8A8272;
-  --red:#ED1C24;
-  --red-dim:#A30E13;
+  --ink-dim:#6B6355;
+  --red:#D6161D;
+  --red-dim:#94090E;
   --red-tint:rgba(237,28,36,.10);
-  --green:#1E9E63;
+  --green:#0F7A4A;
   --green-dim:#12703F;
   --green-tint:rgba(30,158,99,.12);
   --rose:#B3261E;
@@ -226,7 +226,7 @@ label.f span{display:block;font-size:11px;color:var(--ink-dim);margin-bottom:4px
 
 .btn{
   display:flex;align-items:center;justify-content:center;gap:7px;
-  width:100%;padding:11px;border-radius:10px;font-weight:600;font-size:14px;
+  width:100%;min-height:48px;padding:12px;border-radius:12px;font-weight:600;font-size:15px;
   background:var(--red);color:#fff;transition:opacity .15s,transform .1s;
 }
 .btn:active{transform:scale(.985)}
@@ -234,7 +234,8 @@ label.f span{display:block;font-size:11px;color:var(--ink-dim);margin-bottom:4px
 .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink);font-weight:500}
 .btn.outline{background:transparent;border:1.5px solid var(--red);color:var(--red);font-weight:600}
 .btn.mint{background:var(--green);color:#fff}
-.btn.sm{padding:8px 11px;font-size:12.5px;width:auto}
+.btn.primary-lg{min-height:56px;font-size:16.5px;font-weight:700;border-radius:14px}
+.btn.sm{min-height:44px;padding:10px 14px;font-size:13.5px;width:auto}
 
 /* צ'יפים בשורה אחת עם גלילה אופקית - לא נשברים לשורה שנייה */
 /* ---------- שעון הרצה / ETA ---------- */
@@ -292,7 +293,8 @@ label.f span{display:block;font-size:11px;color:var(--ink-dim);margin-bottom:4px
 }
 .chips::-webkit-scrollbar{display:none}
 .chip{
-  padding:6px 11px;border-radius:999px;font-size:12px;white-space:nowrap;flex:none;
+  min-height:40px;display:inline-flex;align-items:center;
+  padding:9px 15px;border-radius:999px;font-size:13.5px;white-space:nowrap;flex:none;
   border:1px solid var(--line);color:var(--ink-dim);background:var(--glass-2);
   backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
   transition:transform .12s, background .15s, border-color .15s;
@@ -352,7 +354,7 @@ html[data-theme="dark"] .tab{
   padding:2px 0;
 }
 html[data-theme="dark"] .docs{background:rgba(24,24,28,.5);border-color:rgba(255,255,255,.08)}
-.doc{display:flex;align-items:center;flex-wrap:wrap;gap:6px 7px;padding:8px 12px;border-bottom:1px dashed var(--line)}
+.doc{display:flex;align-items:center;flex-wrap:wrap;gap:6px 7px;min-height:56px;padding:10px 12px;border-bottom:1px dashed var(--line)}
 .doc:last-child{border-bottom:0}
 .doc .dt{font-family:'Rubik';font-size:11px;color:var(--ink-dim);white-space:nowrap}
 .doc .ttl{color:var(--ink);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -448,7 +450,7 @@ html[data-theme="dark"] .modal{background:rgba(34,34,39,.9);border-color:rgba(25
 .delta.up{color:var(--rose)}
 .delta.down{color:var(--green-dim)}
 .edBtn{
-  flex:none;width:26px;height:26px;border-radius:8px;
+  flex:none;width:44px;height:44px;border-radius:10px;
   background:var(--glass-2);border:1px solid var(--line);color:var(--ink-dim);
   font-size:13px;line-height:1;
 }
@@ -506,7 +508,7 @@ nav{
 }
 html[data-theme="dark"] nav{background:rgba(22,22,26,.72);border-top-color:rgba(255,255,255,.08)}
 html[data-theme="dark"] header{background:rgba(13,13,15,.72);border-bottom-color:rgba(255,255,255,.08)}
-nav button{padding:6px 2px;display:grid;justify-items:center;gap:2px;font-size:10px;color:#B9AF9A;border-radius:9px}
+nav button{min-height:52px;padding:7px 2px;display:grid;justify-items:center;align-content:center;gap:3px;font-size:10.5px;color:#8A8272;border-radius:10px}
 nav button i{font-style:normal;font-size:16px;line-height:1}
 nav button.on{color:var(--red)}
 
@@ -546,13 +548,6 @@ nav button.on{color:var(--red)}
       <button class="chip" id="btnResetAll">🧹 אפס הכל והתחל מאפס</button>
     </div>
   </div>
-  <div class="card">
-    <h2>חיבור לתיבת המייל</h2>
-    <p class="hint">האפליקציה קוראת בלבד. שום דבר לא נמחק ולא נשלח.</p>
-    <button class="btn" id="btnLogin">התחבר עם Google</button>
-    <button class="btn ghost sm" id="btnLogout" style="width:100%;margin-top:8px;display:none">התנתק</button>
-    <button class="btn outline sm" id="btnSwitch" style="width:100%;margin-top:8px;display:none">החלף תיבת מייל</button>
-  </div>
 
   <div class="card">
     <h2>טווח וסינון</h2>
@@ -568,6 +563,9 @@ nav button.on{color:var(--red)}
       <label class="f"><span>מתאריך</span><input type="date" class="inp" id="dFrom"></label>
       <label class="f"><span>עד תאריך</span><input type="date" class="inp" id="dTo"></label>
     </div>
+    <details class="acc" style="margin:10px 0">
+      <summary>⚙ אפשרויות סריקה</summary>
+      <div class="accbody">
     <label class="f">
       <span>מה לתפוס</span>
       <div class="chips" id="modes">
@@ -576,18 +574,13 @@ nav button.on{color:var(--red)}
         <button class="chip on" data-m="body">גוף המייל</button>
       </div>
     </label>
-    <label class="f" style="margin-top:12px">
-      <span>מילות חיפוש ב-Gmail</span>
-      <input class="inp" id="kw" value="חשבונית OR קבלה OR &quot;חשבונית מס&quot; OR invoice OR receipt OR &quot;דרישת תשלום&quot;">
-    </label>
-    <label class="f">
-      <span>מקסימום מיילים לסריקה</span>
-      <input class="inp num" id="maxMsgs" type="number" value="150" min="1" max="500">
-    </label>
-    <div class="chips" style="margin-bottom:10px">
-      <button class="chip" id="chipRescan">↻ סרוק מחדש גם מיילים שכבר עובדו</button>
-    </div>
-    <button class="btn" id="btnScan">התחל סריקה</button>
+        <div class="chips">
+          <button class="chip" id="chipRescan">↻ סרוק מחדש גם מיילים שכבר עובדו</button>
+        </div>
+        <p class="hint" style="margin:8px 0 0">מילות החיפוש וכמות המיילים עברו להגדרות.</p>
+      </div>
+    </details>
+    <button class="btn primary-lg" id="btnScan">🔍 סרוק חשבוניות מהמייל</button>
     <button class="btn ghost sm" id="btnStop" style="width:100%;margin-top:8px;display:none">עצור</button>
   </div>
 
@@ -725,8 +718,8 @@ nav button.on{color:var(--red)}
       <div class="kv"><b>מצב נוכחי</b><span>מראה כמה מסמכים שמורים וכמה מיילים כבר עובדו. אם כתוב שם אזהרה אדומה — קרא אותה לפני שאתה סורק.</span></div>
       <div class="kv"><b>טווח מהיר</b><span>החודש / חודש שעבר / 3 חודשים / השנה / הכל. לחיצה אחת במקום להקליד תאריכים.</span></div>
       <div class="kv"><b>מה לתפוס</b><span>קבצים מצורפים · קישורים למערכות · גוף המייל. אפשר לבחור כמה.</span></div>
-      <div class="kv"><b>מילות חיפוש</b><span>שאילתת Gmail רגילה. אפשר להוסיף שם ספק ספציפי כדי למקד.</span></div>
-      <div class="kv"><b>מקסימום מיילים</b><span>עד 500. מומלץ 150 בהרצה.</span></div>
+      <div class="kv"><b>מילות חיפוש</b><span>עברו ל<b>הגדרות</b> — משם משפיעות על כל סריקה.</span></div>
+      <div class="kv"><b>מקסימום מיילים</b><span>עברו ל<b>הגדרות</b>. עד 500, מומלץ 150.</span></div>
       <div class="kv"><b>↻ סרוק מחדש</b><span>סורק גם מיילים שכבר עובדו. השתמש כשאתה רוצה לנסות שוב עם מודל אחר.</span></div>
       <div class="kv"><b>עצור</b><span>קוטע מיד את כל הבקשות. מה שכבר נמצא — נשמר.</span></div>
       <div class="kv"><b>📷 צלם</b><span>חשבונית נייר שקיבלת באתר — צלם והיא נכנסת לאותה רשימה.</span></div>
@@ -832,6 +825,24 @@ nav button.on{color:var(--red)}
 </section>
 <!-- ========== הגדרות ========== -->
 <section class="view" id="v-set">
+    <div class="card">
+    <h2>חיבור לתיבת המייל</h2>
+    <p class="hint">האפליקציה קוראת בלבד. שום דבר לא נמחק ולא נשלח.</p>
+    <button class="btn" id="btnLogin">התחבר עם Google</button>
+    <button class="btn ghost sm" id="btnLogout" style="width:100%;margin-top:8px;display:none">התנתק</button>
+    <button class="btn outline sm" id="btnSwitch" style="width:100%;margin-top:8px;display:none">החלף תיבת מייל</button>
+  </div>
+  <details class="acc"><summary>🔍 מילות חיפוש ב-Gmail</summary><div class="accbody">
+    <label class="f" style="margin-top:12px">
+      <span>מילות חיפוש ב-Gmail</span>
+      <input class="inp" id="kw" value="חשבונית OR קבלה OR &quot;חשבונית מס&quot; OR invoice OR receipt OR &quot;דרישת תשלום&quot;">
+    </label>
+    <label class="f">
+      <span>מקסימום מיילים לסריקה</span>
+      <input class="inp num" id="maxMsgs" type="number" value="150" min="1" max="500">
+    </label>
+    <p class="hint" style="margin:8px 0 0">משפיע על כל סריקה עתידית.</p>
+  </div></details>
   <div id="lockGate">
     <div class="card">
       <div class="lockwrap">
@@ -900,7 +911,7 @@ nav button.on{color:var(--red)}
   </div></details>
   <details class="acc"><summary>ℹ גרסה</summary><div class="accbody">
     
-    <p class="hint" style="margin:0">v2.7 · <span id="verDate"></span></p>
+    <p class="hint" style="margin:0">v2.8 · <span id="verDate"></span></p>
   </div></details>
   <details class="acc"><summary>💾 גיבוי הגדרות</summary><div class="accbody">
     
@@ -1039,6 +1050,7 @@ let seenFP = {};        // fingerprint -> true (דדופ בתוך סריקה א�
 let priceMem = {};      // 'ספק|סוג' -> {total, date} (זיכרון מחיר אחרון)
 let docMeta = {};        // fingerprint -> {project} (תיוג פרויקט ששרד בין סריקות)
 let dupSkipped = 0;
+let junkSkipped = 0;   // קבצים שסוננו לפני AI (לוגואים, אייקונים)
 
 function $(id){ return document.getElementById(id); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -1074,9 +1086,9 @@ function loadCfg(){
   updMem();
 }
 const SPEEDS = {
-  slow:   {concurrency:1, minGapMs:3000, label:'בקשה אחת כל 3 שניות — הכי בטוח מול המגבלה החינמית'},
-  normal: {concurrency:2, minGapMs:1200, label:'2 במקביל, מרווח 1.2 שניות'},
-  fast:   {concurrency:4, minGapMs:400,  label:'4 במקביל, מרווח 0.4 שניות — עלול להיחסם בשכבה החינמית'}
+  slow:   {concurrency:2, minGapMs:900, label:'2 במקביל · מאט אוטומטית רק כשגוגל מתלוננת'},
+  normal: {concurrency:3, minGapMs:350, label:'3 במקביל · איזון בין מהירות ליציבות'},
+  fast:   {concurrency:5, minGapMs:0,   label:'5 במקביל · ללא מרווח — עלול להיחסם בשכבה החינמית'}
 };
 function applySpeed(s, silent){
   const p = SPEEDS[s] || SPEEDS.normal;
@@ -1647,8 +1659,18 @@ function walk(part, out){
   if(!part) return out;
   if(part.filename && part.body && part.body.attachmentId){
     const mt=(part.mimeType||'').toLowerCase();
-    if(/pdf|jpeg|jpg|png/.test(mt) || /\.(pdf|jpe?g|png)$/i.test(part.filename)){
-      out.files.push({name:part.filename, mime: mt.includes('pdf')?'application/pdf':(mt||'application/pdf'), id:part.body.attachmentId, size:part.body.size||0});
+    const nm=(part.filename||'').toLowerCase();
+    const sz=part.body.size||0;
+    const isPdf = mt.includes('pdf') || /\.pdf$/i.test(nm);
+    const isImg = /jpeg|jpg|png/.test(mt) || /\.(jpe?g|png)$/i.test(nm);
+    if(isPdf || isImg){
+      // סינון מוקדם ללא AI: לוגואים בחתימה, אייקונים ותמונות מעקב
+      // אף פעם אינם חשבונית, אבל עולים בדיוק אותה קריאה יקרה.
+      const junkName = /logo|signature|sign|icon|banner|footer|header|facebook|instagram|linkedin|whatsapp|twitter|spacer|pixel|avatar|profile/i.test(nm);
+      const tooSmall = isImg && sz > 0 && sz < 25000;   // תמונת חשבונית אמיתית גדולה מזה
+      const unnamed  = /^(image|img|untitled)[-_ ]?\d{0,4}\.(png|jpe?g)$/i.test(nm) && sz < 80000;
+      if(junkName || tooSmall || unnamed){ out.skipped++; return out; }
+      out.files.push({name:part.filename, mime: isPdf?'application/pdf':(mt||'image/jpeg'), id:part.body.attachmentId, size:sz});
     }
   }
   if(part.mimeType==='text/plain' && part.body && part.body.data) out.text += decodeText(part.body.data)+'\n';
@@ -1657,7 +1679,7 @@ function walk(part, out){
   return out;
 }
 function parseMsg(msg){
-  const o = walk(msg.payload, {files:[], text:'', html:''});
+  const o = walk(msg.payload, {files:[], text:'', html:'', skipped:0});
   if(!o.text && o.html) o.text = o.html.replace(/<style[\s\S]*?<\/style>/gi,'').replace(/<script[\s\S]*?<\/script>/gi,'').replace(/<[^>]+>/g,' ').replace(/&nbsp;/g,' ').replace(/\s+/g,' ');
   const links=[];
   const rx=/https?:\/\/[^\s"'<>]+/gi; let m;
@@ -1666,6 +1688,7 @@ function parseMsg(msg){
     const u=m[0].replace(/[.,;)\]]+$/,'');
     if(LINK_HOSTS.some(h=>u.toLowerCase().includes(h)) && !links.includes(u)) links.push(u);
   }
+  junkSkipped += o.skipped||0;
   return {
     id: msg.id,
     from: hdr(msg,'From'),
@@ -1708,12 +1731,30 @@ let modelSwitchedTo = null;   // מדווח בסיכום אם עברנו מוד�
 
 function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
-// ויסות קצב גלובלי: מבטיח מרווח מינימלי בין קריאות ל-Gemini
+// ויסות קצב אדפטיבי: מתחיל מהיר ומאט רק כשגוגל באמת מתלוננת.
+// קודם היה מרווח קבוע שהעניש כל בקשה גם כשהכל עבד חלק —
+// זו הייתה הסיבה העיקרית ל-50 דקות על 150 מיילים.
 let lastGeminiAt = 0;
+let curGap = 0;          // מרווח נוכחי במילישניות
+let okStreak = 0;        // רצף הצלחות
+function gapFloor(){ return Math.max(0, parseInt(cfg.minGapMs)||0); }
+function noteRateLimit(){
+  curGap = Math.min(8000, Math.max(gapFloor(), curGap*2 || 1500));
+  okStreak = 0;
+}
+function noteSuccess(){
+  okStreak++;
+  if(okStreak >= 5 && curGap > gapFloor()){   // אחרי 5 הצלחות רצופות - מאיצים בחזרה
+    curGap = Math.max(gapFloor(), Math.round(curGap*0.6));
+    okStreak = 0;
+  }
+}
 async function rateGate(){
-  const gap = Math.max(0, parseInt(cfg.minGapMs)||1200);
-  const wait = lastGeminiAt + gap - Date.now();
-  if(wait > 0) await sleep(wait);
+  const gap = Math.max(gapFloor(), curGap);
+  if(gap>0){
+    const wait = lastGeminiAt + gap - Date.now();
+    if(wait > 0) await sleep(wait);
+  }
   lastGeminiAt = Date.now();
 }
 
@@ -1732,6 +1773,7 @@ async function gemini(parts){
     try{
       const r = await fetch(url,{ method:'POST', headers:{'Content-Type':'application/json'}, body, signal: scanAbort? scanAbort.signal : undefined });
       if(r.ok){
+        noteSuccess();
         const j = await r.json();
         const txt = ((((j.candidates||[])[0]||{}).content||{}).parts||[]).map(p=>p.text||'').join('');
         const clean = txt.replace(/```json/gi,'').replace(/```/g,'').trim();
@@ -1740,6 +1782,7 @@ async function gemini(parts){
       // 429 = חריגת קצב, 5xx = תקלה זמנית -> שווה לנסות שוב
       if(r.status===429 || r.status>=500){
         let m=''; try{ m=(await r.json()).error.message; }catch(e){ m='HTTP '+r.status; }
+        if(r.status===429) noteRateLimit();
         lastErr = new Error(r.status===429 ? 'חריגת קצב (429) — האטה ונסיון חוזר' : m);
         await sleep(Math.min(20000, 1500*Math.pow(2,attempt)) + Math.random()*600);
         continue;
@@ -1751,6 +1794,7 @@ async function gemini(parts){
       // "Failed to fetch" = כשל רשת/ניתוק, כמעט תמיד עומס. מנסים שוב.
       if(e && (e.name==='AbortError' || /abort/i.test(e.message||''))) throw e;   // בוטל - לא מנסים שוב
       const isNetwork = /failed to fetch|networkerror|load failed/i.test(e.message||'');
+      if(isNetwork) noteRateLimit();   // כשל רשת חוזר = כמעט תמיד עומס
       if(!isNetwork && !/429|חריגת קצב/.test(e.message||'')) throw e;
       lastErr = e;
       if(attempt < MAX_TRIES) await sleep(Math.min(20000, 1500*Math.pow(2,attempt)) + Math.random()*600);
@@ -1832,7 +1876,7 @@ $('btnScan').onclick = async ()=>{
   if(errs.length){ showScanErrors(errs); return; }
 
   scanRunning = true;
-  stopFlag=false; docs=[]; seenFP={}; dupSkipped=0; modelSwitchedTo=null;
+  stopFlag=false; docs=[]; seenFP={}; dupSkipped=0; junkSkipped=0; modelSwitchedTo=null;
   scanAbort = new AbortController();
   $('errBox').innerHTML='';
   $('progCard').style.display='block';
@@ -2798,7 +2842,7 @@ $('btnDrive').onclick = async ()=>{
   const from=new Date(now.getFullYear(), now.getMonth()-2, 1);
   $('dFrom').value = from.toISOString().slice(0,10);
   $('verDate').textContent = new Date().toISOString().slice(0,10);
-  $('helpVer').textContent = 'v2.7';
+  $('helpVer').textContent = 'v2.8';
   renderChecks();
   render();
   loadDocs();   // שחזור תוצאות הסריקה האחרונה מ-IndexedDB
