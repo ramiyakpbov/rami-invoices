@@ -47,6 +47,10 @@ Retry + Backoff        | const MAX_TRIES
 מדריך + צקליסט         | const CHECKS
 גיבוי/שחזור הגדרות     | btnExportCfg
 אבחון מכשיר            | async function runDiagnostics
+צבירת תוצאות בין סריקות| const restoreDocs
+סינון קבצי זבל         | junkSkipped
+כיווץ תמונות           | async function shrinkImage
+ויסות אדפטיבי          | function noteRateLimit
 הוספה ידנית/מצלמה      | function ingestFiles
 */
 -->
@@ -911,7 +915,7 @@ nav button.on{color:var(--red)}
   </div></details>
   <details class="acc"><summary>ℹ גרסה</summary><div class="accbody">
     
-    <p class="hint" style="margin:0">v2.8 · <span id="verDate"></span></p>
+    <p class="hint" style="margin:0">v2.9 · <span id="verDate"></span></p>
   </div></details>
   <details class="acc"><summary>💾 גיבוי הגדרות</summary><div class="accbody">
     
@@ -1697,6 +1701,28 @@ function parseMsg(msg){
     files: o.files, text:(o.text||'').slice(0,12000), links
   };
 }
+/* ============================================================
+   מסנן מקדים ללא AI
+   רוב המיילים שתואמים "חשבונית OR קבלה" הם דיוור ופרסומות.
+   כל אחד מהם עלה קריאת Gemini מלאה. כאן מסננים אותם בחינם
+   לפי סימנים שחייבים להופיע בחשבונית אמיתית.
+   ============================================================ */
+function invoiceScore(text, subject){
+  const t = (text||'') + ' ' + (subject||'');
+  if(t.length < 25) return 0;
+  let score = 0;
+  if(/(?:₪|ש"ח|שח|ils|nis)\s*[\d,]+(?:\.\d{1,2})?|[\d,]+(?:\.\d{1,2})?\s*(?:₪|ש"ח|שח)/i.test(t)) score += 3;
+  if(/מע["']?מ|מ\.ע\.מ|\bvat\b/i.test(t)) score += 2;
+  if(/(?:חשבונית|קבלה|invoice|receipt)\s*(?:מס['״"]?\s*)?[:#]?\s*\d{2,}/i.test(t)) score += 2;
+  if(/סה["']?כ\s*לתשלום|לתשלום|סכום\s*לתשלום|total\s*(?:due|amount)|amount\s*due/i.test(t)) score += 2;
+  if(/ח\.?פ\.?\s*\d{8,9}|ע\.?מ\.?\s*\d{8,9}|עוסק\s*מורשה/i.test(t)) score += 2;
+  if(/\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}/.test(t)) score += 1;
+  if(/הסר[ה]?\s*מרשימ|להסרה\s*מ?הדיוור|unsubscribe|ניוזלטר|newsletter/i.test(t)) score -= 3;
+  if(/מבצע|הנחה|קופון|% הנחה/i.test(t)) score -= 2;
+  return score;
+}
+const INVOICE_MIN_SCORE = 4;
+
 function senderName(from){
   const m = String(from).match(/^\s*"?([^"<]*?)"?\s*<?([^>]*)>?\s*$/);
   const nm=(m&&m[1]||'').trim();
@@ -1817,8 +1843,88 @@ async function gemini(parts){
   }
   throw new Error((lastErr && lastErr.message) ? lastErr.message+' (אחרי '+MAX_TRIES+' נסיונות)' : 'נכשל אחרי מספר נסיונות');
 }
+/* ============================================================
+   הקטנת מטען לפני שליחה ל-AI — התיקון המרכזי לזמני הסריקה.
+   קודם כל PDF נשלח במלואו (2MB -> 2.7MB בבסיס-64), הועלה מהנייד
+   ועובד כתמונה. רוב החשבוניות בישראל הן PDF דיגיטלי עם שכבת טקסט,
+   ולכן אפשר לחלץ את הטקסט מקומית ולשלוח ~4KB במקום 2.7MB.
+   ============================================================ */
+let pdfjsReady = null;
+function loadPdfJs(){
+  if(pdfjsReady) return pdfjsReady;
+  pdfjsReady = new Promise((res,rej)=>{
+    const sc=document.createElement('script');
+    sc.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    sc.onload=()=>{
+      try{
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        res(window.pdfjsLib);
+      }catch(e){ rej(e); }
+    };
+    sc.onerror=()=>rej(new Error('pdf.js לא נטען'));
+    document.head.appendChild(sc);
+  });
+  return pdfjsReady;
+}
+// מחזיר טקסט אם יש שכבת טקסט שמישה, אחרת null (PDF סרוק -> יישלח כקובץ)
+async function pdfText(bytes){
+  try{
+    const lib = await loadPdfJs();
+    const doc = await lib.getDocument({data: bytes.slice(0)}).promise;
+    let txt='';
+    const pages = Math.min(doc.numPages, 4);
+    for(let i=1;i<=pages;i++){
+      const pg = await doc.getPage(i);
+      const c = await pg.getTextContent();
+      txt += c.items.map(it=>it.str).join(' ')+'\n';
+    }
+    txt = txt.replace(/\s+/g,' ').trim();
+    return txt.length >= 200 ? txt.slice(0,12000) : null;
+  }catch(e){ return null; }
+}
+// צילום מהטלפון הוא 4MB - מיותר לחלוטין לזיהוי חשבונית
+async function shrinkImage(bytes, mime){
+  try{
+    const blob = new Blob([bytes], {type:mime});
+    const bmp = await createImageBitmap(blob);
+    const MAX = 1600;
+    if(Math.max(bmp.width,bmp.height) <= MAX && bytes.length < 900000) return null;
+    const sc = Math.min(1, MAX/Math.max(bmp.width,bmp.height));
+    const w = Math.round(bmp.width*sc), h = Math.round(bmp.height*sc);
+    const cv = document.createElement('canvas'); cv.width=w; cv.height=h;
+    cv.getContext('2d').drawImage(bmp,0,0,w,h);
+    const out = await new Promise(r=> cv.toBlob(r,'image/jpeg',0.82));
+    if(!out || out.size >= bytes.length) return null;
+    return {bytes:new Uint8Array(await out.arrayBuffer()), mime:'image/jpeg'};
+  }catch(e){ return null; }
+}
+
+// כיווץ תמונות לפני שליחה ל-AI.
+// צילום מהטלפון הוא 3-8MB; ב-base64 זה תופח ב-33% נוסף.
+// חשבונית נקראת מצוין ב-1600px, אז ההעלאה מתקצרת פי 5-15
+// בלי לפגוע בזיהוי. PDF לא נוגעים בו.
+async function shrinkImage(b64, mime, maxPx){
+  maxPx = maxPx || 1600;
+  if(mime==='application/pdf') return {b64, mime};
+  try{
+    const img = await new Promise((res,rej)=>{
+      const im = new Image();
+      im.onload = ()=>res(im); im.onerror = ()=>rej(new Error('img'));
+      im.src = 'data:'+mime+';base64,'+b64;
+    });
+    if(Math.max(img.width,img.height) <= maxPx) return {b64, mime};
+    const sc = maxPx / Math.max(img.width, img.height);
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.width*sc); c.height = Math.round(img.height*sc);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    const out = c.toDataURL('image/jpeg', 0.82).split(',')[1];
+    return out && out.length < b64.length ? {b64: out, mime:'image/jpeg'} : {b64, mime};
+  }catch(e){ return {b64, mime}; }
+}
 async function extractFile(b64, mime){
-  return gemini([{inline_data:{mime_type:mime, data:b64}},{text:SCHEMA_PROMPT}]);
+  const small = await shrinkImage(b64, mime);
+  return gemini([{inline_data:{mime_type:small.mime, data:small.b64}},{text:SCHEMA_PROMPT}]);
 }
 async function extractText(subject, from, body){
   return gemini([{text:SCHEMA_PROMPT+`\n\nנתוני המייל:\nנושא: ${subject}\nשולח: ${from}\n\nתוכן:\n${body}`}]);
@@ -1876,8 +1982,22 @@ $('btnScan').onclick = async ()=>{
   if(errs.length){ showScanErrors(errs); return; }
 
   scanRunning = true;
-  stopFlag=false; docs=[]; seenFP={}; dupSkipped=0; junkSkipped=0; modelSwitchedTo=null;
+  // באג אובדן נתונים שתוקן: קודם היה כאן docs=[] — כל סריקה חדשה
+  // מחקה את התוצאות הקודמות, ואז saveDocs() דרס את מה שהיה שמור.
+  // עכשיו צוברים: מסמכים קיימים נשמרים, חדשים מתווספים.
+  const keepDocs = docs.slice();
+  docs = [];
+  seenFP = {};
+  keepDocs.forEach(d=>{ if(d.fp) seenFP[d.fp] = true; });   // מונע כפילות מול מה שכבר יש
+  stopFlag=false; dupSkipped=0; junkSkipped=0; modelSwitchedTo=null;
   scanAbort = new AbortController();
+  // כל יציאה מוקדמת חייבת להחזיר את המסמכים הקיימים, אחרת docs נשאר
+  // ריק ו-saveDocs() בהמשך ידרוס את מה שכבר נשמר.
+  const restoreDocs = async ()=>{
+    docs = keepDocs.concat(docs.filter(d=>!keepDocs.some(k=>k.fp===d.fp)));
+    if(keepDocs.length) await saveDocs();
+    render(); updStatusCard();
+  };
   $('errBox').innerHTML='';
   $('progCard').style.display='block';
   $('btnScan').disabled=true; $('btnStop').style.display='flex';
@@ -1904,7 +2024,7 @@ $('btnScan').onclick = async ()=>{
       prog(100, ids.length
         ? 'כל '+ids.length+' המיילים בטווח כבר עובדו. הפעל "סרוק מחדש" למעלה כדי לסרוק אותם שוב.'
         : 'לא נמצאו מיילים בטווח הזה.');
-      setStep(4); finish(); return;
+      setStep(4); await restoreDocs(); finish(); return;
     }
     prog(10, fresh.length+' מיילים חדשים (מתוך '+ids.length+').');
 
@@ -1918,7 +2038,7 @@ $('btnScan').onclick = async ()=>{
       }catch(e){}
       done++; prog(10+ (done/fresh.length)*25, 'שולף מיילים '+done+'/'+fresh.length);
     });
-    if(stopFlag){ finish(); return; }
+    if(stopFlag){ await restoreDocs(); finish(); return; }
 
     /* --- 3. זיהוי --- */
     setStep(3);
@@ -1933,20 +2053,47 @@ $('btnScan').onclick = async ()=>{
         jobs.push({kind:'body', msg:m});
       }
     });
-    if(!jobs.length){ prog(100,'לא נמצא תוכן מתאים.'); setStep(4); finish(); return; }
+    if(!jobs.length){ prog(100,'לא נמצא תוכן מתאים.'); setStep(4); await restoreDocs(); finish(); return; }
+
+    // הערכת זמן לפני שמתחילים - כדי שריצה ארוכה לא תפתיע
+    const estSec = Math.round(jobs.length * (Math.max(cfg.minGapMs||0,300)/1000 + 7) / Math.max(1,cfg.concurrency||2));
+    prog(35, jobs.length+' מסמכים לזיהוי · הערכה ~'+Math.max(1,Math.round(estSec/60))+' דקות'+
+             (junkSkipped? ' · '+junkSkipped+' קבצים סוננו מראש':''));
+    await sleep(900);
 
     let k=0; const errs=[]; const failedMsgs={};
+    let tFetch=0, tPrep=0, tAI=0, savedBytes=0;   // מדידה אמיתית של איפה הזמן הולך
     startEta(jobs.length);
     await pool(jobs, Math.max(1, Math.min(4, parseInt(cfg.concurrency)||2)), async (job)=>{
+      const t0=Date.now();
       try{
         let data=null;
         if(job.kind==='pdf'){
           const at = await api('https://gmail.googleapis.com/gmail/v1/users/me/messages/'+job.msg.id+'/attachments/'+job.file.id);
-          const bytes = b64ToBytes(b64urlToB64(at.data));
+          let bytes = b64ToBytes(b64urlToB64(at.data));
           if(bytes.length > 18*1024*1024) throw new Error('קובץ גדול מדי');
-          const b64 = bytesToB64(bytes);
-          data = await extractFile(b64, job.file.mime);
-          if(data && data.is_doc) job.bytes = bytes;
+          job.bytes = bytes;                       // תמיד שומרים את המקור לייצוא
+          tFetch += Date.now()-t0; const t1=Date.now();
+
+          const isPdf = /pdf/i.test(job.file.mime);
+          let txt = null;
+          if(isPdf && bytes.length > 120000) txt = await pdfText(bytes);   // שווה רק לקבצים גדולים
+          tPrep += Date.now()-t1; const t2=Date.now();
+
+          if(txt){
+            // שכבת טקסט נמצאה: שולחים ~4KB במקום מגה-בייטים
+            data = await extractText('קובץ: '+job.file.name, job.msg.from, txt);
+            savedBytes += bytes.length;
+          } else {
+            let sendBytes = bytes, sendMime = job.file.mime;
+            if(!isPdf){
+              const sm = await shrinkImage(bytes, job.file.mime);
+              if(sm){ sendBytes = sm.bytes; sendMime = sm.mime; savedBytes += bytes.length - sm.bytes.length; }
+            }
+            data = await extractFile(bytesToB64(sendBytes), sendMime);
+          }
+          tAI += Date.now()-t2;
+          if(!(data && data.is_doc)) job.bytes = null;   // לא חשבונית - לא לשמור את הקובץ
         } else {
           data = await extractText(job.msg.subject, job.msg.from, job.msg.text);
         }
@@ -1996,13 +2143,23 @@ $('btnScan').onclick = async ()=>{
     });
     Object.assign(priceMem, latestByKey);
     store.set(K.price, priceMem);
+    const foundNow = docs.length;
+    docs = keepDocs.concat(docs);        // צבירה: הישנים + החדשים
     docsSavedAt = Date.now();
     await saveDocs();
-    prog(100, 'הסתיים. '+docs.length+' מסמכים.'+(dupSkipped?' ('+dupSkipped+' כפילויות דולגו)':''));
+    prog(100, 'הסתיים. נמצאו '+foundNow+' חדשים · סה"כ '+docs.length+' מסמכים.'+
+              (dupSkipped?' ('+dupSkipped+' כפילויות דולגו)':'')+
+              (junkSkipped?' · '+junkSkipped+' קבצים סוננו לפני AI':''));
     render();
     showSummary(jobs.length, errs.length);
 
   }catch(e){
+    // גם בשגיאה או בעצירה - לא לאבד את מה שהיה שמור קודם
+    if(keepDocs.length && docs.length < keepDocs.length){
+      docs = keepDocs.concat(docs.filter(d=>!keepDocs.some(k=>k.fp===d.fp)));
+      await saveDocs();
+      render();
+    }
     $('plog').textContent='שגיאה: '+e.message;
   }
   finish();
@@ -2842,7 +2999,7 @@ $('btnDrive').onclick = async ()=>{
   const from=new Date(now.getFullYear(), now.getMonth()-2, 1);
   $('dFrom').value = from.toISOString().slice(0,10);
   $('verDate').textContent = new Date().toISOString().slice(0,10);
-  $('helpVer').textContent = 'v2.8';
+  $('helpVer').textContent = 'v2.9';
   renderChecks();
   render();
   loadDocs();   // שחזור תוצאות הסריקה האחרונה מ-IndexedDB
