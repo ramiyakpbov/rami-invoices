@@ -2,7 +2,7 @@
    אסטרטגיה: network-first לקליפה, כדי שגרסה חדשה תמיד תיתפס.
    קריאות ל-API של גוגל ו-Gemini לא נכנסות לקאש בכלל. */
 
-const CACHE = 'invoices-v2.3';
+const CACHE = 'invoices-v2.6';
 const SHELL = ['./', './index.html', './manifest.json', './logo.png'];
 
 self.addEventListener('install', e => {

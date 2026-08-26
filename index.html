@@ -4,7 +4,6 @@
 # מרשם יכולות. עמודה 1 = שם, עמודה 2 = עוגן שחייב להימצא בקוד.
 # check.py מאמת שכל שורה כאן באמת ממומשת. לפני הוספת יכולת - חפש אותה כאן.
 אחסון מרוכז            | const store =
-הצפנת מפתחות           | crypto.subtle.generateKey
 שמירת תוצאות IndexedDB | function saveDocs
 התחברות Google         | function initToken
 שמירת טוקן             | function loadStoredToken
@@ -46,6 +45,9 @@ Retry + Backoff        | const MAX_TRIES
 פופאפ סיכום            | doneModal
 התקנת PWA              | beforeinstallprompt
 מדריך + צקליסט         | const CHECKS
+גיבוי/שחזור הגדרות     | btnExportCfg
+אבחון מכשיר            | async function runDiagnostics
+הוספה ידנית/מצלמה      | function ingestFiles
 */
 -->
 
@@ -584,6 +586,17 @@ nav button.on{color:var(--red)}
     <button class="btn ghost sm" id="btnStop" style="width:100%;margin-top:8px;display:none">עצור</button>
   </div>
 
+  <div class="card">
+    <h2>הוספה ידנית</h2>
+    <p class="hint">חשבונית שלא הגיעה במייל — צלם אותה או בחר קובץ מהמכשיר. אותו זיהוי בדיוק.</p>
+    <div class="row2">
+      <label class="btn outline sm" for="camFile" style="width:100%;display:flex">📷 צלם</label>
+      <label class="btn ghost sm" for="pickFile" style="width:100%;display:flex">📁 בחר קובץ</label>
+    </div>
+    <input type="file" id="camFile" accept="image/*" capture="environment" style="display:none">
+    <input type="file" id="pickFile" accept="image/*,application/pdf" multiple style="display:none">
+    <div class="plog" id="manualLog" style="margin-top:8px"></div>
+  </div>
   <div class="card" id="progCard" style="display:none">
     <div class="steps">
       <div class="step" id="s1">חיפוש</div>
@@ -711,6 +724,8 @@ nav button.on{color:var(--red)}
       <div class="kv"><b>מקסימום מיילים</b><span>עד 500. מומלץ 150 בהרצה.</span></div>
       <div class="kv"><b>↻ סרוק מחדש</b><span>סורק גם מיילים שכבר עובדו. השתמש כשאתה רוצה לנסות שוב עם מודל אחר.</span></div>
       <div class="kv"><b>עצור</b><span>קוטע מיד את כל הבקשות. מה שכבר נמצא — נשמר.</span></div>
+      <div class="kv"><b>📷 צלם</b><span>חשבונית נייר שקיבלת באתר — צלם והיא נכנסת לאותה רשימה.</span></div>
+      <div class="kv"><b>📁 בחר קובץ</b><span>PDF או תמונה מהמכשיר. אפשר כמה בבת אחת.</span></div>
       <div class="kv"><b>שעון</b><span>נותר משוער / מסמכים / זמן שחלף, מחושב מהקצב בפועל.</span></div>
     </div>
   </details>
@@ -787,6 +802,16 @@ nav button.on{color:var(--red)}
       <div class="kv"><b>תוצאות ריקות</b><span>קרא את "מצב נוכחי". כנראה הכל כבר עובד — הדלק "סרוק מחדש".</span></div>
       <div class="kv"><b>פג תוקף החיבור</b><span>לחץ "התחבר עם Google" שוב. תקין אחרי כשעה.</span></div>
       <div class="kv"><b>הכל נכשל</b><span>הגדרות → "בדוק מפתח Gemini".</span></div>
+    </div>
+  </details>
+
+  <details class="acc">
+    <summary>🩺 אבחון מכשיר — לחיצה אחת</summary>
+    <div class="accbody">
+      <p>בודק בפועל, על המכשיר הזה, שכל המנגנונים עובדים. מריץ בדיקות אמיתיות ולא הצהרות.</p>
+      <button class="btn" id="btnDiag" style="margin-bottom:10px">▶ הרץ אבחון</button>
+      <div id="diagOut"></div>
+      <button class="btn ghost sm" id="btnDiagCopy" style="width:100%;margin-top:8px;display:none">📋 העתק דוח</button>
     </div>
   </details>
 
@@ -870,7 +895,15 @@ nav button.on{color:var(--red)}
   </div>
   <div class="card">
     <h2>גרסה</h2>
-    <p class="hint" style="margin:0">v2.3 · <span id="verDate"></span></p>
+    <p class="hint" style="margin:0">v2.6 · <span id="verDate"></span></p>
+  </div>
+  <div class="card">
+    <h2>גיבוי הגדרות</h2>
+    <p class="hint">שומר קובץ עם המפתחות וההגדרות שלך — כדי שלא תצטרך לחפש אותם שוב אם תעבור מכשיר, דפדפן, או כתובת אתר.</p>
+    <button class="btn outline sm" id="btnExportCfg" style="width:100%">⬇ הורד גיבוי הגדרות</button>
+    <label class="btn ghost sm" for="importCfgFile" style="width:100%;margin-top:8px;display:flex">⬆ שחזר מגיבוי</label>
+    <input type="file" id="importCfgFile" accept="application/json" style="display:none">
+    <div class="plog" id="cfgIoLog" style="margin-top:8px"></div>
   </div>
   <div class="card">
     <h2>קוד גישה</h2>
@@ -1361,7 +1394,98 @@ $('btnLogout').onclick = ()=>{
   $('btnLogin').textContent='התחבר עם Google';
   toast('התנתקת');
 };
+/* ============================================================
+   הוספה ידנית: צילום / בחירת קובץ — פריטים 23, 39
+   עובר באותו צינור חילוץ בדיוק כמו מייל, כדי שלא יהיו
+   שני מסלולי זיהוי שמתנהגים אחרת.
+   ============================================================ */
+function fileToB64(file){
+  return new Promise((res,rej)=>{
+    const r = new FileReader();
+    r.onload = ()=> res(String(r.result).split(',')[1]);
+    r.onerror = ()=> rej(new Error('קריאת הקובץ נכשלה'));
+    r.readAsDataURL(file);
+  });
+}
+async function ingestFiles(files){
+  const log = $('manualLog');
+  if(!cfg.gemini){ log.innerHTML='<span style="color:var(--rose)">חסר Gemini API Key — לך להגדרות.</span>'; return; }
+  const list = Array.from(files).filter(f=>
+    f.size <= 18*1024*1024 && /^image\/|application\/pdf/.test(f.type));
+  if(!list.length){ log.innerHTML='<span style="color:var(--rose)">לא נבחרו קבצים מתאימים (תמונה או PDF, עד 18MB).</span>'; return; }
+
+  let added=0, failed=0;
+  for(let i=0;i<list.length;i++){
+    const f = list[i];
+    log.textContent = 'מזהה '+(i+1)+'/'+list.length+' · '+f.name;
+    try{
+      const b64 = await fileToB64(f);
+      const mime = f.type==='application/pdf' ? 'application/pdf' : f.type;
+      const data = await extractFile(b64, mime);
+      if(data && data.is_doc){
+        // job במבנה זהה לזה של מייל, כדי לעבור באותו push() ולא ליצור מסלול זיהוי שני
+        const fakeJob = {
+          kind:'pdf',
+          file:{name:f.name, mime:mime},
+          bytes: b64ToBytes(b64),
+          msg:{ id:'manual-'+Date.now()+'-'+i, from:'הוספה ידנית', subject:'הועלה ידנית: '+f.name,
+                date:new Date(), text:'', links:[] }
+        };
+        const before = docs.length;
+        push(fakeJob, data);
+        if(docs.length>before){ added++; docs[docs.length-1].manual = true; }
+      } else { failed++; }
+    }catch(e){ failed++; }
+  }
+  if(added){
+    docsSavedAt = Date.now();
+    await saveDocs();
+    render(); updStatusCard(); buzz([10,50,10]);
+  }
+  log.innerHTML = added
+    ? '<span style="color:var(--green)">✓ נוספו '+added+' מסמכים.</span>'+(failed?' <span style="color:var(--ink-dim)">('+failed+' לא זוהו כחשבונית)</span>':'')
+    : '<span style="color:var(--rose)">לא זוהתה חשבונית באף קובץ.</span>';
+}
+$('camFile').onchange = (e)=>{ if(e.target.files.length) ingestFiles(e.target.files); e.target.value=''; };
+$('pickFile').onchange = (e)=>{ if(e.target.files.length) ingestFiles(e.target.files); e.target.value=''; };
+
+/* ============================================================
+   גיבוי/שחזור הגדרות (JSON) — פריט 60
+   מגן פיזית מפני "המפתח נעלם": יש עותק חיצוני שאינו תלוי
+   בדפדפן, בדומיין, או בזיכרון המכשיר.
+   ============================================================ */
 $('btnSaveCfg').onclick = saveCfg;
+$('btnExportCfg').onclick = ()=>{
+  const safe = Object.assign({}, cfg);   // בלי modelList הענק - רק מה שצריך לשחזור
+  const payload = {
+    _note: 'גיבוי הגדרות איתור חשבוניות - שמור קובץ זה במקום בטוח',
+    _exportedAt: new Date().toISOString(),
+    client: safe.client, gemini: safe.gemini, model: safe.model,
+    threshold: safe.threshold, theme: safe.theme, speed: safe.speed,
+    concurrency: safe.concurrency, minGapMs: safe.minGapMs, pin: safe.pin
+  };
+  const blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
+  download(blob, 'גיבוי-הגדרות-איתור-חשבוניות.json');
+  toast('הגיבוי הורד — שמור אותו במקום בטוח');
+};
+$('importCfgFile').onchange = async (e)=>{
+  const file = e.target.files[0]; if(!file) return;
+  const log = $('cfgIoLog');
+  try{
+    const text = await file.text();
+    const data = JSON.parse(text);
+    if(!data.client && !data.gemini){ log.innerHTML='<span style="color:var(--rose)">קובץ לא תקין — לא נמצאו מפתחות.</span>'; return; }
+    cfg = Object.assign(cfg, data);
+    delete cfg._note; delete cfg._exportedAt;
+    saveCfgNow();
+    loadCfg();
+    log.innerHTML='<span style="color:var(--green)">✓ ההגדרות שוחזרו מהגיבוי.</span>';
+    toast('הגדרות שוחזרו');
+  }catch(err){
+    log.innerHTML='<span style="color:var(--rose)">הקובץ לא תקין: '+esc(err.message)+'</span>';
+  }
+  e.target.value = '';
+};
 document.querySelectorAll('#themeChips .chip').forEach(c=>{
   c.onclick = ()=>{
     cfg.theme = c.dataset.t;
@@ -1909,8 +2033,124 @@ function push(job, d){
 }
 
 /* ============================================================
-   מדריך — צ'קליסט בדיקות
+   אבחון מכשיר — מריץ בדיקות אמיתיות על המכשיר של המשתמש.
+   נבנה אחרי שזוהה שכל האימות עד כה היה סטטי בלבד ולא הריץ
+   את הקוד האמיתי בסביבה האמיתית.
    ============================================================ */
+let diagReport = '';
+async function runDiagnostics(){
+  const out = $('diagOut');
+  const R = [];
+  const add = (name, ok, note)=>{
+    R.push({name, ok, note: note||''});
+    out.innerHTML = R.map(r=>
+      '<div class="kv"><b>'+(r.ok===true?'✓':r.ok===false?'✗':'⚠')+' '+esc(r.name)+'</b>'+
+      '<span style="color:'+(r.ok===true?'var(--green)':r.ok===false?'var(--rose)':'var(--ink-dim)')+'">'+esc(r.note)+'</span></div>'
+    ).join('');
+  };
+  out.innerHTML = '<div class="plog">מריץ...</div>';
+
+  // 1. אחסון מקומי - כתיבה וקריאה בפועל
+  try{
+    const probe = '__diag_'+Date.now();
+    localStorage.setItem(probe,'1');
+    const back = localStorage.getItem(probe);
+    localStorage.removeItem(probe);
+    add('אחסון מקומי (localStorage)', back==='1', back==='1'?'כתיבה וקריאה תקינות':'לא נשמר');
+  }catch(e){ add('אחסון מקומי (localStorage)', false, 'חסום: '+e.message); }
+
+  // 2. IndexedDB - כאן נשמרות התוצאות והקבצים
+  try{
+    const probe = {t:Date.now(), bin:new Uint8Array([1,2,3]), heb:'בדיקה'};
+    await idbSet('__diag', probe);
+    const back = await idbGet('__diag');
+    await idbDel('__diag');
+    const good = back && back.heb==='בדיקה' && back.bin && back.bin.length===3;
+    add('IndexedDB (תוצאות וקבצים)', !!good, good?'שמירת בייטים ועברית תקינה':'החזרה שגויה');
+  }catch(e){ add('IndexedDB (תוצאות וקבצים)', false, e.message); }
+
+  // 3. מכסת אחסון בפועל
+  try{
+    if(navigator.storage && navigator.storage.estimate){
+      const est = await navigator.storage.estimate();
+      const usedMB = (est.usage/1048576).toFixed(1), quotaMB = (est.quota/1048576).toFixed(0);
+      add('מכסת אחסון', true, usedMB+' MB בשימוש מתוך ~'+quotaMB+' MB');
+    } else add('מכסת אחסון', null, 'לא נתמך בדפדפן הזה');
+  }catch(e){ add('מכסת אחסון', null, e.message); }
+
+  // 4. תוצאות שמורות בפועל
+  try{
+    const s = await idbGet('docs');
+    const n = (s && s.docs) ? s.docs.length : 0;
+    const withBytes = (s && s.docs) ? s.docs.filter(d=>d.bytes).length : 0;
+    add('תוצאות שמורות', true, n+' מסמכים · '+withBytes+' עם קובץ מצורף');
+  }catch(e){ add('תוצאות שמורות', null, e.message); }
+
+  // 5. הגדרות ומפתחות
+  add('Client ID', !!cfg.client, cfg.client? 'מוגדר' : 'חסר — ההתחברות לא תעבוד');
+  add('Gemini API Key', !!cfg.gemini, cfg.gemini? 'מוגדר' : 'חסר — הזיהוי לא יעבוד');
+  add('מודל נבחר', !!cfg.model, cfg.model||'לא נבחר');
+
+  // 6. חיבור Google פעיל
+  if(token){
+    try{
+      const me = await api('https://www.googleapis.com/oauth2/v2/userinfo');
+      add('חיבור Google', true, me.email||'מחובר');
+    }catch(e){ add('חיבור Google', false, e.message); }
+  } else add('חיבור Google', false, 'לא מחובר');
+
+  // 7. גישה ל-Gmail בפועל
+  if(token){
+    try{
+      const j = await api('https://gmail.googleapis.com/gmail/v1/users/me/profile');
+      add('גישה ל-Gmail', true, (j.messagesTotal||0).toLocaleString('he-IL')+' מיילים בתיבה');
+    }catch(e){ add('גישה ל-Gmail', false, e.message); }
+  } else add('גישה ל-Gmail', null, 'דורש התחברות');
+
+  // 8. Gemini - קריאה חיה אמיתית
+  if(cfg.gemini && cfg.model){
+    try{
+      const t0 = Date.now();
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+cfg.model+
+        ':generateContent?key='+encodeURIComponent(cfg.gemini),{
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({contents:[{role:'user',parts:[{text:'ענה: OK'}]}],
+          generationConfig:{temperature:0,maxOutputTokens:10}})});
+      if(r.ok) add('Gemini (קריאה חיה)', true, 'תגובה תקינה תוך '+(Date.now()-t0)+' מ"ש');
+      else { let m=''; try{ m=(await r.json()).error.message; }catch(e){ m='HTTP '+r.status; }
+        add('Gemini (קריאה חיה)', false, m.slice(0,90)); }
+    }catch(e){ add('Gemini (קריאה חיה)', false, e.message); }
+  } else add('Gemini (קריאה חיה)', null, 'דורש מפתח ומודל');
+
+  // 9. יכולות מכשיר
+  add('רטט', !!navigator.vibrate, navigator.vibrate? 'נתמך' : 'לא נתמך בדפדפן/מכשיר הזה');
+  add('אודיו (צליל סיום)', !!(window.AudioContext||window.webkitAudioContext), '');
+  add('מותקן כאפליקציה', isStandalone, isStandalone? 'רץ במסך מלא' : 'רץ בדפדפן — כדאי להתקין');
+  add('חיבור לרשת', navigator.onLine, navigator.onLine? 'מקוון':'לא מקוון');
+
+  // 10. ספריות חיצוניות
+  add('SheetJS (xlsx)', typeof XLSX!=='undefined', typeof XLSX!=='undefined'?'נטען':'לא נטען — ייצוא אקסל ייכשל');
+  add('JSZip', typeof JSZip!=='undefined', typeof JSZip!=='undefined'?'נטען':'לא נטען — ייצוא ZIP ייכשל');
+  add('ספריית Google', !!(window.google&&google.accounts), (window.google&&google.accounts)?'נטענה':'לא נטענה — התחברות תיכשל');
+
+  const bad = R.filter(r=>r.ok===false).length;
+  const warn = R.filter(r=>r.ok===null).length;
+  out.innerHTML += '<div class="'+(bad?'warn':'free')+'" style="margin-top:10px">'+
+    (bad? '<b>'+bad+' בדיקות נכשלו</b> — עבור עליהן למעלה.' : '<b>✓ הכל תקין</b>')+
+    (warn? ' · '+warn+' לא רלוונטיות כרגע.' : '')+'</div>';
+
+  diagReport = 'אבחון איתור חשבוניות · '+new Date().toLocaleString('he-IL')+'\n'+
+    'גרסה: '+($('helpVer').textContent||'')+'\n'+
+    navigator.userAgent+'\n\n'+
+    R.map(r=>(r.ok===true?'[OK]  ':r.ok===false?'[FAIL]':'[--]  ')+r.name+(r.note?' — '+r.note:'')).join('\n');
+  $('btnDiagCopy').style.display='flex';
+  buzz(bad? [12,60,12] : 12);
+}
+$('btnDiag').onclick = ()=>{ $('btnDiag').disabled=true; runDiagnostics().finally(()=>{ $('btnDiag').disabled=false; }); };
+$('btnDiagCopy').onclick = async ()=>{
+  try{ await navigator.clipboard.writeText(diagReport); toast('הדוח הועתק'); }
+  catch(e){ toast('העתקה נכשלה — צלם מסך במקום'); }
+};
 const CHECKS = [
   ['התחברות','נכנסתי עם Google ורואה נקודה ירוקה עם המייל למעלה'],
   ['התחברות','סגרתי ופתחתי את האפליקציה — עדיין מחובר, בלי כניסה מחדש'],
@@ -1927,6 +2167,9 @@ const CHECKS = [
   ['תוצאות','מחקתי מסמך — נעלם מהרשימה'],
   ['תוצאות','הרצתי סריקה חוזרת — המסמך שמחקתי לא חזר'],
   ['תוצאות','חיפוש ומיון עובדים'],
+  ['הוספה ידנית','צילמתי חשבונית נייר והיא נוספה לרשימה'],
+  ['הוספה ידנית','בחרתי PDF מהמכשיר והוא זוהה'],
+  ['גיבוי','הורדתי גיבוי הגדרות ושחזרתי אותו בהצלחה'],
   ['שמירה','רעננתי את הדף — התוצאות עדיין שם'],
   ['ייצוא','הורדתי ריכוז.xlsx ונפתח תקין עם עברית'],
   ['ייצוא','הורדתי ZIP — מבנה התיקיות לפי ספק'],
@@ -1936,7 +2179,8 @@ const CHECKS = [
   ['הגדרות','החלפתי בין נושא בהיר לכהה'],
   ['הגדרות','שיניתי קצב סריקה ל-🐢 והשינוי נשמר אחרי רענון'],
   ['כללי','יש רטט קל בלחיצה על כפתורים'],
-  ['כללי','האפליקציה מותקנת במסך הבית ונפתחת במסך מלא']
+  ['כללי','האפליקציה מותקנת במסך הבית ונפתחת במסך מלא'],
+  ['אבחון','מדריך → אבחון מכשיר → הרצתי וקיבלתי "הכל תקין"']
 ];
 function renderChecks(){
   const el = $('chkList'); if(!el) return;
@@ -2040,66 +2284,6 @@ $('edDelete').onclick = async ()=>{
 };
 $('edCancel').onclick = closeEdit;
 $('editSheet').onclick = (e)=>{ if(e.target.id==='editSheet') closeEdit(); };
-
-/* ============================================================
-   הצפנת מפתחות (Web Crypto) — פריט 4
-   המפתח עצמו נשמר כ-CryptoKey לא-ניתן-לחילוץ ב-IndexedDB.
-   גם מי שפותח DevTools לא יכול לקרוא אותו החוצה.
-   ============================================================ */
-let cryptoKey = null;
-
-async function getCryptoKey(){
-  if(cryptoKey) return cryptoKey;
-  try{
-    const saved = await idbGet('cryptoKey');
-    if(saved){ cryptoKey = saved; return cryptoKey; }
-    cryptoKey = await crypto.subtle.generateKey(
-      {name:'AES-GCM', length:256},
-      false,                       // extractable=false — לא ניתן לחילוץ, גם לא ע"י קוד
-      ['encrypt','decrypt']
-    );
-    await idbSet('cryptoKey', cryptoKey);
-    return cryptoKey;
-  }catch(e){ console.warn('הצפנה לא זמינה', e); return null; }
-}
-async function encStr(plain){
-  const k = await getCryptoKey();
-  if(!k || !plain) return null;
-  try{
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const buf = await crypto.subtle.encrypt({name:'AES-GCM', iv}, k, new TextEncoder().encode(plain));
-    return {iv: Array.from(iv), data: Array.from(new Uint8Array(buf))};
-  }catch(e){ return null; }
-}
-async function decStr(box){
-  const k = await getCryptoKey();
-  if(!k || !box || !box.iv || !box.data) return '';
-  try{
-    const buf = await crypto.subtle.decrypt(
-      {name:'AES-GCM', iv:new Uint8Array(box.iv)}, k, new Uint8Array(box.data));
-    return new TextDecoder().decode(buf);
-  }catch(e){ return ''; }
-}
-// שמירת סודות מוצפנים ב-IndexedDB במקום טקסט גלוי ב-localStorage
-async function saveSecrets(client, gemini){
-  try{
-    await idbSet('secrets', {client: await encStr(client), gemini: await encStr(gemini)});
-    cfg.client=''; cfg.gemini='';            // לא נשמרים יותר בטקסט גלוי
-    cfg.secretsEncrypted = true;
-    saveCfgNow();
-    return true;
-  }catch(e){ return false; }
-}
-async function loadSecrets(){
-  try{
-    const s = await idbGet('secrets');
-    if(!s) return false;
-    const c = await decStr(s.client), g = await decStr(s.gemini);
-    if(c) cfg.client = c;
-    if(g) cfg.gemini = g;
-    return !!(c||g);
-  }catch(e){ return false; }
-}
 
 /* ============================================================
    ולידציה לקלט — פריטים 2, 3
@@ -2598,7 +2782,7 @@ $('btnDrive').onclick = async ()=>{
   const from=new Date(now.getFullYear(), now.getMonth()-2, 1);
   $('dFrom').value = from.toISOString().slice(0,10);
   $('verDate').textContent = new Date().toISOString().slice(0,10);
-  $('helpVer').textContent = 'v2.3';
+  $('helpVer').textContent = 'v2.6';
   renderChecks();
   render();
   loadDocs();   // שחזור תוצאות הסריקה האחרונה מ-IndexedDB
