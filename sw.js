@@ -2,11 +2,11 @@
    אסטרטגיה: network-first לקליפה, כדי שגרסה חדשה תמיד תיתפס.
    קריאות ל-API של גוגל ו-Gemini לא נכנסות לקאש בכלל. */
 
-const CACHE = 'invoices-v2.6';
+const CACHE = 'invoices-v2.7';
 const SHELL = ['./', './index.html', './manifest.json', './logo.png'];
 
 self.addEventListener('install', e => {
-  self.skipWaiting();
+  // לא מפעילים אוטומטית - הבאנר באפליקציה שולט מתי לעבור לגרסה החדשה
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).catch(() => {}));
 });
 
@@ -36,4 +36,9 @@ self.addEventListener('fetch', e => {
       })
       .catch(() => caches.match(e.request).then(m => m || caches.match('./index.html')))
   );
+});
+
+// מאפשר לאפליקציה לבקש מעבר מיידי לגרסה החדשה
+self.addEventListener('message', e => {
+  if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
 });

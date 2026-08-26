@@ -125,6 +125,7 @@ html[data-theme="dark"] .doc .lead{border-bottom-color:rgba(255,255,255,.18)}
 html[data-theme="dark"] .src.body{background:rgba(255,255,255,.08);color:var(--ink-dim)}
 html[data-theme="dark"] .mark{box-shadow:0 0 0 1px rgba(255,255,255,.12)}
 html[data-theme="dark"] .dot{background:rgba(255,255,255,.22)}
+html[data-theme="dark"] .dot.on{background:var(--green);box-shadow:0 0 6px rgba(46,204,128,.6)}
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0}
@@ -524,6 +525,10 @@ nav button.on{color:var(--red)}
     <div class="acct" id="acct">לא מחובר<span class="dot" id="dot"></span></div>
   </div>
 </header>
+<div class="installbar" id="updateBar" style="background:var(--green-tint);border-bottom-color:var(--line)">
+  <span>🔄 גרסה חדשה זמינה</span>
+  <button id="btnUpdate" style="background:var(--green)">עדכן עכשיו</button>
+</div>
 <div class="installbar" id="installBar">
   <span>📲 אפשר להתקין את זה כאפליקציה במסך הבית</span>
   <button id="btnInstall">התקן</button>
@@ -842,8 +847,8 @@ nav button.on{color:var(--red)}
     </div>
   </div>
   <div id="setBody" style="display:none">
-  <div class="card">
-    <h2>מפתחות</h2>
+  <details class="acc" open><summary>🔑 מפתחות</summary><div class="accbody">
+    
     <p class="hint">נשמרים רק במכשיר הזה (localStorage). לא נשלחים לשום מקום מלבד גוגל.</p>
     <label class="f"><span>Google OAuth Client ID</span><input class="inp" id="cfgClient" placeholder="....apps.googleusercontent.com"></label>
     <label class="f"><span>Gemini API Key</span><input class="inp" id="cfgGemini" type="password" placeholder="AIza..."></label>
@@ -862,9 +867,9 @@ nav button.on{color:var(--red)}
     <button class="btn" id="btnSaveCfg">שמור</button>
     <button class="btn outline sm" id="btnTestKey" style="width:100%;margin-top:8px">בדוק מפתח Gemini</button>
     <div class="plog" id="keyLog" style="margin-top:8px"></div>
-  </div>
-  <div class="card">
-    <h2>קצב סריקה</h2>
+  </div></details>
+  <details class="acc"><summary>⏱ קצב סריקה</summary><div class="accbody">
+    
     <p class="hint">אם אתה מקבל הרבה "Failed to fetch" או "429" — האט. השכבה החינמית של Gemini מגבילה בקשות לדקה.</p>
     <div class="chips" id="speedChips">
       <button class="chip" data-s="slow">🐢 איטי ובטוח</button>
@@ -872,46 +877,46 @@ nav button.on{color:var(--red)}
       <button class="chip" data-s="fast">⚡ מהיר</button>
     </div>
     <div class="plog" id="speedInfo" style="margin-top:8px"></div>
-  </div>
-  <div class="card">
-    <h2>ערכת נושא</h2>
+  </div></details>
+  <details class="acc"><summary>🎨 ערכת נושא</summary><div class="accbody">
+    
     <p class="hint">בהיר (נייר) או כהה (שחור-אדום, בסגנון אפליקציית הצעות המחיר).</p>
     <div class="chips" id="themeChips">
       <button class="chip on" data-t="light">☀ בהיר</button>
       <button class="chip" data-t="dark">🌙 כהה</button>
     </div>
-  </div>
-  <div class="card">
-    <h2>סף לבדיקה ידנית</h2>
+  </div></details>
+  <details class="acc"><summary>⚠ סף לבדיקה</summary><div class="accbody">
+    
     <p class="hint">חשבוניות מעל הסכום הזה יסומנו לבדיקה שלך לפני שאתה סומך עליהן. 0 = כבוי.</p>
     <label class="f"><span>סכום בש"ח</span><input class="inp num" id="cfgThreshold" type="number" value="0" min="0" step="100"></label>
     <button class="btn ghost sm" id="btnSaveThreshold">שמור סף</button>
-  </div>
-  <div class="card">
-    <h2>זיכרון עיבוד</h2>
+  </div></details>
+  <details class="acc"><summary>🧠 זיכרון עיבוד</summary><div class="accbody">
+    
     <p class="hint">מיילים שכבר עובדו מדולגים בסריקה הבאה.</p>
     <div class="plog" id="memInfo"></div>
     <button class="btn ghost sm" id="btnClearMem" style="width:100%;margin-top:10px">נקה זיכרון עיבוד</button>
-  </div>
-  <div class="card">
-    <h2>גרסה</h2>
-    <p class="hint" style="margin:0">v2.6 · <span id="verDate"></span></p>
-  </div>
-  <div class="card">
-    <h2>גיבוי הגדרות</h2>
+  </div></details>
+  <details class="acc"><summary>ℹ גרסה</summary><div class="accbody">
+    
+    <p class="hint" style="margin:0">v2.7 · <span id="verDate"></span></p>
+  </div></details>
+  <details class="acc"><summary>💾 גיבוי הגדרות</summary><div class="accbody">
+    
     <p class="hint">שומר קובץ עם המפתחות וההגדרות שלך — כדי שלא תצטרך לחפש אותם שוב אם תעבור מכשיר, דפדפן, או כתובת אתר.</p>
     <button class="btn outline sm" id="btnExportCfg" style="width:100%">⬇ הורד גיבוי הגדרות</button>
     <label class="btn ghost sm" for="importCfgFile" style="width:100%;margin-top:8px;display:flex">⬆ שחזר מגיבוי</label>
     <input type="file" id="importCfgFile" accept="application/json" style="display:none">
     <div class="plog" id="cfgIoLog" style="margin-top:8px"></div>
-  </div>
-  <div class="card">
-    <h2>קוד גישה</h2>
+  </div></details>
+  <details class="acc"><summary>🔒 קוד גישה</summary><div class="accbody">
+    
     <p class="hint">מגן על מסך ההגדרות בלבד. נשמר במכשיר הזה.</p>
     <label class="f"><span>קוד חדש (4-8 ספרות)</span><input class="inp" id="pinNew" type="password" inputmode="numeric" maxlength="8" placeholder="••••"></label>
     <button class="btn ghost sm" id="btnSavePin" style="width:100%">עדכן קוד</button>
     <button class="btn outline sm" id="btnLockNow" style="width:100%;margin-top:8px">🔒 נעל עכשיו</button>
-  </div>
+  </div></details>
   </div>
 </section>
 
@@ -1370,6 +1375,12 @@ function loadStoredToken(){
   return false;
 }
 function clearToken(){ token=null; store.del(K.tok); }
+function showDisconnected(reason){
+  $('acct').innerHTML='<span style="color:var(--rose)">'+esc(reason||'לא מחובר')+'</span><span class="dot"></span>';
+  $('btnLogin').textContent='התחבר עם Google';
+  $('btnLogout').style.display='none';
+  $('btnSwitch').style.display='none';
+}
 function showConnected(){
   $('dot').classList.add('on');
   $('acct').innerHTML = esc(userEmail||'מחובר') + '<span class="dot on"></span>';
@@ -1381,7 +1392,11 @@ function showConnected(){
 function silentAuth(){
   if(!cfg.client) return;
   if(!initToken()) return;
-  try{ tokenClient.requestAccessToken({prompt:''}); }catch(e){}
+  try{
+    tokenClient.requestAccessToken({prompt:''});
+    // אם תוך 4 שניות לא התקבל טוקן - החידוש השקט נכשל (אין סשן גוגל פעיל)
+    setTimeout(()=>{ if(!token) showDisconnected('החיבור פג — התחבר מחדש'); }, 4000);
+  }catch(e){ showDisconnected('החיבור פג — התחבר מחדש'); }
 }
 $('btnLogin').onclick = ()=>{ if(initToken()) tokenClient.requestAccessToken({prompt:'consent'}); };
 $('btnLogout').onclick = ()=>{
@@ -1863,6 +1878,7 @@ $('btnScan').onclick = async ()=>{
 
     /* --- 3. זיהוי --- */
     setStep(3);
+    const M = modes();          // חייב להיקרא כאן - קודם הוא הוגדר רק בתוך validateBeforeScan
     const jobs=[];
     msgs.forEach(m=>{
       if(M.pdf && m.files.length){
@@ -2782,7 +2798,7 @@ $('btnDrive').onclick = async ()=>{
   const from=new Date(now.getFullYear(), now.getMonth()-2, 1);
   $('dFrom').value = from.toISOString().slice(0,10);
   $('verDate').textContent = new Date().toISOString().slice(0,10);
-  $('helpVer').textContent = 'v2.6';
+  $('helpVer').textContent = 'v2.7';
   renderChecks();
   render();
   loadDocs();   // שחזור תוצאות הסריקה האחרונה מ-IndexedDB
@@ -2800,7 +2816,37 @@ $('btnDrive').onclick = async ()=>{
     setTimeout(trySilent, 600);
   }
 
-  if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+  // רישום SW + זיהוי גרסה חדשה (פותר "אין עדכון גרסה")
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('sw.js').then(reg=>{
+      // בדיקה יזומה בכל פתיחה ואחת לחצי שעה
+      reg.update().catch(()=>{});
+      setInterval(()=>reg.update().catch(()=>{}), 30*60*1000);
+      reg.addEventListener('updatefound', ()=>{
+        const nw = reg.installing;
+        if(!nw) return;
+        nw.addEventListener('statechange', ()=>{
+          // גרסה חדשה מוכנה ויש כבר גרסה פעילה => יש מה לעדכן
+          if(nw.state==='installed' && navigator.serviceWorker.controller){
+            $('updateBar').classList.add('show');
+            buzz(12);
+          }
+        });
+      });
+    }).catch(()=>{});
+    let reloading=false;
+    navigator.serviceWorker.addEventListener('controllerchange', ()=>{
+      if(reloading) return; reloading=true; location.reload();
+    });
+  }
+  $('btnUpdate').onclick = async ()=>{
+    $('btnUpdate').textContent='מעדכן...';
+    try{
+      const reg = await navigator.serviceWorker.getRegistration();
+      if(reg && reg.waiting) reg.waiting.postMessage({type:'SKIP_WAITING'});
+      else location.reload();
+    }catch(e){ location.reload(); }
+  };
 })();
 </script>
 </body>
