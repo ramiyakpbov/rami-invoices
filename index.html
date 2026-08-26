@@ -1,0 +1,2623 @@
+<!DOCTYPE html>
+<!--
+/* FEATURES
+# מרשם יכולות. עמודה 1 = שם, עמודה 2 = עוגן שחייב להימצא בקוד.
+# check.py מאמת שכל שורה כאן באמת ממומשת. לפני הוספת יכולת - חפש אותה כאן.
+אחסון מרוכז            | const store =
+הצפנת מפתחות           | crypto.subtle.generateKey
+שמירת תוצאות IndexedDB | function saveDocs
+התחברות Google         | function initToken
+שמירת טוקן             | function loadStoredToken
+חידוש שקט              | function silentAuth
+ריבוי תיבות            | btnSwitch
+טעינת מודלים חיה       | btnLoadModels
+בדיקת מפתח             | btnTestKey
+רוטציית מודלים חינמיים | function freeChain
+Retry + Backoff        | const MAX_TRIES
+ויסות קצב              | function rateGate
+ביטול מיידי            | scanAbort = new AbortController
+מניעת סריקה כפולה      | let scanRunning
+ולידציה לפני סריקה     | function validateBeforeScan
+זיהוי כפילויות         | function fp
+דילוג על מחוקים        | deletedFps[docFp]
+זיכרון מיילים          | store.set(K.seen
+סריקה מחדש             | chipRescan
+שעון ETA               | function startEta
+עריכה ידנית            | function openEdit
+בדיקת חשבון מעמ        | function checkVatMath
+מחיקת מסמך             | edDelete
+תיוג פרויקט            | refreshProjectOptions
+סף לבדיקה              | needsReview
+זיהוי קפיצת מחיר       | priceDeltaPct
+חשבונית חסרה           | function missingHtml
+גרף מגמה               | function trendHtml
+דוח מעמ                | function vatData
+תנאי תשלום             | function dueDate
+ייצוא xlsx             | function xlsxBlob
+ייצוא CSV              | btnCsv
+ייצוא ZIP              | btnZip
+העלאה ל-Drive          | function driveUpload
+סיכום וואטסאפ          | btnWa
+נעילת הגדרות           | function unlockSettings
+ערכת נושא              | function applyTheme
+קצב סריקה              | const SPEEDS
+רטט                    | function buzz
+צליל סיום              | AudioContext
+פופאפ סיכום            | doneModal
+התקנת PWA              | beforeinstallprompt
+מדריך + צקליסט         | const CHECKS
+*/
+-->
+
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ED1C24">
+<title>איתור חשבוניות — יהודה שיפוצים</title>
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=Heebo:wght@300;400;500;700&family=Rubik:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F2EEE6;
+  --glass:rgba(255,255,255,.62);       /* משטח זכוכית */
+  --glass-2:rgba(255,255,255,.42);     /* משטח זכוכית משני */
+  --glass-line:rgba(255,255,255,.75);  /* קו אור עליון */
+  --card:rgba(255,255,255,.62);
+  --card-2:rgba(255,255,255,.40);
+  --line:rgba(120,105,80,.16);
+  --ink:#211E1A;
+  --ink-dim:#8A8272;
+  --red:#ED1C24;
+  --red-dim:#A30E13;
+  --red-tint:rgba(237,28,36,.10);
+  --green:#1E9E63;
+  --green-dim:#12703F;
+  --green-tint:rgba(30,158,99,.12);
+  --rose:#B3261E;
+  --rose-tint:rgba(179,38,30,.10);
+  --blur:16px;
+  --r:14px;
+}
+/* ---------- ערכת נושא כהה (שחור-אדום, זכוכית) ---------- */
+html[data-theme="dark"]{
+  --bg:#0B0B0D;
+  --glass:rgba(38,38,44,.55);
+  --glass-2:rgba(38,38,44,.35);
+  --glass-line:rgba(255,255,255,.10);
+  --card:rgba(38,38,44,.55);
+  --card-2:rgba(38,38,44,.35);
+  --line:rgba(255,255,255,.10);
+  --ink:#F2F0ED;
+  --ink-dim:#9A968E;
+  --red:#FF2A32;
+  --red-dim:#FF6B71;
+  --red-tint:rgba(255,42,50,.14);
+  --green:#2ECC80;
+  --green-dim:#7BE0AE;
+  --green-tint:rgba(46,204,128,.14);
+  --rose:#FF6B63;
+  --rose-tint:rgba(255,107,99,.14);
+}
+/* הילות צבע ברקע - מה שנותן לזכוכית מה לשבור */
+body::before{
+  content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(60vw 60vw at 85% -5%, rgba(237,28,36,.22), transparent 60%),
+    radial-gradient(50vw 50vw at -10% 15%, rgba(237,28,36,.10), transparent 60%),
+    radial-gradient(60vw 60vw at 50% 105%, rgba(120,100,70,.16), transparent 60%);
+}
+html[data-theme="dark"] body::before{
+  background:
+    radial-gradient(60vw 60vw at 85% -5%, rgba(255,42,50,.20), transparent 60%),
+    radial-gradient(50vw 50vw at -10% 15%, rgba(255,42,50,.10), transparent 60%),
+    radial-gradient(60vw 60vw at 50% 105%, rgba(90,90,120,.16), transparent 60%);
+}
+html[data-theme="dark"] .step::before,
+html[data-theme="dark"] .step::after{background:rgba(255,255,255,.18)}
+html[data-theme="dark"] .step{color:#6A6862}
+html[data-theme="dark"] nav button{color:#7A766E}
+html[data-theme="dark"] .doc .lead{border-bottom-color:rgba(255,255,255,.18)}
+html[data-theme="dark"] .src.body{background:rgba(255,255,255,.08);color:var(--ink-dim)}
+html[data-theme="dark"] .mark{box-shadow:0 0 0 1px rgba(255,255,255,.12)}
+html[data-theme="dark"] .dot{background:rgba(255,255,255,.22)}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg);
+  background-image:
+    radial-gradient(900px 500px at 110% -5%, rgba(237,28,36,.13), transparent 60%),
+    radial-gradient(700px 450px at -10% 8%, rgba(237,28,36,.07), transparent 60%),
+    radial-gradient(600px 400px at 50% 105%, rgba(120,110,95,.10), transparent 65%);
+  background-attachment:fixed;
+  color:var(--ink);
+  font-family:'Heebo',system-ui,sans-serif;
+  font-size:14px;line-height:1.45;
+  padding-bottom:76px;
+  min-height:100vh;
+}
+html[data-theme="dark"] body{
+  background-image:
+    radial-gradient(900px 500px at 110% -5%, rgba(237,28,36,.20), transparent 60%),
+    radial-gradient(700px 450px at -10% 8%, rgba(237,28,36,.10), transparent 60%),
+    radial-gradient(600px 400px at 50% 105%, rgba(90,90,120,.14), transparent 65%);
+}
+h1,h2,h3{font-family:'Frank Ruhl Libre',Georgia,serif;margin:0;font-weight:700;letter-spacing:-.01em}
+.num{font-family:'Rubik',sans-serif;font-variant-numeric:tabular-nums}
+button{font-family:inherit;font-size:inherit;cursor:pointer;border:0;background:none;color:inherit}
+input,select,textarea{font-family:inherit;font-size:16px}
+
+/* ---------- כותרת ---------- */
+header{
+  position:sticky;top:0;z-index:40;
+  background:var(--glass);
+  backdrop-filter:blur(22px) saturate(1.8);
+  -webkit-backdrop-filter:blur(22px) saturate(1.8);
+  border-top:3px solid var(--red);
+  border-bottom:1px solid var(--line);
+  box-shadow:inset 0 1px 0 var(--glass-line);
+  padding:9px 14px 8px;
+}
+.hrow{display:flex;align-items:center;gap:9px}
+.mark{
+  height:32px;width:auto;flex:none;
+  object-fit:contain;
+  border-radius:8px;
+  box-shadow:0 1px 3px rgba(30,25,15,.18);
+}
+header h1{font-size:16px;line-height:1.15;color:var(--ink)}
+header .sub{font-size:10.5px;color:var(--ink-dim);letter-spacing:.01em}
+.acct{margin-inline-start:auto;text-align:left;font-size:10.5px;color:var(--ink-dim);max-width:36%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--line);margin-inline-start:5px}
+.dot.on{background:var(--green);box-shadow:0 0 6px rgba(30,158,99,.5)}
+
+/* ---------- באנר התקנה ---------- */
+.installbar{
+  display:none;align-items:center;gap:8px;
+  background:var(--red-tint);border-bottom:1px solid var(--line);
+  padding:8px 14px;font-size:12px;color:var(--red-dim);
+}
+.installbar.show{display:flex}
+.installbar span{flex:1;line-height:1.35}
+.installbar button{
+  background:var(--red);color:#fff;font-weight:700;font-size:11.5px;
+  padding:6px 13px;border-radius:999px;white-space:nowrap;
+}
+.installbar .x{background:none;color:var(--red-dim);font-size:15px;padding:2px 3px;font-weight:400}
+
+/* ---------- מבנה ---------- */
+main{padding:12px;max-width:680px;margin:0 auto}
+.view{display:none;animation:fade .25s ease}
+.view.on{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+.card{
+  background:rgba(255,255,255,.62);
+  backdrop-filter:blur(18px) saturate(1.6);
+  -webkit-backdrop-filter:blur(18px) saturate(1.6);
+  border:1px solid rgba(255,255,255,.75);
+  box-shadow:0 1px 2px rgba(30,25,15,.04), 0 8px 28px rgba(30,25,15,.06);
+  border-radius:16px;padding:13px;margin-bottom:10px;
+}
+html[data-theme="dark"] .card{
+  background:rgba(32,32,37,.55);
+  border-color:rgba(255,255,255,.09);
+  box-shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 28px rgba(0,0,0,.35);
+}
+.card h2{font-size:14.5px;margin-bottom:2px;color:var(--ink)}
+.card .hint{font-size:11.5px;color:var(--ink-dim);margin:0 0 10px;line-height:1.4}
+
+label.f{display:block;margin-bottom:9px}
+label.f span{display:block;font-size:11px;color:var(--ink-dim);margin-bottom:4px;letter-spacing:.01em}
+.inp{
+  width:100%;padding:9px 11px;border-radius:9px;
+  background:var(--glass-2);border:1px solid var(--line);color:var(--ink);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  outline:none;transition:border-color .15s,box-shadow .15s;
+}
+.inp:focus{border-color:var(--red)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+.btn{
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  width:100%;padding:11px;border-radius:10px;font-weight:600;font-size:14px;
+  background:var(--red);color:#fff;transition:opacity .15s,transform .1s;
+}
+.btn:active{transform:scale(.985)}
+.btn[disabled]{opacity:.4;pointer-events:none}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink);font-weight:500}
+.btn.outline{background:transparent;border:1.5px solid var(--red);color:var(--red);font-weight:600}
+.btn.mint{background:var(--green);color:#fff}
+.btn.sm{padding:8px 11px;font-size:12.5px;width:auto}
+
+/* צ'יפים בשורה אחת עם גלילה אופקית - לא נשברים לשורה שנייה */
+/* ---------- שעון הרצה / ETA ---------- */
+.eta{display:flex;gap:8px;align-items:center;justify-content:space-between;margin:6px 0 2px}
+.eta .box{
+  flex:1;text-align:center;padding:7px 4px;border-radius:11px;
+  background:var(--glass-2);border:1px solid var(--line);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+}
+.eta .box b{display:block;font-family:'Rubik';font-variant-numeric:tabular-nums;font-size:15px;color:var(--ink)}
+.eta .box.hi b{color:var(--red)}
+.eta .box small{font-size:9.5px;color:var(--ink-dim)}
+
+/* ---------- מודאל סיכום ---------- */
+.overlay{
+  position:fixed;inset:0;z-index:80;display:none;
+  align-items:center;justify-content:center;padding:20px;
+  background:rgba(10,8,6,.45);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+}
+.overlay.show{display:flex;animation:fade .2s ease}
+.modal{
+  width:100%;max-width:400px;border-radius:20px;padding:18px;
+  background:var(--glass);border:1px solid var(--line);
+  backdrop-filter:blur(26px) saturate(160%);-webkit-backdrop-filter:blur(26px) saturate(160%);
+  box-shadow:inset 0 1px 0 var(--glass-line), 0 24px 60px rgba(0,0,0,.30);
+  animation:pop .22s cubic-bezier(.2,.9,.3,1.2);
+}
+@keyframes pop{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
+.modal h2{font-size:17px;margin-bottom:3px}
+.modal .msub{font-size:12px;color:var(--ink-dim);margin-bottom:13px}
+.mstats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:12px}
+.mstats div{background:var(--glass-2);border:1px solid var(--line);border-radius:12px;padding:10px 5px;text-align:center}
+.mstats b{display:block;font-family:'Rubik';font-variant-numeric:tabular-nums;font-size:18px;color:var(--red)}
+.mstats small{font-size:9.5px;color:var(--ink-dim)}
+.mline{font-size:12px;color:var(--ink-dim);padding:5px 0;border-top:1px dashed var(--line)}
+.mline b{color:var(--ink)}
+
+/* ---------- נעילת הגדרות ---------- */
+.lockwrap{text-align:center;padding:34px 18px}
+.lockwrap .lk{font-size:38px;opacity:.35;margin-bottom:10px}
+.lockwrap h2{font-size:16px;margin-bottom:4px}
+.lockwrap p{font-size:12.5px;color:var(--ink-dim);margin:0 0 16px}
+.pinrow{display:flex;gap:8px;max-width:260px;margin:0 auto}
+.pinrow input{
+  flex:1;text-align:center;letter-spacing:.4em;font-size:20px;font-family:'Rubik';
+  padding:11px;border-radius:12px;background:var(--glass-2);
+  border:1px solid var(--line);color:var(--ink);outline:none;
+}
+.pinrow input:focus{border-color:var(--red)}
+
+.chips{
+  display:flex;gap:6px;margin-top:4px;
+  overflow-x:auto;padding-bottom:2px;
+  scrollbar-width:none;-ms-overflow-style:none;
+}
+.chips::-webkit-scrollbar{display:none}
+.chip{
+  padding:6px 11px;border-radius:999px;font-size:12px;white-space:nowrap;flex:none;
+  border:1px solid var(--line);color:var(--ink-dim);background:var(--glass-2);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  transition:transform .12s, background .15s, border-color .15s;
+}
+.chip:active{transform:scale(.94)}
+.chip.on{border-color:var(--red);color:var(--red);background:var(--red-tint);font-weight:600}
+
+/* ---------- שלבי סריקה ---------- */
+.steps{display:flex;gap:0;margin:2px 0 10px}
+.step{flex:1;text-align:center;font-size:10.5px;color:#BDB49F;position:relative;padding-top:14px}
+.step::before{
+  content:'';position:absolute;top:3px;right:50%;transform:translateX(50%);
+  width:8px;height:8px;border-radius:50%;background:#E2DAC7;
+}
+.step::after{content:'';position:absolute;top:6.5px;right:-50%;width:100%;height:1px;background:#E2DAC7}
+.step:last-child::after{display:none}
+.step.on{color:var(--red)}
+.step.on::before{background:var(--red);box-shadow:0 0 0 3px var(--red-tint)}
+.step.done::before{background:var(--green)}
+
+.bar{height:4px;border-radius:99px;background:var(--glass-2);border:1px solid var(--line);overflow:hidden;margin:8px 0 6px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--red-dim),var(--red));width:0;transition:width .3s}
+.plog{font-size:11.5px;color:var(--ink-dim)}
+.plog:empty{display:none}
+
+/* ---------- תיקיות ספקים (אלמנט החתימה) ---------- */
+.folder{margin-bottom:8px}
+.tab{
+  display:flex;align-items:center;gap:9px;width:100%;
+  background:rgba(255,255,255,.62);
+  backdrop-filter:blur(18px) saturate(1.6);
+  -webkit-backdrop-filter:blur(18px) saturate(1.6);
+  border:1px solid rgba(255,255,255,.75);
+  border-inline-start:3px solid var(--red);
+  border-radius:14px;padding:11px 12px;text-align:start;
+  box-shadow:0 1px 2px rgba(30,25,15,.04);
+}
+html[data-theme="dark"] .tab{
+  background:rgba(32,32,37,.55);
+  border-color:rgba(255,255,255,.09);
+  border-inline-start-color:var(--red);
+  box-shadow:none;
+}
+.tab.open{border-radius:14px 14px 0 0;border-bottom-color:transparent}
+.tab .nm{flex:1;min-width:0}
+.tab .nm b{display:block;font-size:13.5px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tab .nm small{color:var(--ink-dim);font-size:11px}
+.tab .tot{font-family:'Rubik';font-variant-numeric:tabular-nums;font-weight:700;color:var(--red);font-size:13.5px;white-space:nowrap}
+.tab .car{color:var(--ink-dim);transition:transform .2s;font-size:11px}
+.tab.open .car{transform:rotate(90deg)}
+
+.docs{
+  border:1px solid rgba(255,255,255,.75);border-top:0;border-radius:0 0 14px 14px;
+  background:rgba(255,255,255,.42);
+  backdrop-filter:blur(14px) saturate(1.4);
+  -webkit-backdrop-filter:blur(14px) saturate(1.4);
+  padding:2px 0;
+}
+html[data-theme="dark"] .docs{background:rgba(24,24,28,.5);border-color:rgba(255,255,255,.08)}
+.doc{display:flex;align-items:center;flex-wrap:wrap;gap:6px 7px;padding:8px 12px;border-bottom:1px dashed var(--line)}
+.doc:last-child{border-bottom:0}
+.doc .dt{font-family:'Rubik';font-size:11px;color:var(--ink-dim);white-space:nowrap}
+.doc .ttl{color:var(--ink);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.doc .lead{flex:1;border-bottom:1px dotted var(--line);transform:translateY(-3px);min-width:12px}
+.doc .amt{font-family:'Rubik';font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:700;color:var(--ink);white-space:nowrap}
+.doc .src{font-size:9.5px;padding:2px 5px;border-radius:4px;white-space:nowrap;font-weight:600}
+.src.pdf{background:var(--green-tint);color:var(--green-dim)}
+.src.link{background:var(--red-tint);color:var(--red-dim)}
+.src.body{background:#EFECE3;color:var(--ink-dim)}
+.doc a{color:var(--red);text-decoration:none;font-size:11px;font-weight:600}
+
+.empty{text-align:center;padding:36px 18px;color:var(--ink-dim)}
+.empty .big{font-size:34px;opacity:.3;margin-bottom:8px}
+.empty h2{font-size:15px}
+.empty p{font-size:12.5px;margin:5px 0 0}
+
+.sum{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:10px}
+.sum div{
+  background:rgba(255,255,255,.62);
+  backdrop-filter:blur(18px) saturate(1.6);
+  -webkit-backdrop-filter:blur(18px) saturate(1.6);
+  border:1px solid rgba(255,255,255,.75);
+  border-radius:14px;padding:9px 6px;text-align:center;
+}
+html[data-theme="dark"] .sum div{background:rgba(32,32,37,.55);border-color:rgba(255,255,255,.09)}
+.sum b{display:block;font-family:'Rubik';font-variant-numeric:tabular-nums;font-size:16px;color:var(--red)}
+.sum small{font-size:10px;color:var(--ink-dim)}
+
+.note{
+  border-inline-start:3px solid var(--red);background:var(--red-tint);
+  padding:9px 11px;border-radius:0 9px 9px 0;font-size:11.5px;color:var(--red-dim);margin-bottom:10px;line-height:1.4;
+}
+.note.err{border-color:var(--rose);background:var(--rose-tint);color:var(--rose)}
+
+/* ---------- שעון/ETA בסריקה ---------- */
+.eta{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:6px 0 2px;font-family:'Rubik';font-variant-numeric:tabular-nums}
+.eta .big{font-size:19px;font-weight:600;color:var(--red)}
+.eta .lbl{font-size:10.5px;color:var(--ink-dim);font-family:'Heebo'}
+.eta .sm{font-size:11.5px;color:var(--ink-dim)}
+
+/* ---------- מודאל סיכום ---------- */
+.modalbg{
+  position:fixed;inset:0;z-index:90;display:none;
+  align-items:center;justify-content:center;padding:20px;
+  background:rgba(20,16,12,.45);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+}
+.modalbg.show{display:flex;animation:fade .2s ease}
+.modal{
+  width:100%;max-width:380px;border-radius:20px;padding:20px;
+  background:rgba(255,255,255,.86);
+  backdrop-filter:blur(26px) saturate(1.8);-webkit-backdrop-filter:blur(26px) saturate(1.8);
+  border:1px solid rgba(255,255,255,.85);
+  box-shadow:0 20px 60px rgba(30,25,15,.28);
+  animation:pop .25s cubic-bezier(.2,.9,.3,1.2);
+}
+html[data-theme="dark"] .modal{background:rgba(34,34,39,.9);border-color:rgba(255,255,255,.1)}
+@keyframes pop{from{opacity:0;transform:scale(.92) translateY(10px)}to{opacity:1;transform:none}}
+.modal h2{font-size:18px;margin-bottom:3px}
+.modal .msub{font-size:12px;color:var(--ink-dim);margin-bottom:14px}
+.mstats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:12px}
+.mstats div{background:var(--red-tint);border-radius:12px;padding:10px 6px;text-align:center}
+.mstats b{display:block;font-family:'Rubik';font-variant-numeric:tabular-nums;font-size:18px;color:var(--red)}
+.mstats small{font-size:10px;color:var(--ink-dim)}
+.mline{display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;border-bottom:1px dashed var(--line)}
+.mline:last-of-type{border-bottom:0}
+.mline b{font-family:'Rubik';font-variant-numeric:tabular-nums}
+
+/* ---------- נעילת הגדרות ---------- */
+.lockwrap{text-align:center;padding:44px 20px}
+.lockwrap .lk{font-size:40px;opacity:.35;margin-bottom:10px}
+.lockwrap h2{font-size:16px;margin-bottom:4px}
+.lockwrap p{font-size:12.5px;color:var(--ink-dim);margin:0 0 16px}
+.pinbox{max-width:230px;margin:0 auto}
+.pinbox .inp{text-align:center;letter-spacing:8px;font-size:22px;font-family:'Rubik'}
+.toolbar{display:flex;gap:7px;margin-bottom:10px}
+.toolbar .inp{flex:1}
+.toolbar select.inp{flex:none;width:auto;padding-inline-end:24px}
+
+/* ---------- מגמת הוצאות ---------- */
+.trend{background:var(--glass);border:1px solid var(--line);border-radius:16px;padding:12px 13px;margin-bottom:10px;
+  backdrop-filter:blur(var(--blur));-webkit-backdrop-filter:blur(var(--blur));box-shadow:inset 0 1px 0 var(--glass-line)}
+.trend h3{font-size:12.5px;color:var(--ink-dim);font-weight:600;margin:0 0 8px}
+.trow{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.trow .tm{font-size:11px;color:var(--ink-dim);width:52px;flex:none;font-family:'Rubik'}
+.trow .tb{height:16px;border-radius:4px;background:var(--red);min-width:3px;transition:width .3s}
+.trow .tv{font-size:11px;font-family:'Rubik';color:var(--ink);flex:none}
+
+/* ---------- דגלים על מסמך ---------- */
+.doc.review{background:var(--rose-tint)}
+.flag{font-size:9.5px;padding:1px 5px;border-radius:4px;background:var(--rose-tint);color:var(--rose);font-weight:700;white-space:nowrap}
+.delta{font-size:10px;font-weight:700;white-space:nowrap}
+.delta.up{color:var(--rose)}
+.delta.down{color:var(--green-dim)}
+.edBtn{
+  flex:none;width:26px;height:26px;border-radius:8px;
+  background:var(--glass-2);border:1px solid var(--line);color:var(--ink-dim);
+  font-size:13px;line-height:1;
+}
+.edBtn:active{transform:scale(.9);color:var(--red);border-color:var(--red)}
+.flag.edited{background:var(--green-tint);color:var(--green-dim)}
+.projTag{
+  font-size:9.5px;padding:1px 6px;border-radius:5px;white-space:nowrap;
+  background:var(--glass-2);border:1px solid var(--line);color:var(--ink-dim);
+}
+.missingNote{
+  border-inline-start:3px solid var(--rose);background:var(--rose-tint);
+  padding:9px 11px;border-radius:0 9px 9px 0;font-size:11.5px;color:var(--rose);margin-bottom:10px;line-height:1.5;
+}
+
+/* ---------- מדריך ---------- */
+.acc{margin-bottom:8px;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--glass);
+  backdrop-filter:blur(var(--blur));-webkit-backdrop-filter:blur(var(--blur))}
+.acc>summary{
+  padding:12px 13px;cursor:pointer;font-weight:700;font-size:13.5px;color:var(--ink);
+  list-style:none;display:flex;align-items:center;gap:8px;
+}
+.acc>summary::-webkit-details-marker{display:none}
+.acc>summary::after{content:'▾';margin-inline-start:auto;color:var(--ink-dim);font-size:11px;transition:transform .2s}
+.acc[open]>summary::after{transform:rotate(180deg)}
+.acc[open]>summary{border-bottom:1px solid var(--line)}
+.accbody{padding:12px 13px;font-size:12.5px;line-height:1.75;color:var(--ink)}
+.accbody b{color:var(--ink)}
+.accbody ol,.accbody ul{margin:6px 0;padding-inline-start:18px}
+.accbody li{margin-bottom:5px}
+.accbody code{
+  background:var(--glass-2);border:1px solid var(--line);border-radius:5px;
+  padding:1px 5px;font-size:11.5px;font-family:'Rubik',monospace;
+}
+.kv{display:flex;gap:8px;padding:6px 0;border-bottom:1px dashed var(--line);font-size:12.5px}
+.kv:last-child{border-bottom:0}
+.kv b{flex:none;min-width:96px;color:var(--ink)}
+.kv span{color:var(--ink-dim)}
+.free{background:var(--green-tint);border-inline-start:3px solid var(--green);
+  padding:10px 12px;border-radius:0 10px 10px 0;margin:8px 0;font-size:12.5px;color:var(--ink)}
+.warn{background:var(--red-tint);border-inline-start:3px solid var(--red);
+  padding:10px 12px;border-radius:0 10px 10px 0;margin:8px 0;font-size:12.5px;color:var(--ink)}
+.chk{display:flex;gap:9px;align-items:flex-start;padding:7px 0;border-bottom:1px dashed var(--line);font-size:12.5px}
+.chk:last-child{border-bottom:0}
+.chk input{margin-top:3px;flex:none;width:16px;height:16px;accent-color:var(--red)}
+.chk s{color:var(--ink-dim)}
+
+/* ---------- ניווט תחתון ---------- */
+nav{
+  position:fixed;bottom:0;right:0;left:0;z-index:50;
+  display:grid;grid-template-columns:repeat(5,1fr);
+  background:rgba(255,255,255,.72);
+  backdrop-filter:blur(22px) saturate(1.8);
+  -webkit-backdrop-filter:blur(22px) saturate(1.8);
+  border-top:1px solid var(--line);box-shadow:inset 0 1px 0 var(--glass-line);padding:5px 6px calc(5px + env(safe-area-inset-bottom));
+}
+html[data-theme="dark"] nav{background:rgba(22,22,26,.72);border-top-color:rgba(255,255,255,.08)}
+html[data-theme="dark"] header{background:rgba(13,13,15,.72);border-bottom-color:rgba(255,255,255,.08)}
+nav button{padding:6px 2px;display:grid;justify-items:center;gap:2px;font-size:10px;color:#B9AF9A;border-radius:9px}
+nav button i{font-style:normal;font-size:16px;line-height:1}
+nav button.on{color:var(--red)}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hrow">
+    <img class="mark" src="logo.png" alt="יהודה שיפוצים">
+    <div>
+      <h1>איתור חשבוניות</h1>
+      <div class="sub">יהודה שיפוצים · מהמייל לתיקייה</div>
+    </div>
+    <div class="acct" id="acct">לא מחובר<span class="dot" id="dot"></span></div>
+  </div>
+</header>
+<div class="installbar" id="installBar">
+  <span>📲 אפשר להתקין את זה כאפליקציה במסך הבית</span>
+  <button id="btnInstall">התקן</button>
+  <button class="x" id="btnInstallX">✕</button>
+</div>
+
+<main>
+
+<!-- ========== סריקה ========== -->
+<section class="view on" id="v-scan">
+  <div class="card" id="statusCard">
+    <h2>מצב נוכחי</h2>
+    <div id="statusBody" class="plog"></div>
+    <div class="chips" style="margin-top:10px">
+      <button class="chip" id="btnResetAll">🧹 אפס הכל והתחל מאפס</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>חיבור לתיבת המייל</h2>
+    <p class="hint">האפליקציה קוראת בלבד. שום דבר לא נמחק ולא נשלח.</p>
+    <button class="btn" id="btnLogin">התחבר עם Google</button>
+    <button class="btn ghost sm" id="btnLogout" style="width:100%;margin-top:8px;display:none">התנתק</button>
+    <button class="btn outline sm" id="btnSwitch" style="width:100%;margin-top:8px;display:none">החלף תיבת מייל</button>
+  </div>
+
+  <div class="card">
+    <h2>טווח וסינון</h2>
+    <p class="hint">ככל שהטווח קצר יותר — הסריקה מהירה וזולה יותר.</p>
+    <div class="chips" id="datePresets" style="margin-bottom:14px">
+      <button class="chip" data-p="1">החודש</button>
+      <button class="chip" data-p="2">חודש שעבר</button>
+      <button class="chip on" data-p="3">3 חודשים</button>
+      <button class="chip" data-p="12">השנה</button>
+      <button class="chip" data-p="0">הכל</button>
+    </div>
+    <div class="row2">
+      <label class="f"><span>מתאריך</span><input type="date" class="inp" id="dFrom"></label>
+      <label class="f"><span>עד תאריך</span><input type="date" class="inp" id="dTo"></label>
+    </div>
+    <label class="f">
+      <span>מה לתפוס</span>
+      <div class="chips" id="modes">
+        <button class="chip on" data-m="pdf">קבצים מצורפים</button>
+        <button class="chip on" data-m="link">קישורים למערכות</button>
+        <button class="chip on" data-m="body">גוף המייל</button>
+      </div>
+    </label>
+    <label class="f" style="margin-top:12px">
+      <span>מילות חיפוש ב-Gmail</span>
+      <input class="inp" id="kw" value="חשבונית OR קבלה OR &quot;חשבונית מס&quot; OR invoice OR receipt OR &quot;דרישת תשלום&quot;">
+    </label>
+    <label class="f">
+      <span>מקסימום מיילים לסריקה</span>
+      <input class="inp num" id="maxMsgs" type="number" value="150" min="1" max="500">
+    </label>
+    <div class="chips" style="margin-bottom:10px">
+      <button class="chip" id="chipRescan">↻ סרוק מחדש גם מיילים שכבר עובדו</button>
+    </div>
+    <button class="btn" id="btnScan">התחל סריקה</button>
+    <button class="btn ghost sm" id="btnStop" style="width:100%;margin-top:8px;display:none">עצור</button>
+  </div>
+
+  <div class="card" id="progCard" style="display:none">
+    <div class="steps">
+      <div class="step" id="s1">חיפוש</div>
+      <div class="step" id="s2">שליפה</div>
+      <div class="step" id="s3">זיהוי</div>
+      <div class="step" id="s4">מיון</div>
+    </div>
+    <div class="eta">
+      <div><div class="big" id="etaLeft">—</div><div class="lbl">נותר משוער</div></div>
+      <div style="text-align:center"><div class="sm" id="etaDone">0 / 0</div><div class="lbl">מסמכים</div></div>
+      <div style="text-align:left"><div class="sm" id="etaElapsed">00:00</div><div class="lbl">חלף</div></div>
+    </div>
+    <div class="bar"><i id="barI"></i></div>
+    <div class="plog" id="plog"></div>
+    <div id="errBox"></div>
+  </div>
+</section>
+
+<!-- ========== תוצאות ========== -->
+<section class="view" id="v-res">
+  <div id="resHead"></div>
+  <div class="toolbar" id="resToolbar" style="display:none;flex-wrap:wrap">
+    <input class="inp" id="resSearch" placeholder="חיפוש לפי ספק...">
+    <select class="inp" id="resSort">
+      <option value="date-desc">תאריך: חדש→ישן</option>
+      <option value="date-asc">תאריך: ישן→חדש</option>
+      <option value="amt-desc">סכום: גבוה→נמוך</option>
+      <option value="supplier">לפי ספק (א-ת)</option>
+    </select>
+  </div>
+  <div class="toolbar" id="resToolbar2" style="display:none">
+    <select class="inp" id="resProject"><option value="">כל הפרויקטים</option></select>
+    <button class="chip" id="btnReviewOnly" style="flex:none">⚠ רק לבדיקה</button>
+    <button class="chip" id="btnTrendToggle" style="flex:none">📊 מגמה</button>
+  </div>
+  <div id="trendBox" style="display:none"></div>
+  <div id="missingBox"></div>
+  <div id="resBody"></div>
+</section>
+
+<!-- ========== ייצוא ========== -->
+<section class="view" id="v-exp">
+  <div class="card">
+    <h2>שמירה ל-Google Drive</h2>
+    <p class="hint">נוצרת תיקייה ראשית, תיקיית משנה לכל ספק, וקובץ ריכוז.xlsx בשורש.</p>
+    <label class="f"><span>שם התיקייה הראשית</span><input class="inp" id="rootName" value="חשבוניות"></label>
+    <button class="btn mint" id="btnDrive">העלה ל-Drive</button>
+    <div class="plog" id="driveLog" style="margin-top:10px"></div>
+  </div>
+  <div class="card">
+    <h2>הורדה כ-ZIP</h2>
+    <p class="hint">קובץ אחד עם אותו מבנה תיקיות, נשמר בהורדות של הטלפון.</p>
+    <button class="btn outline" id="btnZip">הורד ZIP</button>
+    <div class="plog" id="zipLog" style="margin-top:10px"></div>
+  </div>
+  <div class="card">
+    <h2>ריכוז.xlsx בלבד</h2>
+    <p class="hint">רק הטבלה, בלי הקבצים.</p>
+    <button class="btn ghost" id="btnXlsx">הורד ריכוז.xlsx</button>
+  </div>
+  <div class="card">
+    <h2>CSV להנהלת חשבונות</h2>
+    <p class="hint">עמודות סטנדרטיות (תאריך/ספק/ח.פ/מספר/סכומים). <b>לא בדוק מול פורמט היבוא המדויק</b> של חשבשבת/רווית — תבדוק מול התוכנה שלך לפני ייבוא.</p>
+    <button class="btn ghost" id="btnCsv">הורד CSV</button>
+  </div>
+  <div class="card">
+    <h2>דוח מע"מ</h2>
+    <p class="hint">ריכוז מע"מ תשומות לפי חודש או רבעון, לפי תאריך המסמך.</p>
+    <div class="chips" id="vatPeriod" style="margin-bottom:10px">
+      <button class="chip on" data-p="month">חודשי</button>
+      <button class="chip" data-p="quarter">רבעוני</button>
+      <button class="chip" data-p="year">שנתי</button>
+    </div>
+    <div id="vatBox"></div>
+    <button class="btn outline" id="btnVatXlsx" style="margin-top:10px">הורד דוח מע"מ (xlsx)</button>
+    <div class="warn" style="margin-top:10px;font-size:11.5px">
+      הדוח מבוסס על זיהוי AI ועל תיקונים שביצעת. <b>עבור עליו מול רו"ח לפני הגשה.</b>
+      שורות ללא מע"מ מזוהה מוצגות בנפרד.
+    </div>
+  </div>
+  <div class="card">
+    <h2>מה מגיע לתשלום</h2>
+    <p class="hint">לפי תנאי התשלום שהגדרת לכל ספק (ברירת מחדל: שוטף+30).</p>
+    <div id="dueBox"></div>
+  </div>
+  <div class="card">
+    <h2>שליחת סיכום לוואטסאפ</h2>
+    <p class="hint">פותח וואטסאפ עם טקסט סיכום מוכן — אתה בוחר למי לשלוח ולוחץ שליחה. לא אוטומטי (לשליחה אוטומטית אמיתית צריך את פרטי ה-Green API שלך).</p>
+    <button class="btn outline" id="btnWa">פתח בוואטסאפ</button>
+  </div>
+</section>
+
+<!-- ========== מדריך ========== -->
+<section class="view" id="v-help">
+
+  <div class="card" style="text-align:center">
+    <h2>מדריך שימוש</h2>
+    <p class="hint" style="margin:4px 0 0">כל מה שצריך לדעת · גרסה <span id="helpVer"></span></p>
+  </div>
+
+  <div class="free">
+    <b>💚 האפליקציה חינמית לחלוטין</b><br>
+    אין מנוי, אין תשלום חודשי, אין פרסומות. פירוט מלא בסעיף "עלויות" למטה.
+  </div>
+
+  <details class="acc" open>
+    <summary>🚀 התחלה מהירה — 3 צעדים</summary>
+    <div class="accbody">
+      <ol>
+        <li><b>הגדרות</b> (קוד: <code>3396</code>) → הדבק <b>Client ID</b> ו־<b>Gemini API Key</b> → שמור</li>
+        <li><b>סריקה</b> → התחבר עם Google → בחר טווח תאריכים → <b>התחל סריקה</b></li>
+        <li><b>תוצאות</b> → בדוק ותקן → <b>ייצוא</b> → Drive או ZIP</li>
+      </ol>
+      <div class="warn">בפעם הראשונה בלבד — צריך להקים פרויקט ב-Google Cloud ולקבל שני מפתחות. פעולה חד־פעמית של כ-20 דקות.</div>
+    </div>
+  </details>
+
+  <details class="acc">
+    <summary>◎ מסך סריקה</summary>
+    <div class="accbody">
+      <div class="kv"><b>מצב נוכחי</b><span>מראה כמה מסמכים שמורים וכמה מיילים כבר עובדו. אם כתוב שם אזהרה אדומה — קרא אותה לפני שאתה סורק.</span></div>
+      <div class="kv"><b>טווח מהיר</b><span>החודש / חודש שעבר / 3 חודשים / השנה / הכל. לחיצה אחת במקום להקליד תאריכים.</span></div>
+      <div class="kv"><b>מה לתפוס</b><span>קבצים מצורפים · קישורים למערכות · גוף המייל. אפשר לבחור כמה.</span></div>
+      <div class="kv"><b>מילות חיפוש</b><span>שאילתת Gmail רגילה. אפשר להוסיף שם ספק ספציפי כדי למקד.</span></div>
+      <div class="kv"><b>מקסימום מיילים</b><span>עד 500. מומלץ 150 בהרצה.</span></div>
+      <div class="kv"><b>↻ סרוק מחדש</b><span>סורק גם מיילים שכבר עובדו. השתמש כשאתה רוצה לנסות שוב עם מודל אחר.</span></div>
+      <div class="kv"><b>עצור</b><span>קוטע מיד את כל הבקשות. מה שכבר נמצא — נשמר.</span></div>
+      <div class="kv"><b>שעון</b><span>נותר משוער / מסמכים / זמן שחלף, מחושב מהקצב בפועל.</span></div>
+    </div>
+  </details>
+
+  <details class="acc">
+    <summary>🗂 מסך תוצאות — כאן מתקנים</summary>
+    <div class="accbody">
+      <p>המסמכים מקובצים לפי ספק. לחיצה על ספק פותחת את המסמכים שלו.</p>
+      <div class="kv"><b>✎ עריכה</b><span>כפתור בכל שורה. מתקן ספק, סוג, מספר, תאריך, ח.פ וסכומים.</span></div>
+      <div class="kv"><b>בדיקת מע"מ</b><span>בזמן עריכת סכומים מוצג אם "לפני + מע"מ = סה"כ". אזהרה אדומה = טעות זיהוי.</span></div>
+      <div class="kv"><b>🗑 מחיקה</b><span>מתוך מסך העריכה. המסמך לא יחזור גם בסריקה חוזרת.</span></div>
+      <div class="kv"><b>תגית "תוקן"</b><span>ירוקה — סימן שערכת ידנית.</span></div>
+      <div class="kv"><b>תגית "לבדיקה"</b><span>אדומה — הסכום מעל הסף שהגדרת.</span></div>
+      <div class="kv"><b>▲▼ אחוזים</b><span>קפיצת מחיר מול הפעם הקודמת מאותו ספק.</span></div>
+      <div class="kv"><b>חיפוש ומיון</b><span>לפי ספק, תאריך, סכום. גם סינון לפי פרויקט ו"רק לבדיקה".</span></div>
+      <div class="kv"><b>📊 מגמה</b><span>גרף הוצאות חודשי.</span></div>
+      <div class="warn"><b>עבור על התוצאות לפני ייצוא.</b> הזיהוי הוא AI ולא מושלם. עמודת "ודאות" בקובץ הריכוז מראה כמה המערכת בטוחה בכל שורה.</div>
+    </div>
+  </details>
+
+  <details class="acc">
+    <summary>⇩ מסך ייצוא</summary>
+    <div class="accbody">
+      <div class="kv"><b>Google Drive</b><span>תיקייה ראשית → תיקייה לכל ספק → ריכוז.xlsx בשורש. מסתנכרן לטלפון.</span></div>
+      <div class="kv"><b>ZIP</b><span>אותו מבנה בקובץ אחד, לתיקיית ההורדות.</span></div>
+      <div class="kv"><b>ריכוז.xlsx</b><span>רק הטבלה, בלי הקבצים.</span></div>
+      <div class="kv"><b>CSV להנה"ח</b><span>עמודות סטנדרטיות. <b>בדוק מול פורמט היבוא של התוכנה שלך</b> — לא מאומת מול חשבשבת/רווית.</span></div>
+      <div class="kv"><b>וואטסאפ</b><span>פותח וואטסאפ עם סיכום מוכן. אתה בוחר למי לשלוח.</span></div>
+      <div class="warn">מסמכים המסומנים <b>"קישור"</b> יושבים במערכת חיצונית (חשבונית ירוקה / iCount). הדפדפן חסום מלהוריד אותם — נשמר קובץ HTML עם הקישור להורדה ידנית.</div>
+    </div>
+  </details>
+
+  <details class="acc">
+    <summary>⚙ הגדרות</summary>
+    <div class="accbody">
+      <div class="kv"><b>קוד גישה</b><span>ברירת מחדל <code>3396</code>. ניתן לשינוי בתוך ההגדרות.</span></div>
+      <div class="kv"><b>טען מודלים</b><span>מושך את רשימת המודלים שזמינים למפתח שלך. השתמש כשמקבל שגיאת מודל.</span></div>
+      <div class="kv"><b>בדוק מפתח</b><span>אומר מיד אם המפתח והמודל עובדים. תמיד הרץ אחרי שינוי.</span></div>
+      <div class="kv"><b>קצב סריקה</b><span>🐢 איטי / ⚖ מאוזן / ⚡ מהיר. הרבה שגיאות? עבור לאיטי.</span></div>
+      <div class="kv"><b>סף לבדיקה</b><span>חשבוניות מעל הסכום יסומנו. 0 = כבוי.</span></div>
+      <div class="kv"><b>ערכת נושא</b><span>בהיר או כהה.</span></div>
+      <div class="kv"><b>זיכרון עיבוד</b><span>מיילים שכבר עובדו. ניקוי = סריקה מאפס.</span></div>
+    </div>
+  </details>
+
+  <details class="acc">
+    <summary>💰 עלויות — מה חינמי ומה לא</summary>
+    <div class="accbody">
+      <div class="free"><b>בשימוש רגיל אתה משלם 0 ₪.</b></div>
+      <div class="kv"><b>Netlify</b><span>אחסון האפליקציה — חינם</span></div>
+      <div class="kv"><b>Gmail API</b><span>קריאת מיילים — חינם, ללא הגבלה מעשית</span></div>
+      <div class="kv"><b>Drive API</b><span>יצירת תיקיות והעלאה — חינם</span></div>
+      <div class="kv"><b>Gemini Flash / Flash-Lite</b><span>שכבה חינמית עם מגבלת בקשות לדקה וליום</span></div>
+      <div class="kv"><b>Gemini Pro</b><span><b>בתשלום.</b> הימנע ממנו אלא אם אתה מוכן לחייב</span></div>
+      <p style="margin-top:10px"><b>איך להישאר בחינם:</b></p>
+      <ul>
+        <li>בחר תמיד מודל <b>flash</b> או <b>flash-lite</b> (מסומנים "חינמי" ברשימה)</li>
+        <li>אל תחבר כרטיס אשראי לפרויקט Google Cloud — בלי כרטיס אי אפשר לחרוג לתשלום</li>
+        <li>סרוק בטווחים של חודש-שלושה, לא שנה שלמה בבת אחת</li>
+        <li>אם הגעת למכסה — חכה ליום הבא, המכסה מתאפסת</li>
+      </ul>
+      <div class="warn">אם תיגמר המכסה היומית, האפליקציה עוברת אוטומטית למודל חינמי אחר. אם כולם מוצו — היא תעצור, לא תחייב אותך.</div>
+    </div>
+  </details>
+
+  <details class="acc">
+    <summary>🔧 פתרון תקלות</summary>
+    <div class="accbody">
+      <div class="kv"><b>Failed to fetch</b><span>עומס. הגדרות → קצב → 🐢 איטי, והרץ שוב.</span></div>
+      <div class="kv"><b>429 / quota</b><span>מכסה יומית. חכה ליום הבא או החלף מודל.</span></div>
+      <div class="kv"><b>no longer available</b><span>המודל נחסם. "טען מודלים זמינים" ובחר אחר.</span></div>
+      <div class="kv"><b>access_denied</b><span>לא הוספת את עצמך כ-Test user ב-Google Cloud.</span></div>
+      <div class="kv"><b>origin mismatch</b><span>כתובת האתר לא תואמת. בדוק שאין <code>/</code> בסוף.</span></div>
+      <div class="kv"><b>תוצאות ריקות</b><span>קרא את "מצב נוכחי". כנראה הכל כבר עובד — הדלק "סרוק מחדש".</span></div>
+      <div class="kv"><b>פג תוקף החיבור</b><span>לחץ "התחבר עם Google" שוב. תקין אחרי כשעה.</span></div>
+      <div class="kv"><b>הכל נכשל</b><span>הגדרות → "בדוק מפתח Gemini".</span></div>
+    </div>
+  </details>
+
+  <details class="acc">
+    <summary>✅ צ'קליסט בדיקות</summary>
+    <div class="accbody">
+      <p>עבור אחד-אחד. הסימונים נשמרים במכשיר.</p>
+      <div id="chkList"></div>
+      <button class="btn ghost sm" id="btnChkReset" style="width:100%;margin-top:10px">נקה סימונים</button>
+    </div>
+  </details>
+
+</section>
+<!-- ========== הגדרות ========== -->
+<section class="view" id="v-set">
+  <div id="lockGate">
+    <div class="card">
+      <div class="lockwrap">
+        <div class="lk">🔒</div>
+        <h2>אזור מוגן</h2>
+        <p>הגדרות המפתחות והחיבורים נעולות בקוד גישה.</p>
+        <div class="pinbox">
+          <input class="inp" id="pinInput" type="password" inputmode="numeric" maxlength="8" placeholder="••••">
+          <button class="btn" id="btnUnlock" style="margin-top:10px">פתח</button>
+          <div class="plog" id="pinLog" style="margin-top:8px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="setBody" style="display:none">
+  <div class="card">
+    <h2>מפתחות</h2>
+    <p class="hint">נשמרים רק במכשיר הזה (localStorage). לא נשלחים לשום מקום מלבד גוגל.</p>
+    <label class="f"><span>Google OAuth Client ID</span><input class="inp" id="cfgClient" placeholder="....apps.googleusercontent.com"></label>
+    <label class="f"><span>Gemini API Key</span><input class="inp" id="cfgGemini" type="password" placeholder="AIza..."></label>
+    <label class="f"><span>מודל</span>
+      <select class="inp" id="cfgModel">
+        <option value="">— לחץ "טען מודלים" למטה —</option>
+      </select>
+    </label>
+    <button class="btn ghost sm" id="btnLoadModels" style="width:100%;margin-bottom:9px">↻ טען מודלים זמינים למפתח שלי</button>
+    <p class="hint" style="margin-top:-4px">
+      גוגל מוציאה ומכניסה מודלים כל הזמן. לחץ על הכפתור למעלה כדי למשוך את הרשימה
+      <b>שבאמת זמינה למפתח שלך</b> במקום להסתמך על רשימה קבועה.
+      דגמי Flash ו-Flash-Lite כוללים שכבה חינמית; דגמי Pro הם בתשלום בלבד.
+      מקור: <a href="https://ai.google.dev/gemini-api/docs/pricing" target="_blank" rel="noopener">ai.google.dev/gemini-api/docs/pricing</a>
+    </p>
+    <button class="btn" id="btnSaveCfg">שמור</button>
+    <button class="btn outline sm" id="btnTestKey" style="width:100%;margin-top:8px">בדוק מפתח Gemini</button>
+    <div class="plog" id="keyLog" style="margin-top:8px"></div>
+  </div>
+  <div class="card">
+    <h2>קצב סריקה</h2>
+    <p class="hint">אם אתה מקבל הרבה "Failed to fetch" או "429" — האט. השכבה החינמית של Gemini מגבילה בקשות לדקה.</p>
+    <div class="chips" id="speedChips">
+      <button class="chip" data-s="slow">🐢 איטי ובטוח</button>
+      <button class="chip on" data-s="normal">⚖ מאוזן</button>
+      <button class="chip" data-s="fast">⚡ מהיר</button>
+    </div>
+    <div class="plog" id="speedInfo" style="margin-top:8px"></div>
+  </div>
+  <div class="card">
+    <h2>ערכת נושא</h2>
+    <p class="hint">בהיר (נייר) או כהה (שחור-אדום, בסגנון אפליקציית הצעות המחיר).</p>
+    <div class="chips" id="themeChips">
+      <button class="chip on" data-t="light">☀ בהיר</button>
+      <button class="chip" data-t="dark">🌙 כהה</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>סף לבדיקה ידנית</h2>
+    <p class="hint">חשבוניות מעל הסכום הזה יסומנו לבדיקה שלך לפני שאתה סומך עליהן. 0 = כבוי.</p>
+    <label class="f"><span>סכום בש"ח</span><input class="inp num" id="cfgThreshold" type="number" value="0" min="0" step="100"></label>
+    <button class="btn ghost sm" id="btnSaveThreshold">שמור סף</button>
+  </div>
+  <div class="card">
+    <h2>זיכרון עיבוד</h2>
+    <p class="hint">מיילים שכבר עובדו מדולגים בסריקה הבאה.</p>
+    <div class="plog" id="memInfo"></div>
+    <button class="btn ghost sm" id="btnClearMem" style="width:100%;margin-top:10px">נקה זיכרון עיבוד</button>
+  </div>
+  <div class="card">
+    <h2>גרסה</h2>
+    <p class="hint" style="margin:0">v2.3 · <span id="verDate"></span></p>
+  </div>
+  <div class="card">
+    <h2>קוד גישה</h2>
+    <p class="hint">מגן על מסך ההגדרות בלבד. נשמר במכשיר הזה.</p>
+    <label class="f"><span>קוד חדש (4-8 ספרות)</span><input class="inp" id="pinNew" type="password" inputmode="numeric" maxlength="8" placeholder="••••"></label>
+    <button class="btn ghost sm" id="btnSavePin" style="width:100%">עדכן קוד</button>
+    <button class="btn outline sm" id="btnLockNow" style="width:100%;margin-top:8px">🔒 נעל עכשיו</button>
+  </div>
+  </div>
+</section>
+
+</main>
+<div class="modalbg" id="editSheet">
+  <div class="modal">
+    <h2>עריכת מסמך</h2>
+    <div class="msub" id="edSub"></div>
+    <label class="f"><span>ספק</span><input class="inp" id="edSupplier"></label>
+    <div class="row2">
+      <label class="f"><span>סוג מסמך</span><input class="inp" id="edType" list="typeList"></label>
+      <label class="f"><span>מספר מסמך</span><input class="inp" id="edNum"></label>
+    </div>
+    <div class="row2">
+      <label class="f"><span>תאריך</span><input class="inp" id="edDate" type="date"></label>
+      <label class="f"><span>ח.פ / ע.מ</span><input class="inp" id="edVatId"></label>
+    </div>
+    <div class="row2">
+      <label class="f"><span>לפני מע"מ</span><input class="inp num" id="edBefore" type="number" step="0.01"></label>
+      <label class="f"><span>מע"מ</span><input class="inp num" id="edVat" type="number" step="0.01"></label>
+    </div>
+    <div class="row2">
+      <label class="f"><span>סה"כ</span><input class="inp num" id="edTotal" type="number" step="0.01"></label>
+      <label class="f"><span>פרויקט</span><input class="inp" id="edProject" list="projList"></label>
+    </div>
+    <label class="f"><span>תנאי תשלום לספק זה (שוטף + ימים)</span>
+      <select class="inp" id="edTerms">
+        <option value="0">שוטף</option>
+        <option value="15">שוטף + 15</option>
+        <option value="30">שוטף + 30</option>
+        <option value="45">שוטף + 45</option>
+        <option value="60">שוטף + 60</option>
+        <option value="90">שוטף + 90</option>
+      </select>
+    </label>
+    <div class="plog" id="edCalc" style="margin-bottom:10px"></div>
+    <button class="btn" id="edSave">שמור שינויים</button>
+    <div class="row2" style="margin-top:8px">
+      <button class="btn ghost sm" id="edCancel" style="width:100%">ביטול</button>
+      <button class="btn outline sm" id="edDelete" style="width:100%">🗑 מחק מסמך</button>
+    </div>
+  </div>
+</div>
+<datalist id="typeList">
+  <option value="חשבונית מס"><option value="קבלה"><option value="חשבונית מס קבלה">
+  <option value="חשבונית"><option value="דרישת תשלום"><option value="הזמנה">
+</datalist>
+<div class="modalbg" id="doneModal">
+  <div class="modal">
+    <h2 id="mTitle">הסריקה הסתיימה</h2>
+    <div class="msub" id="mSub"></div>
+    <div class="mstats">
+      <div><b id="mDocs">0</b><small>מסמכים</small></div>
+      <div><b id="mSup">0</b><small>ספקים</small></div>
+      <div><b id="mTot">0</b><small>סה"כ ₪</small></div>
+    </div>
+    <div id="mLines"></div>
+    <button class="btn" id="mGo" style="margin-top:14px">צפה בתוצאות</button>
+    <button class="btn ghost sm" id="mClose" style="width:100%;margin-top:8px">סגור</button>
+  </div>
+</div>
+<datalist id="projList"></datalist>
+
+<nav>
+  <button class="on" data-v="scan"><i>◎</i>סריקה</button>
+  <button data-v="res"><i>🗂</i>תוצאות</button>
+  <button data-v="exp"><i>⇩</i>ייצוא</button>
+  <button data-v="set"><i>⚙</i>הגדרות</button>
+  <button data-v="help"><i>?</i>מדריך</button>
+</nav>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+'use strict';
+
+/* ============================================================
+   מצב ותצורה
+   ============================================================ */
+const SCOPES = 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email';
+const LINK_HOSTS = ['greeninvoice.co.il','green-invoice','icount.co.il','morning.co.il','ezcount.co.il','invoice4u.co.il','rivhit.co.il','sumit.co.il','tranzila','cardcom','payplus','hashavshevet','invoice.co.il','myinvoice'];
+
+/* ============================================================
+   שכבת אחסון מרוכזת (שלב 0 - ריפקטור)
+   כל הכתיבה/קריאה ל-localStorage עוברת דרך כאן. לפני זה היו
+   28 קריאות מפוזרות בקוד עם שמות מפתח כתובים בקשיחות.
+   ============================================================ */
+const K = {
+  cfg:'inv_cfg', seen:'inv_seen', tok:'inv_tok', email:'inv_email',
+  price:'inv_price_memory', meta:'inv_doc_meta', deleted:'inv_deleted', terms:'inv_terms',
+  install:'inv_install_dismissed'
+};
+const store = {
+  get(key, fallback){
+    try{
+      const raw = localStorage.getItem(key);
+      if(raw==null) return fallback;
+      return JSON.parse(raw);
+    }catch(e){ return fallback; }
+  },
+  getRaw(key, fallback){
+    try{ const v = localStorage.getItem(key); return v==null? fallback : v; }
+    catch(e){ return fallback; }
+  },
+  set(key, val){
+    try{ localStorage.setItem(key, typeof val==='string'? val : JSON.stringify(val)); return true; }
+    catch(e){ console.warn('כתיבה נכשלה:', key, e); return false; }
+  },
+  del(key){ try{ localStorage.removeItem(key); }catch(e){} }
+};
+const saveCfgNow = ()=> store.set(K.cfg, cfg);
+
+let cfg = { client:'', gemini:'', model:'gemini-2.5-flash', threshold:0, theme:'light', modelList:null, speed:'normal', concurrency:2, minGapMs:1200, pin:'3396', haptics:true, sound:true };
+let token = null, tokenClient = null, userEmail = '';
+let docs = [];        // כל המסמכים שזוהו
+let stopFlag = false;
+let seen = {};         // messageId -> true (מיילים שכבר עובדו)
+let seenFP = {};        // fingerprint -> true (דדופ בתוך סריקה אחת)
+let priceMem = {};      // 'ספק|סוג' -> {total, date} (זיכרון מחיר אחרון)
+let docMeta = {};        // fingerprint -> {project} (תיוג פרויקט ששרד בין סריקות)
+let dupSkipped = 0;
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function money(n){ return (Number(n)||0).toLocaleString('he-IL',{maximumFractionDigits:2}) + ' ₪'; }
+function safeName(s){ return String(s||'').replace(/[\\\/:*?"<>|\r\n\t]/g,'-').replace(/\s+/g,' ').trim().slice(0,120) || 'ללא שם'; }
+function fp(d){ return [d.supplier,d.docType,d.docNum,d.date,Math.round(d.total||0)].join('|').toLowerCase(); }
+function priceKey(supplier,docType){ return (supplier+'|'+docType).toLowerCase(); }
+
+function loadCfg(){
+  cfg = Object.assign(cfg, store.get(K.cfg, {}));
+  seen = store.get(K.seen, {});
+  priceMem = store.get(K.price, {});
+  docMeta = store.get(K.meta, {});
+  deletedFps = store.get(K.deleted, {});
+  $('cfgClient').value = cfg.client||'';
+  $('cfgGemini').value = cfg.gemini||'';
+  const sel = $('cfgModel');
+  const savedModel = cfg.model||'gemini-2.5-flash';
+  // שחזור רשימת המודלים שנטענה בעבר מגוגל, אם קיימת
+  if(Array.isArray(cfg.modelList) && cfg.modelList.length){
+    sel.innerHTML = cfg.modelList.map(n=>'<option value="'+esc(n)+'">'+esc(n)+'</option>').join('');
+  }
+  const hasOpt = Array.from(sel.options).some(o=>o.value===savedModel);
+  if(!hasOpt){
+    const o = document.createElement('option');
+    o.value = savedModel; o.textContent = savedModel+' (שמור, לא ברשימה — כדאי לבדוק)';
+    sel.insertBefore(o, sel.firstChild);
+  }
+  sel.value = savedModel;
+  $('cfgThreshold').value = cfg.threshold||0;
+  applySpeed(cfg.speed||'normal', true);
+  applyTheme(cfg.theme||'light');
+  updMem();
+}
+const SPEEDS = {
+  slow:   {concurrency:1, minGapMs:3000, label:'בקשה אחת כל 3 שניות — הכי בטוח מול המגבלה החינמית'},
+  normal: {concurrency:2, minGapMs:1200, label:'2 במקביל, מרווח 1.2 שניות'},
+  fast:   {concurrency:4, minGapMs:400,  label:'4 במקביל, מרווח 0.4 שניות — עלול להיחסם בשכבה החינמית'}
+};
+function applySpeed(s, silent){
+  const p = SPEEDS[s] || SPEEDS.normal;
+  cfg.speed = s; cfg.concurrency = p.concurrency; cfg.minGapMs = p.minGapMs;
+  document.querySelectorAll('#speedChips .chip').forEach(c=> c.classList.toggle('on', c.dataset.s===s));
+  $('speedInfo').textContent = p.label;
+  if(!silent) saveCfgNow();
+}
+function applyTheme(t){
+  document.documentElement.setAttribute('data-theme', t==='dark'?'dark':'light');
+  document.querySelectorAll('#themeChips .chip').forEach(c=> c.classList.toggle('on', c.dataset.t===t));
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if(meta) meta.setAttribute('content', t==='dark' ? '#0D0D0F' : '#ED1C24');
+}
+function saveCfg(){
+  cfg.client = $('cfgClient').value.trim();
+  cfg.gemini = $('cfgGemini').value.trim();
+  cfg.model  = $('cfgModel').value;
+  saveCfgNow();
+  tokenClient = null;
+  toast('ההגדרות נשמרו');
+}
+function updMem(){
+  const el = $('memInfo');
+  if(el) el.textContent = Object.keys(seen).length + ' מיילים בזיכרון';
+  updStatusCard();
+}
+function updStatusCard(){
+  const el = $('statusBody'); if(!el) return;
+  const nSeen = Object.keys(seen).length;
+  const rescanOn = $('chipRescan') && $('chipRescan').classList.contains('on');
+  const when = docsSavedAt ? new Date(docsSavedAt).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : null;
+
+  let html = '';
+  html += docs.length
+    ? '📄 <b>'+docs.length+' מסמכים</b> שמורים'+(when?' (סריקה אחרונה: '+esc(when)+')':'')+' — נשמרים גם אחרי רענון.<br>'
+    : '📄 אין תוצאות שמורות.<br>';
+  html += '🧠 <b>'+nSeen+' מיילים</b> כבר עובדו ';
+  html += rescanOn
+    ? '— אבל "סרוק מחדש" <b>דלוק</b>, אז הם ייסרקו שוב.<br>'
+    : '— הם <b>ידולגו</b> בסריקה הבאה.<br>';
+
+  if(!docs.length && nSeen>0 && !rescanOn){
+    html += '<span style="color:var(--rose)">⚠ אין תוצאות אבל יש זיכרון — סריקה עכשיו תחזיר ריק. '+
+            'הדלק "סרוק מחדש" למטה, או לחץ "אפס הכל".</span>';
+  }
+  el.innerHTML = html;
+}
+$('btnResetAll').onclick = async ()=>{
+  if(!confirm('לאפס הכל? יימחקו התוצאות השמורות וזיכרון המיילים. ההגדרות והמפתחות יישארו.')) return;
+  seen = {}; store.del(K.seen);
+  await clearDocs();
+  updMem(); updStatusCard();
+  toast('אופס. הסריקה הבאה תתחיל מאפס.');
+};
+
+function toast(msg){
+  const d=document.createElement('div');
+  d.textContent=msg;
+  d.style.cssText='position:fixed;bottom:96px;right:50%;transform:translateX(50%);background:#211E1A;border:1px solid #ED1C24;color:#fff;padding:10px 18px;border-radius:99px;font-size:13px;z-index:99;box-shadow:0 6px 24px rgba(0,0,0,.25)';
+  document.body.appendChild(d);
+  setTimeout(()=>d.remove(),2600);
+}
+
+/* ============================================================
+   התקנת PWA
+   ============================================================ */
+let deferredInstall = null;
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+window.addEventListener('beforeinstallprompt', (e)=>{
+  e.preventDefault();
+  deferredInstall = e;
+  if(!isStandalone && !store.getRaw(K.install)) $('installBar').classList.add('show');
+});
+$('btnInstall').onclick = async ()=>{
+  if(!deferredInstall) return;
+  $('installBar').classList.remove('show');
+  deferredInstall.prompt();
+  await deferredInstall.userChoice;
+  deferredInstall = null;
+};
+$('btnInstallX').onclick = ()=>{
+  $('installBar').classList.remove('show');
+  store.set(K.install,'1');
+};
+window.addEventListener('appinstalled', ()=>{
+  $('installBar').classList.remove('show');
+  store.del(K.install);
+});
+
+/* ============================================================
+   משוב מישושי וקולי
+   ============================================================ */
+function buzz(ms){
+  if(cfg.haptics===false) return;
+  try{ if(navigator.vibrate) navigator.vibrate(ms||8); }catch(e){}
+}
+let audioCtx = null;
+function chime(){
+  if(cfg.sound===false) return;
+  try{
+    audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)();
+    if(audioCtx.state==='suspended') audioCtx.resume();
+    // שני צלילים עדינים עולים (C6 -> E6) עם דעיכה רכה
+    [[1046.5,0],[1318.5,.13]].forEach(([f,delay])=>{
+      const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+      o.type='sine'; o.frequency.value=f;
+      const t0=audioCtx.currentTime+delay;
+      g.gain.setValueAtTime(0,t0);
+      g.gain.linearRampToValueAtTime(.16,t0+.02);
+      g.gain.exponentialRampToValueAtTime(.0001,t0+.42);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t0); o.stop(t0+.45);
+    });
+  }catch(e){}
+}
+// רטט עדין בכל נגיעה באלמנט אינטראקטיבי
+document.addEventListener('click', (e)=>{
+  if(e.target.closest('button, .chip, nav button, select, input[type=date]')) buzz(8);
+}, true);
+
+/* ============================================================
+   נעילת הגדרות
+   ============================================================ */
+let setUnlocked = false;
+function lockSettings(){
+  setUnlocked = false;
+  $('lockGate').style.display='block';
+  $('setBody').style.display='none';
+  $('pinInput').value=''; $('pinLog').textContent='';
+}
+function unlockSettings(){
+  setUnlocked = true;
+  $('lockGate').style.display='none';
+  $('setBody').style.display='block';
+}
+$('btnUnlock').onclick = ()=>{
+  const v = $('pinInput').value.trim();
+  if(v === String(cfg.pin||'3396')){
+    unlockSettings(); buzz(14); toast('נפתח');
+  } else {
+    $('pinLog').innerHTML='<span style="color:var(--rose)">קוד שגוי</span>';
+    $('pinInput').value=''; buzz([12,60,12]);
+  }
+};
+$('pinInput').onkeydown = (e)=>{ if(e.key==='Enter') $('btnUnlock').click(); };
+$('btnSavePin').onclick = ()=>{
+  const v = $('pinNew').value.trim();
+  if(!/^\d{4,8}$/.test(v)){ toast('הקוד חייב להיות 4-8 ספרות'); return; }
+  cfg.pin = v; saveCfgNow();
+  $('pinNew').value=''; toast('קוד הגישה עודכן');
+};
+$('btnLockNow').onclick = ()=>{ lockSettings(); toast('ההגדרות ננעלו'); };
+
+/* ============================================================
+   שמירת תוצאות (IndexedDB) — כדי שרענון/עדכון גרסה לא ימחק את הסריקה
+   localStorage לא מתאים כאן: קבצי PDF גדולים מדי עבורו.
+   ============================================================ */
+function idbOpen(){
+  return new Promise((res,rej)=>{
+    const r = indexedDB.open('invoices_db', 1);
+    r.onupgradeneeded = ()=>{ if(!r.result.objectStoreNames.contains('kv')) r.result.createObjectStore('kv'); };
+    r.onsuccess = ()=> res(r.result);
+    r.onerror   = ()=> rej(r.error);
+  });
+}
+async function idbSet(k,v){
+  const db = await idbOpen();
+  return new Promise((res,rej)=>{
+    const t = db.transaction('kv','readwrite');
+    t.objectStore('kv').put(v,k);
+    t.oncomplete = ()=>res(); t.onerror = ()=>rej(t.error);
+  });
+}
+async function idbGet(k){
+  const db = await idbOpen();
+  return new Promise((res,rej)=>{
+    const t = db.transaction('kv','readonly');
+    const q = t.objectStore('kv').get(k);
+    q.onsuccess = ()=>res(q.result); q.onerror = ()=>rej(q.error);
+  });
+}
+async function idbDel(k){
+  const db = await idbOpen();
+  return new Promise((res,rej)=>{
+    const t = db.transaction('kv','readwrite');
+    t.objectStore('kv').delete(k);
+    t.oncomplete = ()=>res(); t.onerror = ()=>rej(t.error);
+  });
+}
+
+async function saveDocs(){
+  try{
+    await idbSet('docs', {savedAt: Date.now(), docs: docs});
+    updStatusCard();
+  }catch(e){ console.warn('שמירת תוצאות נכשלה', e); }
+}
+async function loadDocs(){
+  try{
+    const s = await idbGet('docs');
+    if(s && Array.isArray(s.docs) && s.docs.length){
+      docs = s.docs;
+      docsSavedAt = s.savedAt || null;
+      render();
+    }
+  }catch(e){ console.warn('טעינת תוצאות נכשלה', e); }
+  updStatusCard();
+}
+async function clearDocs(){
+  docs = []; docsSavedAt = null;
+  try{ await idbDel('docs'); }catch(e){}
+  render(); updStatusCard();
+}
+let docsSavedAt = null;
+
+/* ============================================================
+   ניווט
+   ============================================================ */
+document.querySelectorAll('nav button').forEach(b=>{
+  b.onclick = ()=>{
+    document.querySelectorAll('nav button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+    $('v-'+b.dataset.v).classList.add('on');
+    if(b.dataset.v==='exp'){ renderVat(); renderDue(); }
+    window.scrollTo(0,0);
+  };
+});
+document.querySelectorAll('#modes .chip').forEach(c=>{
+  c.onclick = ()=> c.classList.toggle('on');
+});
+function modes(){
+  const m={};
+  document.querySelectorAll('#modes .chip').forEach(c=> m[c.dataset.m]=c.classList.contains('on'));
+  return m;
+}
+
+/* ---------- טווחי תאריך מהירים ---------- */
+document.querySelectorAll('#datePresets .chip').forEach(c=>{
+  c.onclick=()=>{
+    document.querySelectorAll('#datePresets .chip').forEach(x=>x.classList.remove('on'));
+    c.classList.add('on');
+    const months = parseInt(c.dataset.p);
+    const now = new Date();
+    if(months===0){ // הכל - שנתיים אחורה כדי לא לפתוח שאילתה בלתי מוגבלת
+      $('dTo').value = now.toISOString().slice(0,10);
+      $('dFrom').value = new Date(now.getFullYear()-2, now.getMonth(), 1).toISOString().slice(0,10);
+    } else if(months===2){ // חודש שעבר בדיוק
+      const to = new Date(now.getFullYear(), now.getMonth(), 0);
+      const from = new Date(now.getFullYear(), now.getMonth()-1, 1);
+      $('dFrom').value = from.toISOString().slice(0,10);
+      $('dTo').value = to.toISOString().slice(0,10);
+    } else {
+      $('dTo').value = now.toISOString().slice(0,10);
+      $('dFrom').value = new Date(now.getFullYear(), now.getMonth()-months+1, 1).toISOString().slice(0,10);
+    }
+  };
+});
+
+/* ============================================================
+   התחברות
+   ============================================================ */
+function initToken(){
+  if(!cfg.client){ toast('חסר Client ID — לך להגדרות'); return false; }
+  if(!window.google || !google.accounts){ toast('ספריית גוגל עוד נטענת, נסה שוב'); return false; }
+  if(!tokenClient){
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: cfg.client,
+      scope: SCOPES,
+      callback: async (r)=>{
+        if(r.error){ toast('ההתחברות נכשלה: '+r.error); return; }
+        setToken(r.access_token, r.expires_in);
+        try{
+          const me = await api('https://www.googleapis.com/oauth2/v2/userinfo');
+          userEmail = me.email||'';
+          store.set(K.email, userEmail);
+        }catch(e){ userEmail=''; }
+        showConnected();
+        toast('מחובר');
+      }
+    });
+  }
+  return true;
+}
+function setToken(tok, expiresIn){
+  token = tok;
+  const expAt = Date.now() + (Number(expiresIn||3600)-120)*1000; // מרווח ביטחון של 2 דק'
+  store.set(K.tok, {t:tok, e:expAt});
+}
+function loadStoredToken(){
+  try{
+    const t = store.get(K.tok, null);
+    if(t && t.t && t.e && Date.now() < t.e){ token = t.t; return true; }
+  }catch(e){}
+  store.del(K.tok);
+  return false;
+}
+function clearToken(){ token=null; store.del(K.tok); }
+function showConnected(){
+  $('dot').classList.add('on');
+  $('acct').innerHTML = esc(userEmail||'מחובר') + '<span class="dot on"></span>';
+  $('btnLogout').style.display='flex';
+  $('btnSwitch').style.display='flex';
+  $('btnLogin').textContent='מחובר ✓';
+}
+// ניסיון חידוש שקט: אם המשתמש כבר אישר בעבר, גוגל מחזיר טוקן בלי מסך אישור
+function silentAuth(){
+  if(!cfg.client) return;
+  if(!initToken()) return;
+  try{ tokenClient.requestAccessToken({prompt:''}); }catch(e){}
+}
+$('btnLogin').onclick = ()=>{ if(initToken()) tokenClient.requestAccessToken({prompt:'consent'}); };
+$('btnLogout').onclick = ()=>{
+  if(token && google.accounts) google.accounts.oauth2.revoke(token,()=>{});
+  clearToken(); userEmail='';
+  store.del(K.email);
+  $('acct').innerHTML='לא מחובר<span class="dot"></span>';
+  $('btnLogout').style.display='none';
+  $('btnSwitch').style.display='none';
+  $('btnLogin').textContent='התחבר עם Google';
+  toast('התנתקת');
+};
+$('btnSaveCfg').onclick = saveCfg;
+document.querySelectorAll('#themeChips .chip').forEach(c=>{
+  c.onclick = ()=>{
+    cfg.theme = c.dataset.t;
+    saveCfgNow();
+    applyTheme(cfg.theme);
+  };
+});
+document.querySelectorAll('#speedChips .chip').forEach(c=>{
+  c.onclick = ()=>{ applySpeed(c.dataset.s); toast('קצב: '+c.textContent.trim()); };
+});
+$('cfgModel').onchange = ()=>{
+  cfg.model = $('cfgModel').value;
+  saveCfgNow();
+  $('keyLog').textContent = 'המודל נשמר: '+cfg.model;
+};
+$('chipRescan').onclick = ()=>{
+  $('chipRescan').classList.toggle('on');
+  updStatusCard();
+  toast($('chipRescan').classList.contains('on') ? 'ייסרקו גם מיילים שכבר עובדו' : 'ייסרקו רק מיילים חדשים');
+};
+$('btnClearMem').onclick = ()=>{ seen={}; store.del(K.seen); updMem(); toast('הזיכרון נוקה'); };
+$('btnSaveThreshold').onclick = ()=>{
+  cfg.threshold = Math.max(0, parseInt($('cfgThreshold').value)||0);
+  saveCfgNow();
+  toast(cfg.threshold ? 'סף נשמר: '+money(cfg.threshold) : 'סף כובה');
+};
+$('btnTestKey').onclick = async ()=>{
+  const key = $('cfgGemini').value.trim();
+  const model = $('cfgModel').value;
+  const log = $('keyLog');
+  if(!key){ log.textContent='לא הוזן מפתח.'; return; }
+  log.textContent='בודק...';
+  try{
+    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+encodeURIComponent(key),{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({contents:[{role:'user',parts:[{text:'החזר בדיוק את המילה: תקין'}]}],generationConfig:{temperature:0,maxOutputTokens:20}})
+    });
+    if(r.ok){
+      log.innerHTML='<span style="color:var(--green)">✓ המפתח והמודל עובדים.</span>';
+    } else {
+      let m=''; try{ m=(await r.json()).error.message; }catch(e){ m='HTTP '+r.status; }
+      log.innerHTML='<span style="color:var(--rose)">✗ '+esc(m)+'</span>';
+    }
+  }catch(e){
+    log.innerHTML='<span style="color:var(--rose)">✗ '+esc(e.message||'שגיאת רשת')+'</span>';
+  }
+};
+$('btnLoadModels').onclick = async ()=>{
+  const key = $('cfgGemini').value.trim();
+  const log = $('keyLog');
+  if(!key){ log.textContent='קודם הכנס מפתח Gemini למעלה.'; return; }
+  log.textContent='טוען רשימת מודלים זמינים למפתח שלך...';
+  try{
+    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?key='+encodeURIComponent(key));
+    if(!r.ok){
+      let m=''; try{ m=(await r.json()).error.message; }catch(e){ m='HTTP '+r.status; }
+      log.innerHTML='<span style="color:var(--rose)">✗ '+esc(m)+'</span>'; return;
+    }
+    const j = await r.json();
+    const raw = (j.models||[])
+      .filter(m=> (m.supportedGenerationMethods||[]).includes('generateContent'));
+    // סעיף 6: זריקת מודלים שגוגל עצמה מסמנת כמיושנים/פורשים, לפי שדה התיאור שלה
+    const deprecated = [];
+    const list = raw.filter(m=>{
+      const desc = String(m.description||'');
+      const name = String(m.name||'').replace('models/','');
+      if(/deprecat|retir|no longer|discontinu|superseded/i.test(desc)){ deprecated.push(name); return false; }
+      return true;
+    })
+      .map(m=> String(m.name||'').replace('models/',''))
+      .filter(n=> n && !/embedding|aqa|tts|-live|-image|imagen|veo/i.test(n))
+      .sort();
+    if(!list.length){ log.textContent='לא נמצאו מודלים מתאימים למפתח הזה.'; return; }
+    const sel = $('cfgModel');
+    const current = sel.value;
+    const ordered = list.slice().sort((a,b)=> (isFreeTier(b)?1:0)-(isFreeTier(a)?1:0) || a.localeCompare(b));
+    sel.innerHTML = ordered.map(n=>'<option value="'+esc(n)+'">'+esc(n)+(isFreeTier(n)?'  ·  חינמי':'  ·  בתשלום')+'</option>').join('');
+    sel.value = ordered.includes(current) ? current : (ordered.find(isFreeTier) || ordered[0]);
+    cfg.modelList = ordered;
+    cfg.model = sel.value;
+    saveCfgNow();
+    const freeN = ordered.filter(isFreeTier).length;
+    saveCfgNow();
+    log.innerHTML='<span style="color:var(--green)">✓ נטענו '+ordered.length+' מודלים ('+freeN+' עם שכבה חינמית). הרשימה נשמרה.</span>'+
+      (deprecated.length? '<br><span style="color:var(--ink-dim)">'+deprecated.length+' מודלים מיושנים נמחקו מהרשימה.</span>' : '');
+  }catch(e){
+    log.innerHTML='<span style="color:var(--rose)">✗ '+esc(e.message||'שגיאת רשת')+'</span>';
+  }
+};
+$('btnSwitch').onclick = ()=>{
+  if(!initToken()) return;
+  tokenClient.requestAccessToken({prompt:'select_account consent'});
+};
+
+/* ============================================================
+   עזרי רשת
+   ============================================================ */
+let scanAbort = null;   // AbortController - ביטול מיידי של כל הבקשות הפתוחות
+
+async function api(url, opts){
+  opts = opts||{};
+  opts.headers = Object.assign({Authorization:'Bearer '+token}, opts.headers||{});
+  if(scanAbort && !opts.signal) opts.signal = scanAbort.signal;
+  const r = await fetch(url, opts);
+  if(r.status===401){ clearToken(); throw new Error('פג תוקף החיבור — התחבר מחדש'); }
+  if(!r.ok){
+    let t=''; try{ t=(await r.json()).error.message; }catch(e){ t=r.status+''; }
+    throw new Error(t);
+  }
+  return r.json();
+}
+function b64urlToB64(s){ return String(s||'').replace(/-/g,'+').replace(/_/g,'/'); }
+function b64ToBytes(b64){
+  const pad = b64.length%4 ? b64 + '='.repeat(4-b64.length%4) : b64;
+  const bin = atob(pad); const a = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) a[i]=bin.charCodeAt(i);
+  return a;
+}
+function bytesToB64(bytes){
+  let s=''; const CH=0x8000;
+  for(let i=0;i<bytes.length;i+=CH) s+=String.fromCharCode.apply(null,bytes.subarray(i,i+CH));
+  return btoa(s);
+}
+function decodeText(b64url){
+  try{ return new TextDecoder('utf-8').decode(b64ToBytes(b64urlToB64(b64url))); }catch(e){ return ''; }
+}
+async function pool(items, n, fn){
+  let i=0;
+  const workers = Array.from({length:Math.min(n,items.length||1)}, async ()=>{
+    while(i<items.length && !stopFlag){ const k=i++; await fn(items[k],k); }
+  });
+  await Promise.all(workers);
+}
+
+/* ============================================================
+   פירוק מייל
+   ============================================================ */
+function hdr(msg,name){
+  const h=(msg.payload&&msg.payload.headers)||[];
+  const f=h.find(x=>x.name.toLowerCase()===name.toLowerCase());
+  return f? f.value : '';
+}
+function walk(part, out){
+  if(!part) return out;
+  if(part.filename && part.body && part.body.attachmentId){
+    const mt=(part.mimeType||'').toLowerCase();
+    if(/pdf|jpeg|jpg|png/.test(mt) || /\.(pdf|jpe?g|png)$/i.test(part.filename)){
+      out.files.push({name:part.filename, mime: mt.includes('pdf')?'application/pdf':(mt||'application/pdf'), id:part.body.attachmentId, size:part.body.size||0});
+    }
+  }
+  if(part.mimeType==='text/plain' && part.body && part.body.data) out.text += decodeText(part.body.data)+'\n';
+  if(part.mimeType==='text/html'  && part.body && part.body.data) out.html += decodeText(part.body.data)+'\n';
+  (part.parts||[]).forEach(p=>walk(p,out));
+  return out;
+}
+function parseMsg(msg){
+  const o = walk(msg.payload, {files:[], text:'', html:''});
+  if(!o.text && o.html) o.text = o.html.replace(/<style[\s\S]*?<\/style>/gi,'').replace(/<script[\s\S]*?<\/script>/gi,'').replace(/<[^>]+>/g,' ').replace(/&nbsp;/g,' ').replace(/\s+/g,' ');
+  const links=[];
+  const rx=/https?:\/\/[^\s"'<>]+/gi; let m;
+  const hay = o.html || o.text;
+  while((m=rx.exec(hay))){
+    const u=m[0].replace(/[.,;)\]]+$/,'');
+    if(LINK_HOSTS.some(h=>u.toLowerCase().includes(h)) && !links.includes(u)) links.push(u);
+  }
+  return {
+    id: msg.id,
+    from: hdr(msg,'From'),
+    subject: hdr(msg,'Subject'),
+    date: new Date(Number(msg.internalDate)||Date.now()),
+    files: o.files, text:(o.text||'').slice(0,12000), links
+  };
+}
+function senderName(from){
+  const m = String(from).match(/^\s*"?([^"<]*?)"?\s*<?([^>]*)>?\s*$/);
+  const nm=(m&&m[1]||'').trim();
+  const em=(m&&m[2]||from||'').trim();
+  return nm || em.split('@')[0] || 'לא ידוע';
+}
+
+/* ============================================================
+   Gemini — חילוץ נתונים
+   ============================================================ */
+const SCHEMA_PROMPT = `אתה מחלץ נתונים ממסמכים חשבונאיים ישראליים.
+החזר JSON בלבד, ללא טקסט נוסף וללא סימוני קוד, במבנה:
+{"is_doc":true|false,"doc_type":"חשבונית מס|קבלה|חשבונית מס קבלה|חשבונית|דרישת תשלום|הזמנה|אחר","supplier":"שם העסק המנפיק","supplier_id":"ח.פ או ע.מ או ריק","doc_number":"מספר המסמך","date":"YYYY-MM-DD","amount_before_vat":number|null,"vat":number|null,"amount_total":number|null,"currency":"ILS|USD|EUR","confidence":0-1}
+כללים:
+- is_doc=false אם זה לא חשבונית/קבלה/דרישת תשלום (למשל ניוזלטר, פרסומת, אישור הזמנה בלבד).
+- supplier = מי הנפיק את המסמך (הספק), לא הלקוח.
+- amount_total = הסכום הסופי לתשלום כולל מע"מ.
+- מספרים בלי פסיקים ובלי סימן מטבע.
+- אם ערך לא מופיע במסמך — null או מחרוזת ריקה. אל תמציא.`;
+
+// דגמי Flash / Flash-Lite הם אלה שיש להם שכבה חינמית. Pro הוא בתשלום בלבד.
+function isFreeTier(name){ return /flash/i.test(name) && !/pro/i.test(name); }
+// סדר עדיפות לגיבוי: הזולים/הקלים קודם
+function freeChain(){
+  const list = Array.isArray(cfg.modelList) ? cfg.modelList.filter(isFreeTier) : [];
+  return list.sort((a,b)=>{
+    const rank = n => (/flash-lite/i.test(n) ? 0 : 1);
+    return rank(a)-rank(b) || b.localeCompare(a); // בתוך אותה רמה - גרסה חדשה יותר קודם
+  });
+}
+let modelSwitchedTo = null;   // מדווח בסיכום אם עברנו מודל תוך כדי ריצה
+
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+// ויסות קצב גלובלי: מבטיח מרווח מינימלי בין קריאות ל-Gemini
+let lastGeminiAt = 0;
+async function rateGate(){
+  const gap = Math.max(0, parseInt(cfg.minGapMs)||1200);
+  const wait = lastGeminiAt + gap - Date.now();
+  if(wait > 0) await sleep(wait);
+  lastGeminiAt = Date.now();
+}
+
+async function gemini(parts){
+  if(!cfg.gemini) throw new Error('חסר Gemini API Key');
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/'+cfg.model+':generateContent?key='+encodeURIComponent(cfg.gemini);
+  const body = JSON.stringify({
+    contents:[{role:'user',parts}],
+    generationConfig:{ temperature:0, responseMimeType:'application/json', maxOutputTokens:1024 }
+  });
+
+  const MAX_TRIES = 4;
+  let lastErr = null;
+  for(let attempt=1; attempt<=MAX_TRIES; attempt++){
+    await rateGate();
+    try{
+      const r = await fetch(url,{ method:'POST', headers:{'Content-Type':'application/json'}, body, signal: scanAbort? scanAbort.signal : undefined });
+      if(r.ok){
+        const j = await r.json();
+        const txt = ((((j.candidates||[])[0]||{}).content||{}).parts||[]).map(p=>p.text||'').join('');
+        const clean = txt.replace(/```json/gi,'').replace(/```/g,'').trim();
+        try{ return JSON.parse(clean); }catch(e){ return null; }
+      }
+      // 429 = חריגת קצב, 5xx = תקלה זמנית -> שווה לנסות שוב
+      if(r.status===429 || r.status>=500){
+        let m=''; try{ m=(await r.json()).error.message; }catch(e){ m='HTTP '+r.status; }
+        lastErr = new Error(r.status===429 ? 'חריגת קצב (429) — האטה ונסיון חוזר' : m);
+        await sleep(Math.min(20000, 1500*Math.pow(2,attempt)) + Math.random()*600);
+        continue;
+      }
+      // שאר השגיאות (מפתח לא תקין, מודל חסום) - אין טעם לנסות שוב
+      let m=''; try{ m=(await r.json()).error.message; }catch(e){ m='HTTP '+r.status; }
+      throw new Error('Gemini: '+m);
+    }catch(e){
+      // "Failed to fetch" = כשל רשת/ניתוק, כמעט תמיד עומס. מנסים שוב.
+      if(e && (e.name==='AbortError' || /abort/i.test(e.message||''))) throw e;   // בוטל - לא מנסים שוב
+      const isNetwork = /failed to fetch|networkerror|load failed/i.test(e.message||'');
+      if(!isNetwork && !/429|חריגת קצב/.test(e.message||'')) throw e;
+      lastErr = e;
+      if(attempt < MAX_TRIES) await sleep(Math.min(20000, 1500*Math.pow(2,attempt)) + Math.random()*600);
+    }
+  }
+  // מיצינו את הנסיונות על המודל הנוכחי — ננסה לעבור למודל חינמי אחר במקום להיכשל
+  const chain = freeChain().filter(m=> m!==cfg.model);
+  if(chain.length && !gemini._switching){
+    gemini._switching = true;                 // מונע מרוץ בין קריאות מקבילות
+    const next = chain[0];
+    const prev = cfg.model;
+    cfg.model = next;
+    modelSwitchedTo = next;
+    saveCfgNow();
+    try{ $('cfgModel').value = next; }catch(e){}
+    setTimeout(()=>{ gemini._switching = false; }, 1500);
+    toast('עברתי אוטומטית ל-'+next);
+    lastGeminiAt = 0;
+    return gemini(parts);                     // נסיון אחד עם המודל החדש
+  }
+  throw new Error((lastErr && lastErr.message) ? lastErr.message+' (אחרי '+MAX_TRIES+' נסיונות)' : 'נכשל אחרי מספר נסיונות');
+}
+async function extractFile(b64, mime){
+  return gemini([{inline_data:{mime_type:mime, data:b64}},{text:SCHEMA_PROMPT}]);
+}
+async function extractText(subject, from, body){
+  return gemini([{text:SCHEMA_PROMPT+`\n\nנתוני המייל:\nנושא: ${subject}\nשולח: ${from}\n\nתוכן:\n${body}`}]);
+}
+
+/* ============================================================
+   סריקה
+   ============================================================ */
+function setStep(n){
+  ['s1','s2','s3','s4'].forEach((id,i)=>{
+    const el=$(id); el.classList.toggle('on', i===n-1); el.classList.toggle('done', i<n-1);
+  });
+}
+function prog(p,msg){ $('barI').style.width=Math.max(0,Math.min(100,p))+'%'; if(msg!=null) $('plog').textContent=msg; }
+
+/* ---------- שעון / זמן נותר ---------- */
+let scanT0 = 0, etaTimer = null;
+function fmtDur(sec){
+  sec = Math.max(0, Math.round(sec));
+  const m = Math.floor(sec/60), s = sec%60;
+  return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+}
+function startEta(total){
+  scanT0 = Date.now();
+  $('etaDone').textContent = '0 / '+total;
+  $('etaLeft').textContent = '—';
+  $('etaElapsed').textContent = '00:00';
+  clearInterval(etaTimer);
+  etaTimer = setInterval(()=>{
+    $('etaElapsed').textContent = fmtDur((Date.now()-scanT0)/1000);
+  }, 1000);
+}
+function updEta(done, total){
+  $('etaDone').textContent = done+' / '+total;
+  const elapsed = (Date.now()-scanT0)/1000;
+  if(done >= 3){                       // צריך כמה דגימות לפני שהערכה שווה משהו
+    const perItem = elapsed/done;
+    $('etaLeft').textContent = fmtDur(perItem*(total-done));
+  }
+}
+function stopEta(){ clearInterval(etaTimer); etaTimer=null; $('etaLeft').textContent='✓'; }
+
+$('btnStop').onclick = ()=>{
+  stopFlag = true;
+  try{ if(scanAbort) scanAbort.abort(); }catch(e){}   // קוטע מיד בקשות שכבר בדרך
+  $('plog').textContent = 'עוצר...';
+  buzz(14);
+};
+
+let scanRunning = false;   // פריט 13 - מונע סריקה כפולה מלחיצה כפולה
+
+$('btnScan').onclick = async ()=>{
+  if(scanRunning){ toast('סריקה כבר רצה'); return; }
+  const errs = validateBeforeScan();
+  if(errs.length){ showScanErrors(errs); return; }
+
+  scanRunning = true;
+  stopFlag=false; docs=[]; seenFP={}; dupSkipped=0; modelSwitchedTo=null;
+  scanAbort = new AbortController();
+  $('errBox').innerHTML='';
+  $('progCard').style.display='block';
+  $('btnScan').disabled=true; $('btnStop').style.display='flex';
+
+  try{
+    /* --- 1. חיפוש --- */
+    setStep(1); prog(3,'מחפש מיילים...');
+    let q = '('+$('kw').value.trim()+') -in:spam -in:trash';
+    if($('dFrom').value) q += ' after:'+$('dFrom').value.replace(/-/g,'/');
+    if($('dTo').value)   q += ' before:'+$('dTo').value.replace(/-/g,'/');
+
+    const cap = Math.min(500, Math.max(1, parseInt($('maxMsgs').value)||150));
+    let ids=[], pageToken=null;
+    while(ids.length<cap && !stopFlag){
+      const u='https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=100&q='+encodeURIComponent(q)+(pageToken?'&pageToken='+pageToken:'');
+      const j=await api(u);
+      (j.messages||[]).forEach(m=>{ if(ids.length<cap) ids.push(m.id); });
+      pageToken=j.nextPageToken;
+      if(!pageToken) break;
+      prog(6,'נמצאו '+ids.length+' מיילים...');
+    }
+    const fresh = $('chipRescan').classList.contains('on') ? ids : ids.filter(id=>!seen[id]);
+    if(!fresh.length){
+      prog(100, ids.length
+        ? 'כל '+ids.length+' המיילים בטווח כבר עובדו. הפעל "סרוק מחדש" למעלה כדי לסרוק אותם שוב.'
+        : 'לא נמצאו מיילים בטווח הזה.');
+      setStep(4); finish(); return;
+    }
+    prog(10, fresh.length+' מיילים חדשים (מתוך '+ids.length+').');
+
+    /* --- 2. שליפה --- */
+    setStep(2);
+    const msgs=[]; let done=0;
+    await pool(fresh, 5, async (id)=>{
+      try{
+        const m = await api('https://gmail.googleapis.com/gmail/v1/users/me/messages/'+id+'?format=full');
+        msgs.push(parseMsg(m));
+      }catch(e){}
+      done++; prog(10+ (done/fresh.length)*25, 'שולף מיילים '+done+'/'+fresh.length);
+    });
+    if(stopFlag){ finish(); return; }
+
+    /* --- 3. זיהוי --- */
+    setStep(3);
+    const jobs=[];
+    msgs.forEach(m=>{
+      if(M.pdf && m.files.length){
+        m.files.forEach(f=> jobs.push({kind:'pdf', msg:m, file:f}));
+      } else if(M.link && m.links.length){
+        jobs.push({kind:'link', msg:m});
+      } else if(M.body){
+        jobs.push({kind:'body', msg:m});
+      }
+    });
+    if(!jobs.length){ prog(100,'לא נמצא תוכן מתאים.'); setStep(4); finish(); return; }
+
+    let k=0; const errs=[]; const failedMsgs={};
+    startEta(jobs.length);
+    await pool(jobs, Math.max(1, Math.min(4, parseInt(cfg.concurrency)||2)), async (job)=>{
+      try{
+        let data=null;
+        if(job.kind==='pdf'){
+          const at = await api('https://gmail.googleapis.com/gmail/v1/users/me/messages/'+job.msg.id+'/attachments/'+job.file.id);
+          const bytes = b64ToBytes(b64urlToB64(at.data));
+          if(bytes.length > 18*1024*1024) throw new Error('קובץ גדול מדי');
+          const b64 = bytesToB64(bytes);
+          data = await extractFile(b64, job.file.mime);
+          if(data && data.is_doc) job.bytes = bytes;
+        } else {
+          data = await extractText(job.msg.subject, job.msg.from, job.msg.text);
+        }
+        if(data && data.is_doc) push(job, data);
+      }catch(e){
+        const aborted = (e && (e.name==='AbortError' || /abort/i.test(e.message||'')));
+        if(!aborted) errs.push(e.message||String(e));   // ביטול יזום הוא לא כשל
+        failedMsgs[job.msg.id] = 1;   // נכשל/בוטל -> לא לסמן כמטופל, כדי לנסות שוב
+      }
+      k++; prog(35+(k/jobs.length)*60, 'מזהה מסמכים '+k+'/'+jobs.length+' · נמצאו '+docs.length);
+    });
+
+    // סימון "עובד" רק למיילים שלא נכשלו — אחרת סריקה כושלת "שורפת" מיילים לתמיד
+    jobs.forEach(job=>{ if(!failedMsgs[job.msg.id]) seen[job.msg.id]=1; });
+
+    // הצגת שגיאות: אם הכל נכשל, זו כמעט תמיד בעיית מפתח/מודל ולא בעיית מסמכים
+    if(errs.length){
+      const uniq = {}; errs.forEach(m=>{ uniq[m]=(uniq[m]||0)+1; });
+      const top = Object.keys(uniq).sort((a,b)=>uniq[b]-uniq[a]).slice(0,3);
+      const allFailed = errs.length>=jobs.length;
+      const rateish = errs.filter(m=>/failed to fetch|429|חריגת קצב|נסיונות/i.test(m)).length;
+      let advice = '';
+      if(rateish > errs.length/2){
+        advice = '<br><b>רוב הכשלונות הם עומס/מגבלת קצב, לא תקלה אמיתית.</b>' +
+                 '<br>• עבור להגדרות → קצב סריקה → <b>🐢 איטי ובטוח</b>' +
+                 '<br>• הרץ את הסריקה שוב — המיילים שנכשלו לא נשרפו והם ייסרקו מחדש אוטומטית' +
+                 '<br>• אפשר גם לסרוק בטווחים קצרים יותר (חודש בכל פעם)';
+      } else if(allFailed){
+        advice = '<br>כנראה מפתח Gemini לא תקין או המודל לא זמין. לך להגדרות → "בדוק מפתח Gemini".';
+      }
+      $('errBox').innerHTML = '<div class="note '+(allFailed?'err':'')+'" style="margin-top:8px">'+
+        esc(errs.length)+' מתוך '+jobs.length+' מסמכים נכשלו.<br>'+
+        top.map(m=>'• '+esc(m)+(uniq[m]>1?' ('+uniq[m]+'×)':'')).join('<br>')+
+        advice+
+        '</div>';
+    } else { $('errBox').innerHTML=''; }
+
+    /* --- 4. מיון --- */
+    setStep(4);
+    store.set(K.seen, seen); updMem();
+    // עדכון זיכרון מחיר: לכל מפתח (ספק+סוג) שומרים את המסמך המאוחר ביותר שנמצא
+    const latestByKey = {};
+    docs.forEach(d=>{
+      const k = priceKey(d.supplier, d.docType);
+      if(d.total==null) return;
+      if(!latestByKey[k] || d.date > latestByKey[k].date) latestByKey[k] = {total:d.total, date:d.date};
+    });
+    Object.assign(priceMem, latestByKey);
+    store.set(K.price, priceMem);
+    docsSavedAt = Date.now();
+    await saveDocs();
+    prog(100, 'הסתיים. '+docs.length+' מסמכים.'+(dupSkipped?' ('+dupSkipped+' כפילויות דולגו)':''));
+    render();
+    showSummary(jobs.length, errs.length);
+
+  }catch(e){
+    $('plog').textContent='שגיאה: '+e.message;
+  }
+  finish();
+};
+function finish(){ scanRunning=false; $('btnScan').disabled=false; $('btnStop').style.display='none'; }
+
+/* ---------- פופאפ סיכום בסיום סריקה ---------- */
+function showSummary(totalJobs, failed){
+  const g = groups();
+  const tot = docs.reduce((s,d)=>s+(d.currency==='ILS'?(d.total||0):0),0);
+  $('mDocs').textContent = docs.length;
+  $('mSup').textContent  = Object.keys(g).length;
+  $('mTot').textContent  = Math.round(tot).toLocaleString('he-IL');
+  $('mTitle').textContent = docs.length ? 'הסריקה הסתיימה' : 'הסריקה הסתיימה — לא זוהו מסמכים';
+  $('mSub').textContent = 'נסרקו '+totalJobs+' פריטים · '+Math.round((Date.now()-scanT0)/1000)+' שניות';
+
+  const lines = [];
+  if(dupSkipped) lines.push('🔁 '+dupSkipped+' כפילויות דולגו');
+  if(failed)     lines.push('⚠ '+failed+' נכשלו — יסרקו שוב אוטומטית בפעם הבאה');
+  const review = docs.filter(d=>d.needsReview).length;
+  if(review)     lines.push('🔎 '+review+' מעל סף הבדיקה שלך');
+  const jumps = docs.filter(d=>d.priceDeltaPct!=null).length;
+  if(jumps)      lines.push('📈 '+jumps+' עם שינוי מחיר משמעותי');
+  const links = docs.filter(d=>d.kind==='link').length;
+  if(links)      lines.push('🔗 '+links+' דורשים הורדה ידנית מהמערכת של הספק');
+  if(modelSwitchedTo) lines.push('🔄 עברתי אוטומטית למודל '+modelSwitchedTo);
+  $('mLines').innerHTML = lines.length
+    ? '<div style="font-size:12.5px;line-height:1.9;text-align:start">'+lines.map(esc).join('<br>')+'</div>'
+    : '';
+
+  $('doneModal').classList.add('show');
+  chime();
+  buzz(docs.length ? [10,50,10] : 20);
+}
+$('mGo').onclick = ()=>{
+  $('doneModal').classList.remove('show');
+  document.querySelector('nav button[data-v="res"]').click();
+};
+$('mClose').onclick = ()=> $('doneModal').classList.remove('show');
+$('doneModal').onclick = (e)=>{ if(e.target.id==='doneModal') $('doneModal').classList.remove('show'); };
+
+function push(job, d){
+  const sup = safeName(d.supplier || senderName(job.msg.from));
+  const dt  = /^\d{4}-\d{2}-\d{2}$/.test(d.date||'') ? d.date : job.msg.date.toISOString().slice(0,10);
+  const type= d.doc_type || 'מסמך';
+  const num = String(d.doc_number||'').trim();
+  const amt = (d.amount_total==null? null : Number(d.amount_total));
+  const cur = d.currency==='USD'?'$':(d.currency==='EUR'?'€':'₪');
+  const amtTxt = amt==null? 'ללא סכום' : Number(amt).toLocaleString('he-IL',{maximumFractionDigits:2})+' '+cur;
+  const ext = job.kind==='pdf' ? (job.file.mime.includes('pdf')?'pdf':(/png/.test(job.file.mime)?'png':'jpg')) : 'html';
+  const fname = safeName(`${dt} · ${type}${num?' '+num:''} · ${amtTxt}`) + '.' + ext;
+
+  const docFp = fp({supplier:sup, docType:type, docNum:num, date:dt, total:amt});
+  if(seenFP[docFp]){ dupSkipped++; return; }
+  if(deletedFps[docFp]){ dupSkipped++; return; }   // נמחק ידנית - לא מחזירים אותו
+  seenFP[docFp] = true;
+
+  // זיהוי קפיצת מחיר לעומת המסמך האחרון הידוע מאותו ספק+סוג (מסריקות קודמות)
+  let priceDeltaPct = null;
+  const pk = priceKey(sup, type);
+  if(amt!=null && priceMem[pk] && priceMem[pk].total>0 && priceMem[pk].date < dt){
+    const diff = (amt - priceMem[pk].total)/priceMem[pk].total;
+    if(Math.abs(diff) >= 0.15) priceDeltaPct = diff;
+  }
+
+  docs.push({
+    supplier: sup,
+    supplierId: d.supplier_id||'',
+    docType: type, docNum: num, date: dt,
+    before: d.amount_before_vat==null?null:Number(d.amount_before_vat),
+    vat: d.vat==null?null:Number(d.vat),
+    total: amt, currency: d.currency||'ILS',
+    conf: d.confidence==null?null:Number(d.confidence),
+    kind: job.kind,
+    mime: job.kind==='pdf' ? (job.file.mime||'application/pdf') : 'text/html',
+    fileName: fname,
+    bytes: job.bytes||null,
+    origName: job.kind==='pdf'? job.file.name : '',
+    link: job.kind==='link' ? (job.msg.links[0]||'') : '',
+    subject: job.msg.subject, from: job.msg.from,
+    msgId: job.msg.id,
+    bodyText: job.kind!=='pdf' ? job.msg.text : '',
+    fp: docFp,
+    needsReview: !!(cfg.threshold>0 && amt!=null && amt>=cfg.threshold),
+    priceDeltaPct,
+    project: (docMeta[docFp] && docMeta[docFp].project) || ''
+  });
+}
+
+/* ============================================================
+   מדריך — צ'קליסט בדיקות
+   ============================================================ */
+const CHECKS = [
+  ['התחברות','נכנסתי עם Google ורואה נקודה ירוקה עם המייל למעלה'],
+  ['התחברות','סגרתי ופתחתי את האפליקציה — עדיין מחובר, בלי כניסה מחדש'],
+  ['מפתח','הגדרות → "בדוק מפתח Gemini" → יצא ✓ ירוק'],
+  ['מפתח','הגדרות → "טען מודלים" → הרשימה נטענה והמודל מסומן "חינמי"'],
+  ['סריקה','הרצתי סריקה של חודש והתקבלו מסמכים'],
+  ['סריקה','השעון הראה זמן נותר שהתעדכן במהלך הריצה'],
+  ['סריקה','לחצתי "עצור" באמצע — נעצר מיד ולא נתקע'],
+  ['סריקה','בסיום נשמע צליל והופיע פופאפ סיכום'],
+  ['תוצאות','המסמכים מקובצים לפי ספק והסכומים נראים הגיוניים'],
+  ['תוצאות','לחצתי ✎ על מסמך — נפתח מסך עריכה עם כל השדות'],
+  ['תוצאות','שיניתי סכום כך שלא יסתדר — קיבלתי אזהרת מע"מ אדומה'],
+  ['תוצאות','שמרתי עריכה — הופיעה תגית ירוקה "תוקן"'],
+  ['תוצאות','מחקתי מסמך — נעלם מהרשימה'],
+  ['תוצאות','הרצתי סריקה חוזרת — המסמך שמחקתי לא חזר'],
+  ['תוצאות','חיפוש ומיון עובדים'],
+  ['שמירה','רעננתי את הדף — התוצאות עדיין שם'],
+  ['ייצוא','הורדתי ריכוז.xlsx ונפתח תקין עם עברית'],
+  ['ייצוא','הורדתי ZIP — מבנה התיקיות לפי ספק'],
+  ['ייצוא','העליתי ל-Drive והתיקייה נוצרה'],
+  ['ייצוא','וואטסאפ נפתח עם סיכום'],
+  ['הגדרות','קוד הגישה חוסם כניסה, והקוד הנכון פותח'],
+  ['הגדרות','החלפתי בין נושא בהיר לכהה'],
+  ['הגדרות','שיניתי קצב סריקה ל-🐢 והשינוי נשמר אחרי רענון'],
+  ['כללי','יש רטט קל בלחיצה על כפתורים'],
+  ['כללי','האפליקציה מותקנת במסך הבית ונפתחת במסך מלא']
+];
+function renderChecks(){
+  const el = $('chkList'); if(!el) return;
+  const saved = store.get('inv_checks', {});
+  let last = '';
+  el.innerHTML = CHECKS.map((c,i)=>{
+    const group = c[0], text = c[1];
+    const head = group!==last ? '<div style="font-weight:700;font-size:11.5px;color:var(--red);margin:10px 0 2px">'+esc(group)+'</div>' : '';
+    last = group;
+    const on = !!saved['c'+i];
+    return head + '<label class="chk"><input type="checkbox" data-i="'+i+'"'+(on?' checked':'')+'>'+
+           (on? '<s>'+esc(text)+'</s>' : '<span>'+esc(text)+'</span>')+'</label>';
+  }).join('');
+  el.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+    cb.onchange = ()=>{
+      const st = store.get('inv_checks', {});
+      st['c'+cb.dataset.i] = cb.checked;
+      store.set('inv_checks', st);
+      renderChecks(); buzz(8);
+    };
+  });
+}
+$('btnChkReset').onclick = ()=>{ store.del('inv_checks'); renderChecks(); toast('הסימונים נוקו'); };
+
+/* ============================================================
+   עריכה ומחיקה ידנית (שלב 0 - שכבת אמון)
+   פלט AI אף פעם לא 100%. בלי תיקון ידני כל טעות זורמת
+   לדוחות ולייצוא ונשארת שם לתמיד.
+   ============================================================ */
+let deletedFps = {};   // fingerprint -> true. נשמר כדי שסריקה חוזרת לא תחזיר מסמך שנמחק
+let editingFp = null;
+
+function openEdit(fp){
+  const d = docs.find(x=>x.fp===fp);
+  if(!d) return;
+  editingFp = fp;
+  $('edSub').textContent = d.fileName || '';
+  $('edSupplier').value = d.supplier||'';
+  $('edType').value     = d.docType||'';
+  $('edNum').value      = d.docNum||'';
+  $('edDate').value     = /^\d{4}-\d{2}-\d{2}$/.test(d.date||'') ? d.date : '';
+  $('edVatId').value    = d.supplierId||'';
+  $('edBefore').value   = d.before==null?'':d.before;
+  $('edVat').value      = d.vat==null?'':d.vat;
+  $('edTotal').value    = d.total==null?'':d.total;
+  $('edProject').value  = d.project||'';
+  $('edTerms').value    = String(termsFor(d.supplier));
+  checkVatMath();
+  $('editSheet').classList.add('show');
+}
+function closeEdit(){ $('editSheet').classList.remove('show'); editingFp=null; }
+
+// בדיקת שפיות: לפני+מע"מ אמור להסתדר עם סה"כ
+function checkVatMath(){
+  const b = parseFloat($('edBefore').value), v = parseFloat($('edVat').value), t = parseFloat($('edTotal').value);
+  const el = $('edCalc');
+  if([b,v,t].some(isNaN)){ el.textContent=''; return; }
+  const diff = Math.abs((b+v)-t);
+  if(diff < 0.05){
+    el.innerHTML = '<span style="color:var(--green)">✓ הסכומים מסתדרים ('+b.toFixed(2)+' + '+v.toFixed(2)+' = '+t.toFixed(2)+')</span>';
+  } else {
+    const impliedVat = b>0 ? ((t-b)/b*100) : null;
+    el.innerHTML = '<span style="color:var(--rose)">⚠ לפני+מע"מ = '+(b+v).toFixed(2)+' אבל סה"כ = '+t.toFixed(2)+
+      ' (הפרש '+diff.toFixed(2)+')'+(impliedVat!=null? ' · שיעור מע"מ בפועל '+impliedVat.toFixed(1)+'%':'')+'</span>';
+  }
+}
+['edBefore','edVat','edTotal'].forEach(id=> $(id).oninput = checkVatMath);
+
+$('edSave').onclick = async ()=>{
+  const d = docs.find(x=>x.fp===editingFp);
+  if(!d){ closeEdit(); return; }
+  const num = v => { const n = parseFloat(v); return isNaN(n)? null : n; };
+  d.supplier   = ($('edSupplier').value||'').trim() || d.supplier;
+  d.docType    = ($('edType').value||'').trim() || d.docType;
+  d.docNum     = ($('edNum').value||'').trim();
+  d.date       = $('edDate').value || d.date;
+  d.supplierId = ($('edVatId').value||'').trim();
+  d.before     = num($('edBefore').value);
+  d.vat        = num($('edVat').value);
+  d.total      = num($('edTotal').value);
+  d.project    = ($('edProject').value||'').trim();
+  setTerms(d.supplier, parseInt($('edTerms').value)||0);
+  d.edited     = true;                    // מסומן כתוקן ידנית - לא ידרוס בסריקה חוזרת
+  d.needsReview = !!(cfg.threshold>0 && d.total!=null && d.total>=cfg.threshold);
+
+  docMeta[d.fp] = Object.assign(docMeta[d.fp]||{}, {project:d.project, edited:true});
+  store.set(K.meta, docMeta);
+  await saveDocs();
+  render(); closeEdit(); buzz(12); toast('המסמך עודכן');
+};
+
+$('edDelete').onclick = async ()=>{
+  const d = docs.find(x=>x.fp===editingFp);
+  if(!d) return;
+  if(!confirm('למחוק את המסמך הזה?\n' + (d.supplier||'') + ' · ' + (d.docType||'') + ' ' + (d.docNum||''))) return;
+  deletedFps[d.fp] = true;
+  store.set(K.deleted, deletedFps);
+  docs = docs.filter(x=>x.fp!==d.fp);
+  await saveDocs();
+  render(); closeEdit(); buzz([10,50,10]); toast('נמחק. לא יחזור בסריקה חוזרת.');
+};
+$('edCancel').onclick = closeEdit;
+$('editSheet').onclick = (e)=>{ if(e.target.id==='editSheet') closeEdit(); };
+
+/* ============================================================
+   הצפנת מפתחות (Web Crypto) — פריט 4
+   המפתח עצמו נשמר כ-CryptoKey לא-ניתן-לחילוץ ב-IndexedDB.
+   גם מי שפותח DevTools לא יכול לקרוא אותו החוצה.
+   ============================================================ */
+let cryptoKey = null;
+
+async function getCryptoKey(){
+  if(cryptoKey) return cryptoKey;
+  try{
+    const saved = await idbGet('cryptoKey');
+    if(saved){ cryptoKey = saved; return cryptoKey; }
+    cryptoKey = await crypto.subtle.generateKey(
+      {name:'AES-GCM', length:256},
+      false,                       // extractable=false — לא ניתן לחילוץ, גם לא ע"י קוד
+      ['encrypt','decrypt']
+    );
+    await idbSet('cryptoKey', cryptoKey);
+    return cryptoKey;
+  }catch(e){ console.warn('הצפנה לא זמינה', e); return null; }
+}
+async function encStr(plain){
+  const k = await getCryptoKey();
+  if(!k || !plain) return null;
+  try{
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const buf = await crypto.subtle.encrypt({name:'AES-GCM', iv}, k, new TextEncoder().encode(plain));
+    return {iv: Array.from(iv), data: Array.from(new Uint8Array(buf))};
+  }catch(e){ return null; }
+}
+async function decStr(box){
+  const k = await getCryptoKey();
+  if(!k || !box || !box.iv || !box.data) return '';
+  try{
+    const buf = await crypto.subtle.decrypt(
+      {name:'AES-GCM', iv:new Uint8Array(box.iv)}, k, new Uint8Array(box.data));
+    return new TextDecoder().decode(buf);
+  }catch(e){ return ''; }
+}
+// שמירת סודות מוצפנים ב-IndexedDB במקום טקסט גלוי ב-localStorage
+async function saveSecrets(client, gemini){
+  try{
+    await idbSet('secrets', {client: await encStr(client), gemini: await encStr(gemini)});
+    cfg.client=''; cfg.gemini='';            // לא נשמרים יותר בטקסט גלוי
+    cfg.secretsEncrypted = true;
+    saveCfgNow();
+    return true;
+  }catch(e){ return false; }
+}
+async function loadSecrets(){
+  try{
+    const s = await idbGet('secrets');
+    if(!s) return false;
+    const c = await decStr(s.client), g = await decStr(s.gemini);
+    if(c) cfg.client = c;
+    if(g) cfg.gemini = g;
+    return !!(c||g);
+  }catch(e){ return false; }
+}
+
+/* ============================================================
+   ולידציה לקלט — פריטים 2, 3
+   ============================================================ */
+function validateBeforeScan(){
+  const errs = [];
+  if(!cfg.client) errs.push('חסר Google OAuth Client ID (הגדרות)');
+  else if(!/\.apps\.googleusercontent\.com$/.test(cfg.client.trim()))
+    errs.push('ה-Client ID לא נראה תקין — הוא אמור להסתיים ב-.apps.googleusercontent.com');
+  if(!cfg.gemini) errs.push('חסר Gemini API Key (הגדרות)');
+  if(!cfg.model) errs.push('לא נבחר מודל (הגדרות)');
+  if(!token) errs.push('לא מחובר לתיבת המייל — לחץ "התחבר עם Google"');
+
+  const f = $('dFrom').value, t = $('dTo').value;
+  if(f && t && f > t) errs.push('"מתאריך" מאוחר מ-"עד תאריך"');
+  if(t && t > new Date(Date.now()+86400000).toISOString().slice(0,10))
+    errs.push('"עד תאריך" בעתיד');
+  const mx = parseInt($('maxMsgs').value);
+  if(isNaN(mx) || mx<1 || mx>500) errs.push('מקסימום מיילים חייב להיות בין 1 ל-500');
+
+  const M = modes();
+  if(!M.pdf && !M.link && !M.body) errs.push('לא נבחר שום סוג תוכן ב-"מה לתפוס"');
+  return errs;
+}
+function showScanErrors(errs){
+  $('errBox').innerHTML = '<div class="note err" style="margin-top:8px"><b>לא ניתן להתחיל סריקה:</b><br>'+
+    errs.map(e=>'• '+esc(e)).join('<br>')+'</div>';
+  $('progCard').style.display='block';
+  buzz([12,60,12]);
+}
+
+/* ============================================================
+   תצוגת תוצאות
+   ============================================================ */
+let resSearch = '', resSort = 'date-desc', resProjectFilter = '', reviewOnlyOn = false, trendOn = false;
+$('resSearch').oninput = ()=>{ resSearch = $('resSearch').value.trim(); render(); };
+$('resSort').onchange = ()=>{ resSort = $('resSort').value; render(); };
+$('resProject').onchange = ()=>{ resProjectFilter = $('resProject').value; render(); };
+$('btnReviewOnly').onclick = ()=>{ reviewOnlyOn=!reviewOnlyOn; $('btnReviewOnly').classList.toggle('on',reviewOnlyOn); render(); };
+$('btnTrendToggle').onclick = ()=>{ trendOn=!trendOn; $('btnTrendToggle').classList.toggle('on',trendOn); render(); };
+
+function groups(list){
+  const g={};
+  (list||docs).forEach(d=>{ (g[d.supplier]=g[d.supplier]||[]).push(d); });
+  Object.values(g).forEach(a=>a.sort((x,y)=>x.date.localeCompare(y.date)));
+  return g;
+}
+function visibleDocs(){
+  let list = docs;
+  if(resSearch){ const q=resSearch.toLowerCase(); list = list.filter(d=> d.supplier.toLowerCase().includes(q)); }
+  if(resProjectFilter) list = list.filter(d=> (d.project||'')===resProjectFilter);
+  if(reviewOnlyOn) list = list.filter(d=> d.needsReview);
+  return list;
+}
+function refreshProjectOptions(){
+  const set = new Set();
+  docs.forEach(d=>{ if(d.project) set.add(d.project); });
+  Object.values(docMeta).forEach(m=>{ if(m && m.project) set.add(m.project); });
+  const opts = Array.from(set).sort((a,b)=>a.localeCompare(b,'he'));
+  $('projList').innerHTML = opts.map(p=>'<option value="'+esc(p)+'">').join('');
+  const sel = $('resProject');
+  sel.innerHTML = '<option value="">כל הפרויקטים</option>' + opts.map(p=>'<option value="'+esc(p)+'">'+esc(p)+'</option>').join('');
+  sel.value = resProjectFilter;
+}
+function trendHtml(){
+  const byMonth = {};
+  docs.forEach(d=>{ if(d.currency!=='ILS'||d.total==null) return; const m=d.date.slice(0,7); byMonth[m]=(byMonth[m]||0)+d.total; });
+  const months = Object.keys(byMonth).sort().slice(-12);
+  if(!months.length) return '';
+  const max = Math.max(...months.map(m=>byMonth[m]));
+  return '<div class="trend"><h3>מגמת הוצאות (12 חודשים אחרונים)</h3>' +
+    months.map(m=>{
+      const v = byMonth[m];
+      const pct = max? Math.max(3, Math.round(v/max*100)) : 3;
+      const label = m.slice(5,7)+'/'+m.slice(2,4);
+      return '<div class="trow"><span class="tm">'+label+'</span><span class="tb" style="width:'+pct+'%"></span><span class="tv">'+Math.round(v).toLocaleString('he-IL')+'</span></div>';
+    }).join('') + '</div>';
+}
+function missingHtml(gAll){
+  const today = new Date();
+  const flags = [];
+  Object.keys(gAll).forEach(sup=>{
+    const arr = gAll[sup];
+    if(arr.length<3) return;
+    const dates = arr.map(d=>new Date(d.date));
+    const gaps = [];
+    for(let i=1;i<dates.length;i++) gaps.push((dates[i]-dates[i-1])/86400000);
+    gaps.sort((a,b)=>a-b);
+    const median = gaps[Math.floor(gaps.length/2)];
+    if(median>40) return; // לא ספק חוזר בקצב חודשי-ish
+    const last = dates[dates.length-1];
+    const daysSince = (today-last)/86400000;
+    if(daysSince > median*1.6) flags.push(sup+' (בד"כ כל ~'+Math.round(median)+' ימים, עברו '+Math.round(daysSince)+')');
+  });
+  if(!flags.length) return '';
+  return '<div class="missingNote">⚠ ייתכן שחסרה חשבונית החודש מ: '+flags.map(esc).join(' · ')+'</div>';
+}
+function render(){
+  const head=$('resHead'), body=$('resBody'), toolbar=$('resToolbar'), toolbar2=$('resToolbar2'), trendBox=$('trendBox'), missingBox=$('missingBox');
+  if(!docs.length){
+    head.innerHTML=''; toolbar.style.display='none'; toolbar2.style.display='none';
+    trendBox.style.display='none'; trendBox.innerHTML=''; missingBox.innerHTML='';
+    body.innerHTML='<div class="empty"><div class="big">🗂</div><h2>עוד לא סרקת</h2><p>עבור למסך הסריקה, בחר טווח תאריכים והתחל.</p></div>';
+    return;
+  }
+  toolbar.style.display='flex'; toolbar2.style.display='flex';
+  refreshProjectOptions();
+  const gAll = groups();
+  const tot=docs.reduce((s,d)=>s+(d.currency==='ILS'?(d.total||0):0),0);
+  head.innerHTML =
+    '<div class="sum">'+
+      '<div><b class="num">'+docs.length+'</b><small>מסמכים</small></div>'+
+      '<div><b class="num">'+Object.keys(gAll).length+'</b><small>ספקים</small></div>'+
+      '<div><b class="num">'+Math.round(tot).toLocaleString('he-IL')+'</b><small>סה"כ ₪</small></div>'+
+    '</div>'+
+    (docs.some(d=>d.kind==='link')
+      ? '<div class="note">מסמכים המסומנים <b>קישור</b> יושבים במערכת חיצונית (חשבונית ירוקה / iCount וכו\'). הדפדפן חסום מלהוריד אותם אוטומטית — הם מופיעים בטבלה עם קישור להורדה ידנית.</div>'
+      : '');
+
+  missingBox.innerHTML = missingHtml(gAll);
+  if(trendOn){ trendBox.style.display='block'; trendBox.innerHTML = trendHtml(); }
+  else { trendBox.style.display='none'; trendBox.innerHTML=''; }
+
+  const g = groups(visibleDocs());
+  let names = Object.keys(g);
+
+  const latest = n => g[n][g[n].length-1].date;
+  const earliest = n => g[n][0].date;
+  const total = n => g[n].reduce((s,d)=>s+(d.currency==='ILS'?(d.total||0):0),0);
+  if(resSort==='date-desc') names.sort((a,b)=> latest(b).localeCompare(latest(a)));
+  else if(resSort==='date-asc') names.sort((a,b)=> earliest(a).localeCompare(earliest(b)));
+  else if(resSort==='amt-desc') names.sort((a,b)=> total(b)-total(a));
+  else names.sort((a,b)=> a.localeCompare(b,'he'));
+
+  if(!names.length){
+    body.innerHTML='<div class="empty"><div class="big">🔍</div><h2>אין תוצאות</h2><p>נסה מסנן אחר.</p></div>';
+    return;
+  }
+
+  body.innerHTML = names.map((sup,i)=>{
+    const arr=g[sup];
+    const t=arr.reduce((s,d)=>s+(d.currency==='ILS'?(d.total||0):0),0);
+    return '<div class="folder">'+
+      '<button class="tab" data-i="'+i+'"><span class="car">▸</span>'+
+        '<span class="nm"><b>'+esc(sup)+'</b><small>'+arr.length+' מסמכים'+(arr[0].supplierId?' · '+esc(arr[0].supplierId):'')+'</small></span>'+
+        '<span class="tot">'+Math.round(t).toLocaleString('he-IL')+' ₪</span>'+
+      '</button>'+
+      '<div class="docs" id="dg'+i+'" style="display:none">'+ arr.map(d=>
+        '<div class="doc'+(d.needsReview?' review':'')+'">'+
+          '<span class="dt">'+esc(d.date)+'</span>'+
+          '<span class="src '+d.kind+'">'+(d.kind==='pdf'?'קובץ':d.kind==='link'?'קישור':'מייל')+'</span>'+
+          '<span class="ttl">'+esc(d.docType+(d.docNum?' '+d.docNum:''))+'</span>'+
+          (d.needsReview? '<span class="flag">לבדיקה</span>' : '')+
+          (d.edited? '<span class="flag edited">תוקן</span>' : '')+
+          (d.project? '<span class="projTag">'+esc(d.project)+'</span>' : '')+
+          (d.priceDeltaPct!=null? '<span class="delta '+(d.priceDeltaPct>0?'up':'down')+'">'+(d.priceDeltaPct>0?'▲':'▼')+Math.abs(Math.round(d.priceDeltaPct*100))+'%</span>' : '')+
+          '<span class="lead"></span>'+
+          (d.link? '<a href="'+esc(d.link)+'" target="_blank" rel="noopener">פתח ↗</a>' : '')+
+          '<span class="amt">'+(d.total==null?'—':esc(money(d.total)))+'</span>'+
+          '<button class="edBtn" data-fp="'+esc(d.fp)+'" title="ערוך">✎</button>'+
+        '</div>').join('')+
+      '</div></div>';
+  }).join('');
+
+  body.querySelectorAll('.tab').forEach(t=>{
+    t.onclick=()=>{
+      const d=$('dg'+t.dataset.i);
+      const open=d.style.display!=='none';
+      d.style.display=open?'none':'block';
+      t.classList.toggle('open',!open);
+    };
+  });
+  body.querySelectorAll('.edBtn').forEach(b=>{
+    b.onclick = (e)=>{ e.stopPropagation(); openEdit(b.dataset.fp); };
+  });
+}
+
+/* ============================================================
+   בניית קבצים
+   ============================================================ */
+function bodyHtml(d){
+  return '<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>'+esc(d.docType+' '+d.docNum)+'</title>'+
+  '<style>body{font-family:Arial,sans-serif;padding:24px;max-width:760px;margin:auto;line-height:1.6}'+
+  'table{border-collapse:collapse;margin:16px 0}td{border:1px solid #ccc;padding:6px 12px}'+
+  '.k{background:#f4f4f4;font-weight:bold}pre{white-space:pre-wrap;background:#fafafa;padding:14px;border:1px solid #eee}</style></head><body>'+
+  '<h1>'+esc(d.docType)+' '+esc(d.docNum)+'</h1>'+
+  '<table>'+
+  '<tr><td class="k">ספק</td><td>'+esc(d.supplier)+'</td></tr>'+
+  '<tr><td class="k">ח.פ / ע.מ</td><td>'+esc(d.supplierId)+'</td></tr>'+
+  '<tr><td class="k">תאריך</td><td>'+esc(d.date)+'</td></tr>'+
+  '<tr><td class="k">סה"כ</td><td>'+esc(d.total==null?'—':money(d.total))+'</td></tr>'+
+  (d.link?'<tr><td class="k">קישור למקור</td><td><a href="'+esc(d.link)+'">'+esc(d.link)+'</a></td></tr>':'')+
+  '<tr><td class="k">נושא המייל</td><td>'+esc(d.subject)+'</td></tr>'+
+  '<tr><td class="k">שולח</td><td>'+esc(d.from)+'</td></tr>'+
+  '</table><h3>תוכן המייל</h3><pre>'+esc(d.bodyText||'')+'</pre></body></html>';
+}
+function xlsxBlob(){
+  const rows = docs.slice().sort((a,b)=> a.supplier.localeCompare(b.supplier,'he') || a.date.localeCompare(b.date)).map(d=>({
+    'תאריך': d.date,
+    'ספק': d.supplier,
+    'ח.פ / ע.מ': d.supplierId,
+    'סוג מסמך': d.docType,
+    'מספר מסמך': d.docNum,
+    'לפני מע"מ': d.before,
+    'מע"מ': d.vat,
+    'סה"כ': d.total,
+    'מטבע': d.currency,
+    'פרויקט': d.project||'',
+    'מקור': d.kind==='pdf'?'קובץ מצורף':d.kind==='link'?'קישור חיצוני':'גוף המייל',
+    'שם קובץ': d.fileName,
+    'קישור': d.link,
+    'נושא המייל': d.subject,
+    'שולח': d.from,
+    'ודאות': d.conf
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols']=[{wch:11},{wch:26},{wch:12},{wch:14},{wch:12},{wch:11},{wch:10},{wch:12},{wch:7},{wch:16},{wch:13},{wch:34},{wch:26},{wch:34},{wch:26},{wch:8}];
+  const wb = XLSX.utils.book_new();
+  wb.Workbook = {Views:[{RTL:true}]};
+  XLSX.utils.book_append_sheet(wb, ws, 'ריכוז');
+  const out = XLSX.write(wb,{bookType:'xlsx',type:'array'});
+  return new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+}
+function download(blob,name){
+  const u=URL.createObjectURL(blob), a=document.createElement('a');
+  a.href=u; a.download=name; document.body.appendChild(a); a.click();
+  setTimeout(()=>{a.remove();URL.revokeObjectURL(u);},1500);
+}
+
+/* ============================================================
+   דוח מע"מ — פריט 34
+   ============================================================ */
+let vatPeriodMode = 'month';
+function periodKey(dateStr, mode){
+  const y = dateStr.slice(0,4), m = parseInt(dateStr.slice(5,7));
+  if(mode==='year') return y;
+  if(mode==='quarter') return y+' Q'+Math.ceil(m/3);
+  return dateStr.slice(0,7);
+}
+function vatData(){
+  const byP = {}; const noVat = [];
+  docs.forEach(d=>{
+    if(d.currency!=='ILS') return;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(d.date||'')) return;
+    const k = periodKey(d.date, vatPeriodMode);
+    const row = byP[k] || (byP[k] = {period:k, count:0, before:0, vat:0, total:0, missing:0});
+    row.count++;
+    // אם אין פירוק מע"מ אבל יש סה"כ - לא ממציאים. סופרים בנפרד.
+    if(d.vat==null || d.before==null){
+      row.missing++; noVat.push(d);
+      if(d.total!=null) row.total += d.total;
+    }else{
+      row.before += d.before; row.vat += d.vat;
+      row.total  += (d.total!=null? d.total : d.before+d.vat);
+    }
+  });
+  return {rows: Object.values(byP).sort((a,b)=>b.period.localeCompare(a.period)), noVat};
+}
+function renderVat(){
+  const el = $('vatBox'); if(!el) return;
+  if(!docs.length){ el.innerHTML='<div class="plog">אין נתונים. הרץ סריקה קודם.</div>'; return; }
+  const {rows, noVat} = vatData();
+  if(!rows.length){ el.innerHTML='<div class="plog">אין מסמכים עם תאריך תקין.</div>'; return; }
+  const f = n => Math.round(n).toLocaleString('he-IL');
+  el.innerHTML =
+    '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
+    '<tr style="color:var(--ink-dim);font-size:10.5px">'+
+      '<th style="text-align:start;padding:5px 4px">תקופה</th>'+
+      '<th style="text-align:start;padding:5px 4px">מס\'</th>'+
+      '<th style="text-align:start;padding:5px 4px">לפני מע"מ</th>'+
+      '<th style="text-align:start;padding:5px 4px">מע"מ</th>'+
+      '<th style="text-align:start;padding:5px 4px">סה"כ</th></tr>'+
+    rows.map(r=>
+      '<tr style="border-top:1px dashed var(--line)">'+
+      '<td style="padding:6px 4px;font-family:Rubik">'+esc(r.period)+'</td>'+
+      '<td style="padding:6px 4px">'+r.count+(r.missing?'<span class="flag" style="margin-inline-start:4px">'+r.missing+' ללא</span>':'')+'</td>'+
+      '<td style="padding:6px 4px;font-family:Rubik">'+f(r.before)+'</td>'+
+      '<td style="padding:6px 4px;font-family:Rubik;color:var(--red);font-weight:700">'+f(r.vat)+'</td>'+
+      '<td style="padding:6px 4px;font-family:Rubik">'+f(r.total)+'</td></tr>').join('')+
+    '</table></div>'+
+    (noVat.length? '<div class="plog" style="margin-top:8px">⚠ '+noVat.length+
+      ' מסמכים ללא פירוק מע"מ — לא נכללו בעמודות לפני/מע"מ. ערוך אותם במסך התוצאות כדי לכלול.</div>' : '');
+}
+document.querySelectorAll('#vatPeriod .chip').forEach(c=>{
+  c.onclick=()=>{
+    document.querySelectorAll('#vatPeriod .chip').forEach(x=>x.classList.remove('on'));
+    c.classList.add('on'); vatPeriodMode=c.dataset.p; renderVat();
+  };
+});
+$('btnVatXlsx').onclick = ()=>{
+  if(!docs.length){ toast('אין נתונים'); return; }
+  const {rows} = vatData();
+  const wb = XLSX.utils.book_new(); wb.Workbook={Views:[{RTL:true}]};
+  const ws1 = XLSX.utils.json_to_sheet(rows.map(r=>({
+    'תקופה':r.period,'מסמכים':r.count,'ללא פירוק מע"מ':r.missing,
+    'לפני מע"מ':Math.round(r.before*100)/100,'מע"מ':Math.round(r.vat*100)/100,'סה"כ':Math.round(r.total*100)/100
+  })));
+  ws1['!cols']=[{wch:12},{wch:9},{wch:15},{wch:13},{wch:12},{wch:13}];
+  XLSX.utils.book_append_sheet(wb, ws1, 'סיכום מע"מ');
+  const ws2 = XLSX.utils.json_to_sheet(docs.filter(d=>d.currency==='ILS').map(d=>({
+    'תקופה': /^\d{4}-\d{2}-\d{2}$/.test(d.date||'')? periodKey(d.date,vatPeriodMode):'',
+    'תאריך':d.date,'ספק':d.supplier,'ח.פ':d.supplierId,'סוג':d.docType,'מספר':d.docNum,
+    'לפני מע"מ':d.before,'מע"מ':d.vat,'סה"כ':d.total,'תוקן ידנית':d.edited?'כן':''
+  })));
+  ws2['!cols']=[{wch:11},{wch:11},{wch:24},{wch:12},{wch:14},{wch:11},{wch:12},{wch:10},{wch:12},{wch:11}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'פירוט');
+  const out = XLSX.write(wb,{bookType:'xlsx',type:'array'});
+  download(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),
+           'דוח_מעמ_'+vatPeriodMode+'.xlsx');
+  toast('דוח מע"מ הורד');
+};
+
+/* ============================================================
+   תנאי תשלום ומה מגיע לתשלום — פריט 31
+   ============================================================ */
+function termsFor(supplier){
+  const t = store.get(K.terms, {});
+  return (t[supplier]!=null) ? t[supplier] : 30;   // ברירת מחדל שוטף+30
+}
+function setTerms(supplier, days){
+  const t = store.get(K.terms, {});
+  t[supplier] = days; store.set(K.terms, t);
+}
+function dueDate(d){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(d.date||'')) return null;
+  const days = termsFor(d.supplier);
+  const base = new Date(d.date+'T00:00:00');
+  base.setMonth(base.getMonth()+1, 0);      // סוף החודש = "שוטף"
+  base.setDate(base.getDate()+days);        // + ימי האשראי
+  return base;
+}
+function renderDue(){
+  const el = $('dueBox'); if(!el) return;
+  if(!docs.length){ el.innerHTML='<div class="plog">אין נתונים.</div>'; return; }
+  const today = new Date(); today.setHours(0,0,0,0);
+  const items = docs
+    .filter(d=> d.total!=null && d.currency==='ILS' && !/קבלה/.test(d.docType||''))  // קבלה = כבר שולם
+    .map(d=>({d, due: dueDate(d)}))
+    .filter(x=> x.due)
+    .sort((a,b)=> a.due-b.due);
+  if(!items.length){ el.innerHTML='<div class="plog">אין חשבוניות פתוחות לתשלום.</div>'; return; }
+
+  const bucket = x=>{
+    const diff = Math.round((x.due-today)/86400000);
+    if(diff < 0)  return {k:'late',  t:'באיחור '+Math.abs(diff)+' ימים', c:'var(--rose)'};
+    if(diff <= 7) return {k:'soon',  t:'בעוד '+diff+' ימים', c:'var(--red)'};
+    return {k:'later', t:x.due.toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit'}), c:'var(--ink-dim)'};
+  };
+  const late = items.filter(x=>bucket(x).k==='late');
+  const soon = items.filter(x=>bucket(x).k==='soon');
+  const sum = a => Math.round(a.reduce((s,x)=>s+(x.d.total||0),0)).toLocaleString('he-IL');
+
+  el.innerHTML =
+    '<div class="sum" style="margin-bottom:10px">'+
+      '<div><b class="num" style="color:var(--rose)">'+late.length+'</b><small>באיחור · '+sum(late)+' ₪</small></div>'+
+      '<div><b class="num">'+soon.length+'</b><small>השבוע · '+sum(soon)+' ₪</small></div>'+
+      '<div><b class="num">'+items.length+'</b><small>סה"כ פתוח</small></div>'+
+    '</div>'+
+    items.slice(0,25).map(x=>{
+      const b = bucket(x);
+      return '<div class="doc" style="border-bottom:1px dashed var(--line)">'+
+        '<span class="ttl">'+esc(x.d.supplier)+'</span>'+
+        '<span class="dt">'+esc(x.d.docType+' '+(x.d.docNum||''))+'</span>'+
+        '<span class="lead"></span>'+
+        '<span style="font-size:10.5px;color:'+b.c+';font-weight:700;white-space:nowrap">'+esc(b.t)+'</span>'+
+        '<span class="amt">'+esc(money(x.d.total))+'</span></div>';
+    }).join('')+
+    (items.length>25? '<div class="plog" style="margin-top:6px">מוצגות 25 הראשונות מתוך '+items.length+'</div>':'');
+}
+/* ============================================================
+   ייצוא
+   ============================================================ */
+$('btnXlsx').onclick = ()=>{
+  if(!docs.length){ toast('אין נתונים'); return; }
+  download(xlsxBlob(),'ריכוז.xlsx'); toast('ריכוז.xlsx הורד');
+};
+
+$('btnCsv').onclick = ()=>{
+  if(!docs.length){ toast('אין נתונים'); return; }
+  const cols = ['תאריך','ספק','חפ','מספר_מסמך','סוג_מסמך','לפני_מעמ','מעמ','סהכ','פרויקט','שם_קובץ'];
+  const rows = docs.slice().sort((a,b)=> a.supplier.localeCompare(b.supplier,'he') || a.date.localeCompare(b.date));
+  const csvEsc = v => { v = v==null?'':String(v); return /[",\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; };
+  let csv = cols.join(',') + '\r\n';
+  rows.forEach(d=>{
+    csv += [d.date, d.supplier, d.supplierId, d.docNum, d.docType, d.before, d.vat, d.total, d.project||'', d.fileName]
+      .map(csvEsc).join(',') + '\r\n';
+  });
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'}); // BOM כדי שאקסל יציג עברית נכון
+  download(blob, 'ריכוז_הנהח.csv');
+  toast('CSV הורד — בדוק מול פורמט היבוא של התוכנה שלך');
+};
+
+$('btnWa').onclick = ()=>{
+  if(!docs.length){ toast('אין נתונים'); return; }
+  const g = groups();
+  const tot = docs.reduce((s,d)=>s+(d.currency==='ILS'?(d.total||0):0),0);
+  const top = Object.keys(g).map(sup=>({sup, t: g[sup].reduce((s,d)=>s+(d.currency==='ILS'?(d.total||0):0),0)}))
+    .sort((a,b)=>b.t-a.t).slice(0,5);
+  let msg = 'סיכום חשבוניות — יהודה שיפוצים\n';
+  msg += docs.length+' מסמכים מ-'+Object.keys(g).length+' ספקים\n';
+  msg += 'סה"כ: '+Math.round(tot).toLocaleString('he-IL')+' ₪\n\nספקים מובילים:\n';
+  top.forEach(x=> msg += '• '+x.sup+': '+Math.round(x.t).toLocaleString('he-IL')+' ₪\n');
+  window.open('https://wa.me/?text='+encodeURIComponent(msg), '_blank');
+};
+
+$('btnZip').onclick = async ()=>{
+  if(!docs.length){ toast('אין נתונים'); return; }
+  const log=$('zipLog'); log.textContent='בונה ZIP...';
+  try{
+    const zip=new JSZip();
+    const root=zip.folder(safeName($('rootName').value||'חשבוניות'));
+    const used={};
+    docs.forEach(d=>{
+      const f=root.folder(safeName(d.supplier));
+      let n=d.fileName, key=d.supplier+'/'+n, c=1;
+      while(used[key]){ n=d.fileName.replace(/(\.\w+)$/, ' ('+(++c)+')$1'); key=d.supplier+'/'+n; }
+      used[key]=1;
+      if(d.kind==='pdf' && d.bytes) f.file(n, d.bytes);
+      else f.file(n.replace(/\.\w+$/,'.html'), bodyHtml(d));
+    });
+    root.file('ריכוז.xlsx', xlsxBlob());
+    const blob = await zip.generateAsync({type:'blob',compression:'DEFLATE'}, m=>{
+      log.textContent='דוחס... '+Math.round(m.percent)+'%';
+    });
+    download(blob, safeName($('rootName').value||'חשבוניות')+'.zip');
+    log.textContent='ה-ZIP ירד לתיקיית ההורדות.';
+  }catch(e){ log.textContent='שגיאה: '+e.message; }
+};
+
+async function driveFolder(name, parent){
+  const q = "name='"+name.replace(/'/g,"\\'")+"' and mimeType='application/vnd.google-apps.folder' and trashed=false"+(parent?" and '"+parent+"' in parents":"");
+  const j = await api('https://www.googleapis.com/drive/v3/files?spaces=drive&fields=files(id,name)&q='+encodeURIComponent(q));
+  if(j.files && j.files.length) return j.files[0].id;
+  const c = await api('https://www.googleapis.com/drive/v3/files',{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name, mimeType:'application/vnd.google-apps.folder', parents: parent?[parent]:undefined})
+  });
+  return c.id;
+}
+async function driveUpload(name, mime, dataB64, parent){
+  const B='----inv'+Date.now();
+  const meta={name, parents:[parent]};
+  const body =
+    '--'+B+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(meta)+
+    '\r\n--'+B+'\r\nContent-Type: '+mime+'\r\nContent-Transfer-Encoding: base64\r\n\r\n'+dataB64+
+    '\r\n--'+B+'--';
+  return api('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink',{
+    method:'POST', headers:{'Content-Type':'multipart/related; boundary='+B}, body
+  });
+}
+function blobToB64(blob){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>res(String(r.result).split(',')[1]);
+    r.onerror=()=>rej(new Error('קריאת קובץ נכשלה'));
+    r.readAsDataURL(blob);
+  });
+}
+$('btnDrive').onclick = async ()=>{
+  if(!token){ toast('צריך להתחבר'); return; }
+  if(!docs.length){ toast('אין נתונים'); return; }
+  const log=$('driveLog'); $('btnDrive').disabled=true;
+  try{
+    log.textContent='יוצר תיקייה ראשית...';
+    const root = await driveFolder(safeName($('rootName').value||'חשבוניות'), null);
+    const g=groups(); const names=Object.keys(g); const fmap={};
+    for(let i=0;i<names.length;i++){
+      log.textContent='תיקיות ספקים '+(i+1)+'/'+names.length;
+      fmap[names[i]] = await driveFolder(safeName(names[i]), root);
+    }
+    let n=0;
+    for(const d of docs){
+      n++; log.textContent='מעלה '+n+'/'+docs.length+' · '+d.supplier;
+      if(d.kind==='pdf' && d.bytes){
+        await driveUpload(d.fileName, d.mime||'application/pdf', bytesToB64(d.bytes), fmap[d.supplier]);
+      }else{
+        const b64 = btoa(unescape(encodeURIComponent(bodyHtml(d))));
+        await driveUpload(d.fileName.replace(/\.\w+$/,'.html'), 'text/html', b64, fmap[d.supplier]);
+      }
+    }
+    log.textContent='מעלה ריכוז.xlsx...';
+    const x = await driveUpload('ריכוז.xlsx','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', await blobToB64(xlsxBlob()), root);
+    log.innerHTML='הסתיים. <a href="https://drive.google.com/drive/folders/'+esc(root)+'" target="_blank" rel="noopener" style="color:#ED1C24;font-weight:600">פתח את התיקייה ב-Drive ↗</a>';
+    toast('הועלה ל-Drive');
+  }catch(e){ log.textContent='שגיאה: '+e.message; }
+  $('btnDrive').disabled=false;
+};
+
+/* ============================================================
+   אתחול
+   ============================================================ */
+(function init(){
+  loadCfg();
+  const now=new Date();
+  $('dTo').value = now.toISOString().slice(0,10);
+  const from=new Date(now.getFullYear(), now.getMonth()-2, 1);
+  $('dFrom').value = from.toISOString().slice(0,10);
+  $('verDate').textContent = new Date().toISOString().slice(0,10);
+  $('helpVer').textContent = 'v2.3';
+  renderChecks();
+  render();
+  loadDocs();   // שחזור תוצאות הסריקה האחרונה מ-IndexedDB
+
+  // שחזור התחברות: טוקן שמור בתוקף -> משתמשים בו מיד.
+  // אחרת מנסים חידוש שקט (עובד אם המשתמש כבר אישר בעבר, בלי מסך אישור).
+  userEmail = store.getRaw(K.email,'')||'';
+  if(loadStoredToken()){
+    showConnected();
+  } else if(cfg.client){
+    const trySilent = ()=>{
+      if(window.google && google.accounts){ silentAuth(); }
+      else setTimeout(trySilent, 400);
+    };
+    setTimeout(trySilent, 600);
+  }
+
+  if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+})();
+</script>
+</body>
+</html>
