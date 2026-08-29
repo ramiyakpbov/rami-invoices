@@ -100,7 +100,7 @@ nav button.on{color:var(--red)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
-<body onload="setTimeout(function(){document.getElementById('splash').style.display='none';}, 700)">
+<body onload="setTimeout(function(){var sp=document.getElementById('splash');if(sp){sp.style.display='none';}}, 1200)">
 <div id="splash"><img src="logo.png" alt="" style="width:120px"></div>
 <header><div class="hrow"><img class="mark" src="logo.png" alt=""><div><h1>איתור חשבוניות</h1><div class="sub">יהודה שיפוצים</div></div><div class="acct" id="acct">לא מחובר<span class="dot" id="dot"></span></div></div></header>
 <div class="installbar" id="installBar"><span>📲 אפשר להתקין כאפליקציה</span><button id="btnInstall">התקן</button><button class="x" id="btnInstallX">✕</button></div>
@@ -240,7 +240,6 @@ function download(blob,name){const u=URL.createObjectURL(blob),a=document.create
 $('btnXlsx').onclick=()=>{if(!docs.length){toast('אין נתונים');return}download(xlsxBlob(),'ריכוז.xlsx')};
 $('btnCsv').onclick=()=>{if(!docs.length){toast('אין נתונים');return}const cols=['תאריך','ספק','ח.פ','מספר','סוג','לפני_מעמ','מעמ','סהכ'];let csv=cols.join(',')+'\r\n';docs.forEach(d=>{csv+=[d.date,d.supplier,d.supplierId,d.docNum,d.docType,d.before,d.vat,d.total].map(v=>{v=v==null?'':String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}).join(',')+'\r\n'});download(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}),'ריכוז.csv')};
 $('btnZip').onclick=async()=>{if(!docs.length){toast('אין נתונים');return}const zip=new JSZip();const root=zip.folder(safeName($('rootName').value||'חשבוניות'));const used={};docs.forEach(d=>{const f=root.folder(safeName(d.supplier));let n=d.fileName,key=d.supplier+'/'+n,c=1;while(used[key]){n=d.fileName.replace(/(\.\w+)$/,'('+(++c)+')$1');key=d.supplier+'/'+n}used[key]=1;if(d.kind==='pdf'&&d.bytes)f.file(n,d.bytes);else f.file(n.replace(/\.\w+$/,'.html'),'<html><body>'+esc(d.bodyText||'')+'
-<!-- אלמנטים נדרשים ל-JS -->
 <input type="hidden" id="kw" value="חשבונית OR קבלה OR &quot;חשבונית מס&quot; OR invoice OR receipt">
 <input type="hidden" id="maxMsgs" value="150">
 <input type="hidden" id="rootName" value="חשבוניות">
@@ -285,7 +284,6 @@ $('btnSaveCfg').onclick=()=>saveCfg();
 (function init({loadCfg();const now=new Date();$('dTo').value=now.toISOString().slice(0,10);$('dFrom').value=new Date(now.getFullYear(),now.getMonth()-2,1).toISOString().slice(0,10);render();loadDocs();if(loadStoredToken()){showConnected()}})();
 </script>
 
-<!-- אלמנטים נדרשים ל-JS -->
 <input type="hidden" id="kw" value="חשבונית OR קבלה OR &quot;חשבונית מס&quot; OR invoice OR receipt">
 <input type="hidden" id="maxMsgs" value="150">
 <input type="hidden" id="rootName" value="חשבוניות">
