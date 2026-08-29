@@ -4,18 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#ED1C24">
-<!-- גרסה 3.4 -->
 <title>איתור חשבוניות — יהודה שיפוצים</title>
 <link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=Heebo:wght@300;400;500;700&family=Rubik:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#F2EEE6;--glass:rgba(255,255,255,.62);--glass-2:rgba(255,255,255,.42);--glass-line:rgba(255,255,255,.75);--card:rgba(255,255,255,.62);--line:rgba(120,105,80,.16);--ink:#211E1A;--ink-dim:#6B6355;--red:#D6161D;--red-dim:#94090E;--red-tint:rgba(237,28,36,.10);--green:#0F7A4A;--green-dim:#12703F;--green-tint:rgba(30,158,99,.12);--rose:#B3261E;--rose-tint:rgba(179,38,30,.10)}
+:root{--bg:#F2EEE6;--glass:rgba(255,255,255,.62);--glass-2:rgba(255,255,255,.42);--line:rgba(120,105,80,.16);--ink:#211E1A;--ink-dim:#6B6355;--red:#D6161D;--red-dim:#94090E;--red-tint:rgba(237,28,36,.10);--green:#0F7A4A;--green-dim:#12703F;--green-tint:rgba(30,158,99,.12);--rose:#B3261E;--rose-tint:rgba(179,38,30,.10)}
 html[data-theme="dark"]{--bg:#0B0B0D;--glass:rgba(38,38,44,.55);--glass-2:rgba(38,38,44,.35);--line:rgba(255,255,255,.10);--ink:#F2F0ED;--ink-dim:#9A968E;--red:#FF2A32;--red-dim:#FF6B71;--red-tint:rgba(255,42,50,.14);--green:#2ECC80;--green-dim:#7BE0AE;--green-tint:rgba(46,204,128,.14);--rose:#FF6B63;--rose-tint:rgba(255,107,99,.14)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0}
-body{background:var(--bg);color:var(--ink);font-family:'Heebo',system-ui,sans-serif;font-size:14px;line-height:1.45;padding-bottom:76px;min-height:100vh;background-image:radial-gradient(900px 500px at 110% -5%, rgba(237,28,36,.13), transparent 60%)}
+body{background:var(--bg);color:var(--ink);font-family:'Heebo',system-ui,sans-serif;font-size:14px;line-height:1.45;padding-bottom:76px;min-height:100vh}
 h1,h2,h3{font-family:'Frank Ruhl Libre',Georgia,serif;margin:0;font-weight:700}
 button{font-family:inherit;font-size:inherit;cursor:pointer;border:0;background:none;color:inherit}
 input,select,textarea{font-family:inherit;font-size:16px}
@@ -96,7 +95,6 @@ nav{position:fixed;bottom:0;right:0;left:0;z-index:50;display:grid;grid-template
 nav button{min-height:52px;display:grid;justify-items:center;align-content:center;gap:3px;font-size:10.5px;color:#8A8272}
 nav button i{font-style:normal;font-size:16px}
 nav button.on{color:var(--red)}
-/* פיתרון מסך הפתיחה: נעלם לבד גם בלי JS */
 #splash{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;background:var(--bg);pointer-events:none;animation:splashFade .5s ease 1.5s forwards}
 @keyframes splashFade{to{opacity:0;visibility:hidden}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -166,7 +164,7 @@ function fp(d){return [d.supplier,d.docType,d.docNum,d.date,Math.round(d.total||
 function priceKey(s,t){return (s+'|'+t).toLowerCase()}
 function loadCfg(){cfg=Object.assign(cfg,store.get(K.cfg,{}));seen=store.get(K.seen,{});priceMem=store.get(K.price,{});docMeta=store.get(K.meta,{});deletedFps=store.get(K.deleted,{});$('cfgClient').value=cfg.client||'';$('cfgGemini').value=cfg.gemini||'';const s=$('cfgModel');const sv=cfg.model||'gemini-2.5-flash';if(!Array.from(s.options).some(o=>o.value===sv)){const o=document.createElement('option');o.value=sv;o.textContent=sv;s.insertBefore(o,s.firstChild)}s.value=sv;applySpeed(cfg.speed||'normal',true);applyTheme(cfg.theme||'light');updMem()}
 const SPEEDS={slow:{concurrency:2,minGapMs:900,label:'2 במקביל'},normal:{concurrency:3,minGapMs:350,label:'3 במקביל'},fast:{concurrency:5,minGapMs:0,label:'5 במקביל'}};
-function applySpeed(s,silent){const p=SPEEDS[s]||SPEEDS.normal;cfg.speed=s;cfg.concurrency=p.concurrency;cfg.minGapMs=p.minGapMs;document.querySelectorAll('#speedChips .chip').forEach(c=>c.classList.toggle('on',c.dataset.s===s));$('speedInfo')&&($('speedInfo').textContent=p.label);if(!silent)saveCfgNow()}
+function applySpeed(s,silent){const p=SPEEDS[s]||SPEEDS.normal;cfg.speed=s;cfg.concurrency=p.concurrency;cfg.minGapMs=p.minGapMs;document.querySelectorAll('#speedChips .chip').forEach(c=>c.classList.toggle('on',c.dataset.s===s));if(!silent)saveCfgNow()}
 function applyTheme(t){document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');document.querySelectorAll('#themeChips .chip').forEach(c=>c.classList.toggle('on',c.dataset.t===t))}
 function saveCfg(){cfg.client=$('cfgClient').value.trim();cfg.gemini=$('cfgGemini').value.trim();cfg.model=$('cfgModel').value;saveCfgNow();tokenClient=null;toast('ההגדרות נשמרו')}
 function updMem(){const el=$('memInfo');if(el)el.textContent=Object.keys(seen).length+' מיילים בזיכרון'}
@@ -196,6 +194,8 @@ function loadStoredToken(){try{const t=store.get(K.tok,null);if(t&&t.t&&t.e&&Dat
 function showConnected(){$('dot').classList.add('on');$('acct').innerHTML=esc(userEmail||'מחובר')+'<span class="dot on"></span>';$('btnLogout').style.display='flex';$('btnLogin').textContent='מחובר ✓'}
 $('btnLogin').onclick=()=>{if(initToken())tokenClient.requestAccessToken({prompt:'consent'})};
 $('btnLogout').onclick=()=>{if(token&&google.accounts)google.accounts.oauth2.revoke(token,()=>{});token=null;store.del(K.tok);$('dot').classList.remove('on');$('acct').innerHTML='לא מחובר<span class="dot"></span>';$('btnLogout').style.display='none';$('btnLogin').textContent='התחבר עם Google'};
+
+function clearToken(){token=null;store.del(K.tok);try{$('dot').classList.remove('on');$('acct').innerHTML='לא מחובר<span class="dot"></span>';$('btnLogout').style.display='none';$('btnLogin').textContent='התחבר עם Google'}catch(e){}}
 function friendlyError(raw){const r=String(raw||'');const lo=r.toLowerCase();if(/failed to fetch|networkerror|load failed/i.test(r))return 'בעיית חיבור לאינטרנט';if(/401|unauthorized|invalid_grant/i.test(lo))return 'פג תוקף החיבור';if(/429|rate.limit|quota/i.test(lo))return 'מכסת בקשות מלאה';if(/invalid.*key|api.*key|api_key_invalid/i.test(lo))return 'מפתח Gemini לא תקין';return r}
 const MAX_API_RETRY=3;async function api(url,opts){opts=opts||{};opts.headers=Object.assign({Authorization:'Bearer '+token},opts.headers||{});if(scanAbort&&!opts.signal)opts.signal=scanAbort.signal;let lastErr=null;for(let attempt=1;attempt<=MAX_API_RETRY;attempt++){try{const r=await fetch(url,opts);if(r.status===401){clearToken();throw new Error(friendlyError('401'))}if(r.status===429||r.status>=500){try{await r.text()}catch(e){}if(attempt<MAX_API_RETRY){lastErr=new Error('HTTP '+r.status);await sleep(Math.min(12000,1000*Math.pow(2,attempt))+Math.random()*400);continue}throw new Error(friendlyError('HTTP '+r.status))}if(!r.ok){let t='';try{t=(await r.json()).error.message}catch(e){t=r.status+''}throw new Error(friendlyError(t||String(r.status)))}return r.json()}catch(e){if(e.name==='AbortError')throw e;const isNet=/failed to fetch|networkerror|load failed/i.test(e.message||'');if(isNet&&attempt<MAX_API_RETRY){lastErr=e;await sleep(Math.min(12000,1000*Math.pow(2,attempt))+Math.random()*400);continue}throw new Error(friendlyError(e.message))}}throw new Error(friendlyError(lastErr&&lastErr.message?lastErr.message:'נכשל'))}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
@@ -207,8 +207,6 @@ async function pool(items,n,fn){let i=0;const workers=Array.from({length:Math.mi
 function hdr(msg,name){const h=(msg.payload&&msg.payload.headers)||[];const f=h.find(x=>x.name.toLowerCase()===name.toLowerCase());return f?f.value:''}
 function walk(part,out){if(!part)return out;if(part.filename&&part.body&&part.body.attachmentId){const mt=(part.mimeType||'').toLowerCase();const nm=(part.filename||'').toLowerCase();const sz=part.body.size||0;const isPdf=mt.includes('pdf')||/\.pdf$/i.test(nm);const isImg=/jpeg|jpg|png/.test(mt)||/\.(jpe?g|png)$/i.test(nm);if(isPdf||isImg){const junkName=/logo|signature|icon|banner|footer|header|facebook|instagram|spacer|pixel|avatar/i.test(nm);const tooSmall=isImg&&sz>0&&sz<25000;if(junkName||tooSmall){out.skipped++;return out}out.files.push({name:part.filename,mime:isPdf?'application/pdf':(mt||'image/jpeg'),id:part.body.attachmentId,size:sz})}}if(part.mimeType==='text/plain'&&part.body&&part.body.data)out.text+=decodeText(part.body.data)+'\n';if(part.mimeType==='text/html'&&part.body&&part.body.data)out.html+=decodeText(part.body.data)+'\n';(part.parts||[]).forEach(p=>walk(p,out));return out}
 function parseMsg(msg){const o=walk(msg.payload,{files:[],text:'',html:'',skipped:0});if(!o.text&&o.html)o.text=o.html.replace(/<style[\s\S]*?<\/style>/gi,'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');const links=[];const rx=/https?:\/\/[^\s"'<>]+/gi;let m;const hay=o.html||o.text;while((m=rx.exec(hay))){const u=m[0].replace(/[.,;)\]]+$/,'');if(LINK_HOSTS.some(h=>u.toLowerCase().includes(h))&&!links.includes(u))links.push(u)}junkSkipped+=o.skipped||0;return{id:msg.id,from:hdr(msg,'From'),subject:hdr(msg,'Subject'),date:new Date(Number(msg.internalDate)||Date.now()),files:o.files,text:(o.text||'').slice(0,12000),links}}
-function invoiceScore(text,subject){const t=(text||'')+' '+(subject||'');if(t.length<25)return 0;let score=0;if(/(?:₪|ש"ח|ils|nis)\s*[\d,]+/i.test(t))score+=3;if(/מע["']?מ|\bvat\b/i.test(t))score+=2;if(/(?:חשבונית|קבלה|invoice|receipt)\s*[:#]?\s*\d{2,}/i.test(t))score+=2;if(/סה["']?כ\s*לתשלום|לתשלום/i.test(t))score+=2;if(/ח\.?פ\.?\s*\d{8,9}|עוסק\s*מורשה/i.test(t))score+=2;if(/הסר[ה]?\s*מרשימ|unsubscribe|ניוזלטר/i.test(t))score-=3;return score}
-const INVOICE_MIN_SCORE=4;
 function senderName(from){const m=String(from).match(/^\s*"?([^"<]*?)"?\s*<?([^>]*)>?\s*$/);const nm=(m&&m[1]||'').trim();const em=(m&&m[2]||from||'').trim();return nm||em.split('@')[0]||'לא ידוע'}
 const SCHEMA_PROMPT=`אתה מחלץ נתונים ממסמכים חשבונאיים ישראליים. החזר JSON בלבד, במבנה: {"is_doc":true|false,"doc_type":"חשבונית מס|קבלה|חשבונית מס קבלה|חשבונית|דרישת תשלום","supplier":"שם העסק","supplier_id":"ח.פ","doc_number":"מספר","date":"YYYY-MM-DD","amount_before_vat":number|null,"vat":number|null,"amount_total":number|null,"currency":"ILS|USD|EUR"} כללים: is_doc=false אם זה ניוזלטר או פרסומת. supplier=מי הנפיק, לא הלקוח. amount_total=סופי כולל מע"מ. אם ערך לא מופיע - null.`;
 function isFreeTier(name){return /flash/i.test(name)&&!/pro/i.test(name)}
@@ -242,55 +240,14 @@ function download(blob,name){const u=URL.createObjectURL(blob),a=document.create
 $('btnXlsx').onclick=()=>{if(!docs.length){toast('אין נתונים');return}download(xlsxBlob(),'ריכוז.xlsx')};
 $('btnCsv').onclick=()=>{if(!docs.length){toast('אין נתונים');return}const cols=['תאריך','ספק','ח.פ','מספר','סוג','לפני_מעמ','מעמ','סהכ'];let csv=cols.join(',')+'\r\n';docs.forEach(d=>{csv+=[d.date,d.supplier,d.supplierId,d.docNum,d.docType,d.before,d.vat,d.total].map(v=>{v=v==null?'':String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}).join(',')+'\r\n'});download(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}),'ריכוז.csv')};
 $('btnZip').onclick=async()=>{if(!docs.length){toast('אין נתונים');return}const zip=new JSZip();const root=zip.folder(safeName($('rootName').value||'חשבוניות'));const used={};docs.forEach(d=>{const f=root.folder(safeName(d.supplier));let n=d.fileName,key=d.supplier+'/'+n,c=1;while(used[key]){n=d.fileName.replace(/(\.\w+)$/,'('+(++c)+')$1');key=d.supplier+'/'+n}used[key]=1;if(d.kind==='pdf'&&d.bytes)f.file(n,d.bytes);else f.file(n.replace(/\.\w+$/,'.html'),'<html><body>'+esc(d.bodyText||'')+'
-<!-- אלמנטים נדרשים ל-JS (חלק מוסתר / ברירות מחדל) -->
+<!-- אלמנטים נדרשים ל-JS -->
 <input type="hidden" id="kw" value="חשבונית OR קבלה OR &quot;חשבונית מס&quot; OR invoice OR receipt">
 <input type="hidden" id="maxMsgs" value="150">
 <input type="hidden" id="rootName" value="חשבוניות">
-<input type="hidden" id="cfgThreshold" value="0">
-<div id="speedInfo" style="display:none"></div>
-<div id="scanBadge" style="display:none"></div>
-<div id="updateBar" class="installbar" style="display:none"><span>🔄 גרסה חדשה</span><button id="btnUpdate">עדכן</button></div>
-<div id="statusCard" style="display:none"></div>
-<div id="manualLog" style="display:none"></div>
-<div id="etaLeft" style="display:none"></div>
-<div id="etaDone" style="display:none"></div>
-<div id="etaElapsed" style="display:none"></div>
-<div id="missingBox"></div>
-<div id="trendBox" style="display:none"></div>
-<div id="vatBox"></div>
-<div id="dueBox"></div>
-<div id="diagOut"></div>
-<div id="chkList"></div>
-<div id="cfgIoLog"></div>
-<div id="keyLog" class="plog"></div>
-<span id="helpVer" style="display:none">v3.4</span>
-<span id="verDate" style="display:none"></span>
-<input type="file" id="camFile" accept="image/*" capture="environment" style="display:none">
-<input type="file" id="pickFile" accept="image/*,application/pdf" multiple style="display:none">
-<input type="file" id="importCfgFile" accept="application/json" style="display:none">
-<button id="btnResetAll" style="display:none"></button>
-<button id="btnSwitch" style="display:none"></button>
-<button id="btnWa" style="display:none"></button>
-<button id="btnVatXlsx" style="display:none"></button>
-<button id="btnDiag" style="display:none"></button>
-<button id="btnDiagCopy" style="display:none"></button>
-<button id="btnChkReset" style="display:none"></button>
-<button id="btnExportCfg" style="display:none"></button>
-<button id="btnSaveThreshold" style="display:none"></button>
-<button id="btnSavePin" style="display:none"></button>
-<button id="btnLockNow" style="display:none"></button>
-<button id="btnReviewOnly" style="display:none"></button>
-<button id="btnTrendToggle" style="display:none"></button>
-<select id="resProject" style="display:none"><option value="">כל הפרויקטים</option></select>
-<div id="resToolbar2" style="display:none"></div>
-<div id="vatPeriod" style="display:none"></div>
-<input id="pinNew" style="display:none">
-
-<!-- מודל עריכה -->
 <div class="modalbg" id="editSheet" style="display:none;position:fixed;inset:0;z-index:90;align-items:center;justify-content:center;padding:20px;background:rgba(20,16,12,.45)">
-  <div class="modal" style="width:100%;max-width:380px;border-radius:20px;padding:20px;background:#fff;border:1px solid #ddd">
+  <div style="width:100%;max-width:380px;border-radius:20px;padding:20px;background:#fff;border:1px solid #ddd;max-height:90vh;overflow-y:auto">
     <h2>עריכת מסמך</h2>
-    <div class="msub" id="edSub"></div>
+    <div id="edSub" style="font-size:12px;color:#666;margin-bottom:10px"></div>
     <label class="f"><span>ספק</span><input class="inp" id="edSupplier"></label>
     <div class="row2">
       <label class="f"><span>סוג</span><input class="inp" id="edType"></label>
@@ -312,10 +269,7 @@ $('btnZip').onclick=async()=>{if(!docs.length){toast('אין נתונים');retu
     </div>
   </div>
 </div>
-<style>
-.modalbg.show{display:flex!important}
-.modalbg .modal{max-height:90vh;overflow-y:auto}
-</style>
+<style>.modalbg.show{display:flex!important}</style>
 
 </body></html>')});root.file('ריכוז.xlsx',xlsxBlob());const blob=await zip.generateAsync({type:'blob'});download(blob,'חשבוניות.zip')};
 async function driveFolder(name,parent){const q="name='"+name.replace(/'/g,"\\'")+"' and mimeType='application/vnd.google-apps.folder' and trashed=false"+(parent?" and '"+parent+"' in parents":"");const j=await api('https://www.googleapis.com/drive/v3/files?spaces=drive&fields=files(id,name)&q='+encodeURIComponent(q));if(j.files&&j.files.length)return j.files[0].id;const c=await api('https://www.googleapis.com/drive/v3/files',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,mimeType:'application/vnd.google-apps.folder',parents:parent?[parent]:undefined})});return c.id}
@@ -327,60 +281,18 @@ document.querySelectorAll('#speedChips .chip').forEach(c=>{c.onclick=()=>{applyS
 $('chipRescan').onclick=()=>{ $('chipRescan').classList.toggle('on'); toast($('chipRescan').classList.contains('on')?'יסרקו גם ישנים':'יסרקו רק חדשים') };
 $('btnClearMem').onclick=()=>{seen={};store.del(K.seen);updMem();toast('הזיכרון נוקה')};
 $('btnTestKey').onclick=async()=>{const key=$('cfgGemini').value.trim();const model=$('cfgModel').value;const log=$('keyLog');if(!key){log.textContent='לא הוזן מפתח';return}log.textContent='בודק...';try{const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+encodeURIComponent(key),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts:[{text:'תקין'}]}],generationConfig:{temperature:0,maxOutputTokens:20}})});if(r.ok){log.innerHTML='<span style="color:var(--green)">✓ עובד</span>'}else{let m='';try{m=(await r.json()).error.message}catch(e){m='HTTP '+r.status}log.innerHTML='<span style="color:var(--rose)">✗ '+esc(m)+'</span>'}}catch(e){log.innerHTML='<span style="color:var(--rose)">✗ '+esc(e.message)+'</span>'}};
-
-$('btnSaveCfg').onclick=()=>{saveCfg()};
+$('btnSaveCfg').onclick=()=>saveCfg();
 (function init({loadCfg();const now=new Date();$('dTo').value=now.toISOString().slice(0,10);$('dFrom').value=new Date(now.getFullYear(),now.getMonth()-2,1).toISOString().slice(0,10);render();loadDocs();if(loadStoredToken()){showConnected()}})();
 </script>
 
-<!-- אלמנטים נדרשים ל-JS (חלק מוסתר / ברירות מחדל) -->
+<!-- אלמנטים נדרשים ל-JS -->
 <input type="hidden" id="kw" value="חשבונית OR קבלה OR &quot;חשבונית מס&quot; OR invoice OR receipt">
 <input type="hidden" id="maxMsgs" value="150">
 <input type="hidden" id="rootName" value="חשבוניות">
-<input type="hidden" id="cfgThreshold" value="0">
-<div id="speedInfo" style="display:none"></div>
-<div id="scanBadge" style="display:none"></div>
-<div id="updateBar" class="installbar" style="display:none"><span>🔄 גרסה חדשה</span><button id="btnUpdate">עדכן</button></div>
-<div id="statusCard" style="display:none"></div>
-<div id="manualLog" style="display:none"></div>
-<div id="etaLeft" style="display:none"></div>
-<div id="etaDone" style="display:none"></div>
-<div id="etaElapsed" style="display:none"></div>
-<div id="missingBox"></div>
-<div id="trendBox" style="display:none"></div>
-<div id="vatBox"></div>
-<div id="dueBox"></div>
-<div id="diagOut"></div>
-<div id="chkList"></div>
-<div id="cfgIoLog"></div>
-<div id="keyLog" class="plog"></div>
-<span id="helpVer" style="display:none">v3.4</span>
-<span id="verDate" style="display:none"></span>
-<input type="file" id="camFile" accept="image/*" capture="environment" style="display:none">
-<input type="file" id="pickFile" accept="image/*,application/pdf" multiple style="display:none">
-<input type="file" id="importCfgFile" accept="application/json" style="display:none">
-<button id="btnResetAll" style="display:none"></button>
-<button id="btnSwitch" style="display:none"></button>
-<button id="btnWa" style="display:none"></button>
-<button id="btnVatXlsx" style="display:none"></button>
-<button id="btnDiag" style="display:none"></button>
-<button id="btnDiagCopy" style="display:none"></button>
-<button id="btnChkReset" style="display:none"></button>
-<button id="btnExportCfg" style="display:none"></button>
-<button id="btnSaveThreshold" style="display:none"></button>
-<button id="btnSavePin" style="display:none"></button>
-<button id="btnLockNow" style="display:none"></button>
-<button id="btnReviewOnly" style="display:none"></button>
-<button id="btnTrendToggle" style="display:none"></button>
-<select id="resProject" style="display:none"><option value="">כל הפרויקטים</option></select>
-<div id="resToolbar2" style="display:none"></div>
-<div id="vatPeriod" style="display:none"></div>
-<input id="pinNew" style="display:none">
-
-<!-- מודל עריכה -->
 <div class="modalbg" id="editSheet" style="display:none;position:fixed;inset:0;z-index:90;align-items:center;justify-content:center;padding:20px;background:rgba(20,16,12,.45)">
-  <div class="modal" style="width:100%;max-width:380px;border-radius:20px;padding:20px;background:#fff;border:1px solid #ddd">
+  <div style="width:100%;max-width:380px;border-radius:20px;padding:20px;background:#fff;border:1px solid #ddd;max-height:90vh;overflow-y:auto">
     <h2>עריכת מסמך</h2>
-    <div class="msub" id="edSub"></div>
+    <div id="edSub" style="font-size:12px;color:#666;margin-bottom:10px"></div>
     <label class="f"><span>ספק</span><input class="inp" id="edSupplier"></label>
     <div class="row2">
       <label class="f"><span>סוג</span><input class="inp" id="edType"></label>
@@ -402,10 +314,7 @@ $('btnSaveCfg').onclick=()=>{saveCfg()};
     </div>
   </div>
 </div>
-<style>
-.modalbg.show{display:flex!important}
-.modalbg .modal{max-height:90vh;overflow-y:auto}
-</style>
+<style>.modalbg.show{display:flex!important}</style>
 
 </body>
 </html>

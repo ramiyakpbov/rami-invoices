@@ -1,5 +1,5 @@
-/* תיק חשבוניות — service worker v3.4 */
-const CACHE = 'invoices-v3.4';
+/* תיק חשבוניות — service worker v3.4-fixed */
+const CACHE = 'invoices-v3.4-fixed';
 const SHELL = ['./', './index.html', './manifest.json', './logo.png'];
 
 self.addEventListener('install', e => {
