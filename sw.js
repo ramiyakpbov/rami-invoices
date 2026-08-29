@@ -1,13 +1,10 @@
-/* תיק חשבוניות — service worker
-   אסטרטגיה: network-first לקליפה, כדי שגרסה חדשה תמיד תיתפס.
-   קריאות ל-API של גוגל ו-Gemini לא נכנסות לקאש בכלל. */
-
-const CACHE = 'invoices-v3.3';
+/* תיק חשבוניות — service worker v3.4 */
+const CACHE = 'invoices-v3.4';
 const SHELL = ['./', './index.html', './manifest.json', './logo.png'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).catch(() => {}));
   self.skipWaiting();
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).catch(() => {}));
 });
 
 self.addEventListener('activate', e => {
@@ -22,7 +19,6 @@ self.addEventListener('fetch', e => {
   const url = e.request.url;
   if (e.request.method !== 'GET') return;
   if (/googleapis\.com|google\.com|gstatic\.com|generativelanguage/.test(url)) return;
-
   e.respondWith(
     fetch(e.request)
       .then(r => {
