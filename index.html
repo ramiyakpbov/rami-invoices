@@ -194,8 +194,6 @@ function loadStoredToken(){try{const t=store.get(K.tok,null);if(t&&t.t&&t.e&&Dat
 function showConnected(){$('dot').classList.add('on');$('acct').innerHTML=esc(userEmail||'מחובר')+'<span class="dot on"></span>';$('btnLogout').style.display='flex';$('btnLogin').textContent='מחובר ✓'}
 $('btnLogin').onclick=()=>{if(initToken())tokenClient.requestAccessToken({prompt:'consent'})};
 $('btnLogout').onclick=()=>{if(token&&google.accounts)google.accounts.oauth2.revoke(token,()=>{});token=null;store.del(K.tok);$('dot').classList.remove('on');$('acct').innerHTML='לא מחובר<span class="dot"></span>';$('btnLogout').style.display='none';$('btnLogin').textContent='התחבר עם Google'};
-
-function clearToken(){token=null;store.del(K.tok);try{$('dot').classList.remove('on');$('acct').innerHTML='לא מחובר<span class="dot"></span>';$('btnLogout').style.display='none';$('btnLogin').textContent='התחבר עם Google'}catch(e){}}
 function friendlyError(raw){const r=String(raw||'');const lo=r.toLowerCase();if(/failed to fetch|networkerror|load failed/i.test(r))return 'בעיית חיבור לאינטרנט';if(/401|unauthorized|invalid_grant/i.test(lo))return 'פג תוקף החיבור';if(/429|rate.limit|quota/i.test(lo))return 'מכסת בקשות מלאה';if(/invalid.*key|api.*key|api_key_invalid/i.test(lo))return 'מפתח Gemini לא תקין';return r}
 const MAX_API_RETRY=3;async function api(url,opts){opts=opts||{};opts.headers=Object.assign({Authorization:'Bearer '+token},opts.headers||{});if(scanAbort&&!opts.signal)opts.signal=scanAbort.signal;let lastErr=null;for(let attempt=1;attempt<=MAX_API_RETRY;attempt++){try{const r=await fetch(url,opts);if(r.status===401){clearToken();throw new Error(friendlyError('401'))}if(r.status===429||r.status>=500){try{await r.text()}catch(e){}if(attempt<MAX_API_RETRY){lastErr=new Error('HTTP '+r.status);await sleep(Math.min(12000,1000*Math.pow(2,attempt))+Math.random()*400);continue}throw new Error(friendlyError('HTTP '+r.status))}if(!r.ok){let t='';try{t=(await r.json()).error.message}catch(e){t=r.status+''}throw new Error(friendlyError(t||String(r.status)))}return r.json()}catch(e){if(e.name==='AbortError')throw e;const isNet=/failed to fetch|networkerror|load failed/i.test(e.message||'');if(isNet&&attempt<MAX_API_RETRY){lastErr=e;await sleep(Math.min(12000,1000*Math.pow(2,attempt))+Math.random()*400);continue}throw new Error(friendlyError(e.message))}}throw new Error(friendlyError(lastErr&&lastErr.message?lastErr.message:'נכשל'))}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
@@ -239,38 +237,7 @@ function xlsxBlob(){const rows=docs.map(d=>({'תאריך':d.date,'ספק':d.supp
 function download(blob,name){const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{a.remove();URL.revokeObjectURL(u)},1500)}
 $('btnXlsx').onclick=()=>{if(!docs.length){toast('אין נתונים');return}download(xlsxBlob(),'ריכוז.xlsx')};
 $('btnCsv').onclick=()=>{if(!docs.length){toast('אין נתונים');return}const cols=['תאריך','ספק','ח.פ','מספר','סוג','לפני_מעמ','מעמ','סהכ'];let csv=cols.join(',')+'\r\n';docs.forEach(d=>{csv+=[d.date,d.supplier,d.supplierId,d.docNum,d.docType,d.before,d.vat,d.total].map(v=>{v=v==null?'':String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}).join(',')+'\r\n'});download(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}),'ריכוז.csv')};
-$('btnZip').onclick=async()=>{if(!docs.length){toast('אין נתונים');return}const zip=new JSZip();const root=zip.folder(safeName($('rootName').value||'חשבוניות'));const used={};docs.forEach(d=>{const f=root.folder(safeName(d.supplier));let n=d.fileName,key=d.supplier+'/'+n,c=1;while(used[key]){n=d.fileName.replace(/(\.\w+)$/,'('+(++c)+')$1');key=d.supplier+'/'+n}used[key]=1;if(d.kind==='pdf'&&d.bytes)f.file(n,d.bytes);else f.file(n.replace(/\.\w+$/,'.html'),'<html><body>'+esc(d.bodyText||'')+'
-<input type="hidden" id="kw" value="חשבונית OR קבלה OR &quot;חשבונית מס&quot; OR invoice OR receipt">
-<input type="hidden" id="maxMsgs" value="150">
-<input type="hidden" id="rootName" value="חשבוניות">
-<div class="modalbg" id="editSheet" style="display:none;position:fixed;inset:0;z-index:90;align-items:center;justify-content:center;padding:20px;background:rgba(20,16,12,.45)">
-  <div style="width:100%;max-width:380px;border-radius:20px;padding:20px;background:#fff;border:1px solid #ddd;max-height:90vh;overflow-y:auto">
-    <h2>עריכת מסמך</h2>
-    <div id="edSub" style="font-size:12px;color:#666;margin-bottom:10px"></div>
-    <label class="f"><span>ספק</span><input class="inp" id="edSupplier"></label>
-    <div class="row2">
-      <label class="f"><span>סוג</span><input class="inp" id="edType"></label>
-      <label class="f"><span>מספר</span><input class="inp" id="edNum"></label>
-    </div>
-    <div class="row2">
-      <label class="f"><span>תאריך</span><input class="inp" id="edDate" type="date"></label>
-      <label class="f"><span>ח.פ</span><input class="inp" id="edVatId"></label>
-    </div>
-    <div class="row2">
-      <label class="f"><span>לפני מע"מ</span><input class="inp" id="edBefore" type="number" step="0.01"></label>
-      <label class="f"><span>מע"מ</span><input class="inp" id="edVat" type="number" step="0.01"></label>
-    </div>
-    <label class="f"><span>סה"כ</span><input class="inp" id="edTotal" type="number" step="0.01"></label>
-    <button class="btn" id="edSave">שמור</button>
-    <div class="row2" style="margin-top:8px">
-      <button class="btn ghost sm" id="edCancel" style="width:100%">ביטול</button>
-      <button class="btn outline sm" id="edDelete" style="width:100%">🗑 מחק</button>
-    </div>
-  </div>
-</div>
-<style>.modalbg.show{display:flex!important}</style>
-
-</body></html>')});root.file('ריכוז.xlsx',xlsxBlob());const blob=await zip.generateAsync({type:'blob'});download(blob,'חשבוניות.zip')};
+$('btnZip').onclick=async()=>{if(!docs.length){toast('אין נתונים');return}const zip=new JSZip();const root=zip.folder(safeName($('rootName').value||'חשבוניות'));const used={};docs.forEach(d=>{const f=root.folder(safeName(d.supplier));let n=d.fileName,key=d.supplier+'/'+n,c=1;while(used[key]){n=d.fileName.replace(/(\.\w+)$/,'('+(++c)+')$1');key=d.supplier+'/'+n}used[key]=1;if(d.kind==='pdf'&&d.bytes)f.file(n,d.bytes);else f.file(n.replace(/\.\w+$/,'.html'),'<html><body>'+esc(d.bodyText||'')+'</body></html>')});root.file('ריכוז.xlsx',xlsxBlob());const blob=await zip.generateAsync({type:'blob'});download(blob,'חשבוניות.zip')};
 async function driveFolder(name,parent){const q="name='"+name.replace(/'/g,"\\'")+"' and mimeType='application/vnd.google-apps.folder' and trashed=false"+(parent?" and '"+parent+"' in parents":"");const j=await api('https://www.googleapis.com/drive/v3/files?spaces=drive&fields=files(id,name)&q='+encodeURIComponent(q));if(j.files&&j.files.length)return j.files[0].id;const c=await api('https://www.googleapis.com/drive/v3/files',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,mimeType:'application/vnd.google-apps.folder',parents:parent?[parent]:undefined})});return c.id}
 async function driveUpload(name,mime,dataB64,parent){const B='----inv'+Date.now();const meta={name,parents:[parent]};const body='--'+B+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(meta)+'\r\n--'+B+'\r\nContent-Type: '+mime+'\r\nContent-Transfer-Encoding: base64\r\n\r\n'+dataB64+'\r\n--'+B+'--';return api('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',{method:'POST',headers:{'Content-Type':'multipart/related; boundary='+B},body})}
 function blobToB64(blob){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(',')[1]);r.onerror=()=>rej(new Error('קריאה נכשלה'));r.readAsDataURL(blob)})}
@@ -280,39 +247,7 @@ document.querySelectorAll('#speedChips .chip').forEach(c=>{c.onclick=()=>{applyS
 $('chipRescan').onclick=()=>{ $('chipRescan').classList.toggle('on'); toast($('chipRescan').classList.contains('on')?'יסרקו גם ישנים':'יסרקו רק חדשים') };
 $('btnClearMem').onclick=()=>{seen={};store.del(K.seen);updMem();toast('הזיכרון נוקה')};
 $('btnTestKey').onclick=async()=>{const key=$('cfgGemini').value.trim();const model=$('cfgModel').value;const log=$('keyLog');if(!key){log.textContent='לא הוזן מפתח';return}log.textContent='בודק...';try{const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+encodeURIComponent(key),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts:[{text:'תקין'}]}],generationConfig:{temperature:0,maxOutputTokens:20}})});if(r.ok){log.innerHTML='<span style="color:var(--green)">✓ עובד</span>'}else{let m='';try{m=(await r.json()).error.message}catch(e){m='HTTP '+r.status}log.innerHTML='<span style="color:var(--rose)">✗ '+esc(m)+'</span>'}}catch(e){log.innerHTML='<span style="color:var(--rose)">✗ '+esc(e.message)+'</span>'}};
-$('btnSaveCfg').onclick=()=>saveCfg();
-(function init({loadCfg();const now=new Date();$('dTo').value=now.toISOString().slice(0,10);$('dFrom').value=new Date(now.getFullYear(),now.getMonth()-2,1).toISOString().slice(0,10);render();loadDocs();if(loadStoredToken()){showConnected()}})();
+(function init(){loadCfg();const now=new Date();$('dTo').value=now.toISOString().slice(0,10);$('dFrom').value=new Date(now.getFullYear(),now.getMonth()-2,1).toISOString().slice(0,10);render();loadDocs();if(loadStoredToken()){showConnected()}})();
 </script>
-
-<input type="hidden" id="kw" value="חשבונית OR קבלה OR &quot;חשבונית מס&quot; OR invoice OR receipt">
-<input type="hidden" id="maxMsgs" value="150">
-<input type="hidden" id="rootName" value="חשבוניות">
-<div class="modalbg" id="editSheet" style="display:none;position:fixed;inset:0;z-index:90;align-items:center;justify-content:center;padding:20px;background:rgba(20,16,12,.45)">
-  <div style="width:100%;max-width:380px;border-radius:20px;padding:20px;background:#fff;border:1px solid #ddd;max-height:90vh;overflow-y:auto">
-    <h2>עריכת מסמך</h2>
-    <div id="edSub" style="font-size:12px;color:#666;margin-bottom:10px"></div>
-    <label class="f"><span>ספק</span><input class="inp" id="edSupplier"></label>
-    <div class="row2">
-      <label class="f"><span>סוג</span><input class="inp" id="edType"></label>
-      <label class="f"><span>מספר</span><input class="inp" id="edNum"></label>
-    </div>
-    <div class="row2">
-      <label class="f"><span>תאריך</span><input class="inp" id="edDate" type="date"></label>
-      <label class="f"><span>ח.פ</span><input class="inp" id="edVatId"></label>
-    </div>
-    <div class="row2">
-      <label class="f"><span>לפני מע"מ</span><input class="inp" id="edBefore" type="number" step="0.01"></label>
-      <label class="f"><span>מע"מ</span><input class="inp" id="edVat" type="number" step="0.01"></label>
-    </div>
-    <label class="f"><span>סה"כ</span><input class="inp" id="edTotal" type="number" step="0.01"></label>
-    <button class="btn" id="edSave">שמור</button>
-    <div class="row2" style="margin-top:8px">
-      <button class="btn ghost sm" id="edCancel" style="width:100%">ביטול</button>
-      <button class="btn outline sm" id="edDelete" style="width:100%">🗑 מחק</button>
-    </div>
-  </div>
-</div>
-<style>.modalbg.show{display:flex!important}</style>
-
 </body>
 </html>
