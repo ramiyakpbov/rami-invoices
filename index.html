@@ -51,6 +51,13 @@ Retry + Backoff        | const MAX_TRIES
 סינון קבצי זבל         | junkSkipped
 כיווץ תמונות           | async function shrinkImage
 ויסות אדפטיבי          | function noteRateLimit
+הודעות שגיאה ידידותיות | function friendlyError
+retry ל-Gmail API      | MAX_API_RETRY
+חיווי סריקה גלובלי     | scanBadge
+אזהרת טווח גדול        | הצפי:
+ולידציה מפתח Gemini    | AIza
+PDF עמוד ראשון         | function pdfFirstPageImage
+בדיקת מיילים חדשים     | function quickMailCheck
 הוספה ידנית/מצלמה      | function ingestFiles
 */
 -->
@@ -517,9 +524,24 @@ nav button i{font-style:normal;font-size:16px;line-height:1}
 nav button.on{color:var(--red)}
 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* מסך פתיחה */
+#splash{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;background:var(--bg);transition:opacity .4s,visibility .4s}
+#splash.hide{opacity:0;visibility:hidden}
+#splash img{width:120px;height:auto;border-radius:16px;box-shadow:0 8px 32px rgba(30,25,15,.18)}
+/* סקלטונים */
+.skeleton{background:linear-gradient(90deg, var(--glass-2) 25%, rgba(255,255,255,.5) 50%, var(--glass-2) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:8px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+/* טולטיפים */
+[data-tip]{position:relative;cursor:help}
+[data-tip]:hover:after{content:attr(data-tip);position:absolute;bottom:110%;right:0;background:var(--ink);color:#fff;padding:6px 10px;border-radius:6px;font-size:11px;white-space:nowrap;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,.2);opacity:0;animation:tipIn .2s forwards}
+@keyframes tipIn{to{opacity:1}}
+/* Hover עדין */
+.tab:hover,.btn:not([disabled]):hover,.chip:hover{box-shadow:0 4px 12px rgba(30,25,15,.08);transform:translateY(-1px)}
 </style>
 </head>
 <body>
+<div id="splash"><img src="logo.png" alt="יהודה שיפוצים"></div>
 
 <header>
   <div class="hrow">
@@ -528,7 +550,10 @@ nav button.on{color:var(--red)}
       <h1>איתור חשבוניות</h1>
       <div class="sub">יהודה שיפוצים · מהמייל לתיקייה</div>
     </div>
-    <div class="acct" id="acct">לא מחובר<span class="dot" id="dot"></span></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+      <div class="acct" id="acct">לא מחובר<span class="dot" id="dot"></span></div>
+      <div id="scanBadge" style="display:none;font-size:11px;color:var(--brass);font-weight:600;letter-spacing:0.01em;white-space:nowrap"></div>
+    </div>
   </div>
 </header>
 <div class="installbar" id="updateBar" style="background:var(--green-tint);border-bottom-color:var(--line)">
@@ -915,7 +940,7 @@ nav button.on{color:var(--red)}
   </div></details>
   <details class="acc"><summary>ℹ גרסה</summary><div class="accbody">
     
-    <p class="hint" style="margin:0">v2.9 · <span id="verDate"></span></p>
+    <p class="hint" style="margin:0">v3.2 · <span id="verDate"></span></p>
   </div></details>
   <details class="acc"><summary>💾 גיבוי הגדרות</summary><div class="accbody">
     
@@ -1403,6 +1428,7 @@ function showConnected(){
   $('btnLogout').style.display='flex';
   $('btnSwitch').style.display='flex';
   $('btnLogin').textContent='מחובר ✓';
+  setTimeout(quickMailCheck, 2500);   // בדיקת מיילים חדשים ברקע אחרי ייצוב החיבור
 }
 // ניסיון חידוש שקט: אם המשתמש כבר אישר בעבר, גוגל מחזיר טוקן בלי מסך אישור
 function silentAuth(){
@@ -1616,17 +1642,74 @@ $('btnSwitch').onclick = ()=>{
    ============================================================ */
 let scanAbort = null;   // AbortController - ביטול מיידי של כל הבקשות הפתוחות
 
+/* ── הודעות שגיאה ידידותיות ── */
+function friendlyError(raw){
+  const r = String(raw||'');
+  const lo = r.toLowerCase();
+  if(/failed to fetch|networkerror|load failed|network request failed/i.test(r))
+    return 'בעיית חיבור לאינטרנט. בדוק את החיבור ונסה שוב.';
+  if(/401|unauthorized|invalid_grant|token.expired/i.test(lo))
+    return 'פג תוקף החיבור. לחץ "התחבר עם Google" שוב.';
+  if(/403|forbidden|insufficient.permission/i.test(lo))
+    return 'אין הרשאה לתיבת המייל. התנתק והתחבר מחדש.';
+  if(/429|rate.limit|resource_exhausted|too.many.requests/i.test(lo))
+    return 'מכסת בקשות מלאה. הסריקה תאט אוטומטית — אם ממשיך, עבור ל-🐢 איטי ובטוח.';
+  if(/500|502|503|internal.server.error|service.unavailable/i.test(lo))
+    return 'שרת גוגל זמנית לא זמין ('+r+'). נסה שוב בעוד כמה דקות.';
+  if(/invalid.*key|api.*key|api_key_invalid/i.test(lo))
+    return 'מפתח Gemini לא תקין. עבור להגדרות ← בדוק מפתח Gemini.';
+  if(/model.*not.*found|model.*not.*support/i.test(lo))
+    return 'המודל הנבחר לא זמין. עבור להגדרות ובחר מודל אחר.';
+  if(/quota_exceeded|billing.*disabled|per_day|daily.limit/i.test(lo))
+    return 'המכסה החינמית נגמרה. חכה ליום המחר או החלף מפתח Gemini.';
+  if(/user_location_invalid|location.*not.*support/i.test(lo))
+    return 'שירות Gemini לא זמין באזורך. נסה VPN או החלף מפתח.';
+  if(/גדול מדי/i.test(r))
+    return 'קובץ גדול מדי (מעל 18MB). מדלגים על קובץ זה.';
+  if(/pdf|pdfjs/i.test(lo) && /decode|parse|error/i.test(lo))
+    return 'כשל בפענוח PDF — הקובץ ייתכן שפגום. ניסיון הבא ידלג עליו.';
+  return r;   // לא זוהתה שגיאה מוכרת — מחזירים כמו שהוא
+}
+
+/* ── Gmail API עם Retry/Backoff ── */
+const MAX_API_RETRY = 3;
 async function api(url, opts){
   opts = opts||{};
   opts.headers = Object.assign({Authorization:'Bearer '+token}, opts.headers||{});
   if(scanAbort && !opts.signal) opts.signal = scanAbort.signal;
-  const r = await fetch(url, opts);
-  if(r.status===401){ clearToken(); throw new Error('פג תוקף החיבור — התחבר מחדש'); }
-  if(!r.ok){
-    let t=''; try{ t=(await r.json()).error.message; }catch(e){ t=r.status+''; }
-    throw new Error(t);
+  let lastErr = null;
+  for(let attempt=1; attempt<=MAX_API_RETRY; attempt++){
+    try{
+      const r = await fetch(url, opts);
+      // 401 = טוקן פג, לא לנסות שוב
+      if(r.status===401){ clearToken(); throw new Error(friendlyError('401')); }
+      // 429 / 5xx = תקלה זמנית -> נסה שוב עם backoff
+      if(r.status===429 || r.status>=500){
+        try{ await r.text(); }catch(e){}   // drain body
+        if(attempt < MAX_API_RETRY){
+          lastErr = new Error('HTTP '+r.status);
+          await sleep(Math.min(12000, 1000*Math.pow(2,attempt)) + Math.random()*400);
+          continue;
+        }
+        throw new Error(friendlyError('HTTP '+r.status));
+      }
+      if(!r.ok){
+        let t=''; try{ t=(await r.json()).error.message; }catch(e){ t=r.status+''; }
+        throw new Error(friendlyError(t||String(r.status)));
+      }
+      return r.json();
+    }catch(e){
+      if(e.name==='AbortError' || /abort/i.test(e.message||'')) throw e;
+      const isNet = /failed to fetch|networkerror|load failed/i.test(e.message||'');
+      if(isNet && attempt < MAX_API_RETRY){
+        lastErr = e;
+        await sleep(Math.min(12000, 1000*Math.pow(2,attempt)) + Math.random()*400);
+        continue;
+      }
+      throw new Error(friendlyError(e.message));
+    }
   }
-  return r.json();
+  throw new Error(friendlyError(lastErr&&lastErr.message ? lastErr.message : 'נכשל אחרי '+MAX_API_RETRY+' נסיונות'));
 }
 function b64urlToB64(s){ return String(s||'').replace(/-/g,'+').replace(/_/g,'/'); }
 function b64ToBytes(b64){
@@ -1648,7 +1731,7 @@ async function pool(items, n, fn){
   const workers = Array.from({length:Math.min(n,items.length||1)}, async ()=>{
     while(i<items.length && !stopFlag){ const k=i++; await fn(items[k],k); }
   });
-  await Promise.all(workers);
+  await Promise.allSettled(workers);
 }
 
 /* ============================================================
@@ -1883,22 +1966,30 @@ async function pdfText(bytes){
     return txt.length >= 200 ? txt.slice(0,12000) : null;
   }catch(e){ return null; }
 }
-// צילום מהטלפון הוא 4MB - מיותר לחלוטין לזיהוי חשבונית
-async function shrinkImage(bytes, mime){
+// ─── PDF גדול ללא טקסט: מציל עמוד ראשון בלבד כ-JPEG ─────────────────────
+// שולח ~150KB במקום 8MB, מונע קריסת זיכרון על Android
+async function pdfFirstPageImage(bytes){
   try{
-    const blob = new Blob([bytes], {type:mime});
-    const bmp = await createImageBitmap(blob);
-    const MAX = 1600;
-    if(Math.max(bmp.width,bmp.height) <= MAX && bytes.length < 900000) return null;
-    const sc = Math.min(1, MAX/Math.max(bmp.width,bmp.height));
-    const w = Math.round(bmp.width*sc), h = Math.round(bmp.height*sc);
-    const cv = document.createElement('canvas'); cv.width=w; cv.height=h;
-    cv.getContext('2d').drawImage(bmp,0,0,w,h);
-    const out = await new Promise(r=> cv.toBlob(r,'image/jpeg',0.82));
-    if(!out || out.size >= bytes.length) return null;
-    return {bytes:new Uint8Array(await out.arrayBuffer()), mime:'image/jpeg'};
+    const lib = await loadPdfJs();
+    const doc = await lib.getDocument({data: bytes.slice(0)}).promise;
+    const pg  = await doc.getPage(1);
+    const vp0 = pg.getViewport({scale:1});
+    const sc  = Math.min(1600/Math.max(vp0.width,1), 1);
+    const vp  = pg.getViewport({scale:sc});
+    const cv  = document.createElement('canvas');
+    cv.width  = Math.round(vp.width);
+    cv.height = Math.round(vp.height);
+    await pg.render({canvasContext:cv.getContext('2d'), viewport:vp}).promise;
+    return await new Promise(res=>{
+      cv.toBlob(b=>{
+        if(!b){ res(null); return; }
+        b.arrayBuffer().then(ab=> res({bytes:new Uint8Array(ab), mime:'image/jpeg', pages:doc.numPages}));
+      }, 'image/jpeg', 0.85);
+    });
   }catch(e){ return null; }
 }
+// צילום מהטלפון הוא 4MB - מיותר לחלוטין לזיהוי חשבונית
+
 
 // כיווץ תמונות לפני שליחה ל-AI.
 // צילום מהטלפון הוא 3-8MB; ב-base64 זה תופח ב-33% נוסף.
@@ -1938,7 +2029,12 @@ function setStep(n){
     const el=$(id); el.classList.toggle('on', i===n-1); el.classList.toggle('done', i<n-1);
   });
 }
-function prog(p,msg){ $('barI').style.width=Math.max(0,Math.min(100,p))+'%'; if(msg!=null) $('plog').textContent=msg; }
+function prog(p,msg){
+  $('barI').style.width=Math.max(0,Math.min(100,p))+'%';
+  if(msg!=null) $('plog').textContent=msg;
+  const b=$('scanBadge');
+  if(b){ if(p>=100||p<=0){ b.style.display='none'; } else { b.style.display='block'; b.textContent='🔄 '+Math.round(p)+'%'; } }
+}
 
 /* ---------- שעון / זמן נותר ---------- */
 let scanT0 = 0, etaTimer = null;
@@ -1960,12 +2056,17 @@ function startEta(total){
 function updEta(done, total){
   $('etaDone').textContent = done+' / '+total;
   const elapsed = (Date.now()-scanT0)/1000;
-  if(done >= 3){                       // צריך כמה דגימות לפני שהערכה שווה משהו
+  if(done >= 3){
     const perItem = elapsed/done;
     $('etaLeft').textContent = fmtDur(perItem*(total-done));
   }
+  const b=$('scanBadge');
+  if(b){ b.style.display='block'; b.textContent='🔄 '+done+'/'+total; }
 }
-function stopEta(){ clearInterval(etaTimer); etaTimer=null; $('etaLeft').textContent='✓'; }
+function stopEta(){
+  clearInterval(etaTimer); etaTimer=null; $('etaLeft').textContent='✓';
+  const b=$('scanBadge'); if(b) b.style.display='none';
+}
 
 $('btnStop').onclick = ()=>{
   stopFlag = true;
@@ -1980,6 +2081,16 @@ $('btnScan').onclick = async ()=>{
   if(scanRunning){ toast('סריקה כבר רצה'); return; }
   const errs = validateBeforeScan();
   if(errs.length){ showScanErrors(errs); return; }
+
+  // אזהרת טווח גדול — לפני שהמשתמש ממתין שעה ולא לפני-כן
+  const _f=$('dFrom').value, _t=$('dTo').value, _mx=parseInt($('maxMsgs').value)||150;
+  if(_mx > 200){
+    const _days = _f ? Math.round((new Date(_t||Date.now())-new Date(_f))/86400000) : 999;
+    if(_days > 90){
+      const _est = Math.max(5, Math.round(_mx*0.35));
+      if(!confirm('טווח של '+(_days<900?_days+' ימים':'היסטוריה מלאה')+' — '+_mx+' מיילים, צפי ~'+_est+' דקות. להמשיך?')) return;
+    }
+  }
 
   scanRunning = true;
   // באג אובדן נתונים שתוקן: קודם היה כאן docs=[] — כל סריקה חדשה
@@ -2084,13 +2195,17 @@ $('btnScan').onclick = async ()=>{
             // שכבת טקסט נמצאה: שולחים ~4KB במקום מגה-בייטים
             data = await extractText('קובץ: '+job.file.name, job.msg.from, txt);
             savedBytes += bytes.length;
-          } else {
-            let sendBytes = bytes, sendMime = job.file.mime;
-            if(!isPdf){
-              const sm = await shrinkImage(bytes, job.file.mime);
-              if(sm){ sendBytes = sm.bytes; sendMime = sm.mime; savedBytes += bytes.length - sm.bytes.length; }
+          } else if(isPdf && bytes.length > 2*1024*1024){
+            // PDF גדול (>2MB) ללא שכבת טקסט: מציל עמוד ראשון בלבד
+            const pi = await pdfFirstPageImage(bytes);
+            if(pi){
+              savedBytes += bytes.length - pi.bytes.length;
+              data = await extractFile(bytesToB64(pi.bytes), pi.mime);
+            } else {
+              data = await extractFile(bytesToB64(bytes), job.file.mime);
             }
-            data = await extractFile(bytesToB64(sendBytes), sendMime);
+          } else {
+            data = await extractFile(bytesToB64(bytes), job.file.mime);
           }
           tAI += Date.now()-t2;
           if(!(data && data.is_doc)) job.bytes = null;   // לא חשבונית - לא לשמור את הקובץ
@@ -2160,11 +2275,19 @@ $('btnScan').onclick = async ()=>{
       await saveDocs();
       render();
     }
-    $('plog').textContent='שגיאה: '+e.message;
+    $('plog').textContent='שגיאה: '+friendlyError(e.message);
   }
   finish();
 };
-function finish(){ scanRunning=false; $('btnScan').disabled=false; $('btnStop').style.display='none'; }
+function finish(){
+  scanRunning=false; $('btnScan').disabled=false; $('btnStop').style.display='none';
+  const b=$('scanBadge');
+  if(b){
+    b.style.display='block';
+    b.textContent='✓ '+docs.length+' מסמכים';
+    setTimeout(()=>{ b.style.display='none'; }, 4000);
+  }
+}
 
 /* ---------- פופאפ סיכום בסיום סריקה ---------- */
 function showSummary(totalJobs, failed){
@@ -2511,6 +2634,8 @@ function validateBeforeScan(){
   else if(!/\.apps\.googleusercontent\.com$/.test(cfg.client.trim()))
     errs.push('ה-Client ID לא נראה תקין — הוא אמור להסתיים ב-.apps.googleusercontent.com');
   if(!cfg.gemini) errs.push('חסר Gemini API Key (הגדרות)');
+  else if(!/^AIza[A-Za-z0-9_-]{30,55}$/.test(cfg.gemini.trim()))
+    errs.push('מפתח Gemini לא נראה תקין — בדרך כלל מתחיל ב-AIza ואורכו ~39 תווים');
   if(!cfg.model) errs.push('לא נבחר מודל (הגדרות)');
   if(!token) errs.push('לא מחובר לתיבת המייל — לחץ "התחבר עם Google"');
 
@@ -2992,14 +3117,40 @@ $('btnDrive').onclick = async ()=>{
 /* ============================================================
    אתחול
    ============================================================ */
+/* ============================================================
+   בדיקת מיילים חדשים ברקע — חלופה ל-Push Notifications.
+   רצה אוטומטית פעם בפתיחה (לאחר חיבור מוצלח), מחפשת
+   מיילים מ-24 שעות אחרונות שטרם עובדו, ומציגה badge.
+   ============================================================ */
+async function quickMailCheck(){
+  // תנאי הפעלה: יש טוקן, כבר סרקנו בעבר, לא רצה סריקה עכשיו
+  if(!token || !docsSavedAt || scanRunning) return;
+  // לא בודקים יותר מפעם ב-20 דקות (מונע כפולות בריענון)
+  const lastCheck = store.get('inv_qcheck', 0);
+  if(Date.now() - lastCheck < 20*60*1000) return;
+  store.set('inv_qcheck', Date.now());
+  try{
+    const kw = ($('kw')&&$('kw').value.trim()) || 'חשבונית OR קבלה';
+    const q  = '('+kw+') -in:spam -in:trash newer_than:1d';
+    const j  = await api('https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=25&q='+encodeURIComponent(q));
+    const fresh = (j.messages||[]).filter(m=>!seen[m.id]);
+    if(!fresh.length) return;
+    const b = $('scanBadge');
+    if(b){ b.style.display='block'; b.textContent='📬 '+fresh.length+' חדשים'; }
+    toast('📬 '+fresh.length+' מיילים עם חשבוניות מהיממה האחרונה');
+  }catch(e){}   // כשל שקט — בדיקת רקע לא צריכה להפריע למשתמש
+}
+
 (function init(){
+  // הסתרת מסך פתיחה
+  setTimeout(()=>{ const s=document.getElementById('splash'); if(s) s.classList.add('hide'); }, 600);
   loadCfg();
   const now=new Date();
   $('dTo').value = now.toISOString().slice(0,10);
   const from=new Date(now.getFullYear(), now.getMonth()-2, 1);
   $('dFrom').value = from.toISOString().slice(0,10);
   $('verDate').textContent = new Date().toISOString().slice(0,10);
-  $('helpVer').textContent = 'v2.9';
+  $('helpVer').textContent = 'v3.2';
   renderChecks();
   render();
   loadDocs();   // שחזור תוצאות הסריקה האחרונה מ-IndexedDB
