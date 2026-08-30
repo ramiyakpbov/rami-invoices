@@ -354,13 +354,16 @@ label.f span{display:block;font-size:11px;color:var(--ink-dim);margin-bottom:4px
 .btn{
   display:flex;align-items:center;justify-content:center;gap:7px;
   width:100%;min-height:48px;padding:12px;border-radius:12px;font-weight:600;font-size:15px;
-  background:var(--red);color:#fff;transition:opacity .15s,transform .1s;
+  background:linear-gradient(180deg,var(--red) 0%,var(--red-dim) 130%);
+  color:#fff;border:none;
+  box-shadow:inset 0 1px 0 var(--glass-line), 0 3px 10px rgba(214,22,29,.28);
+  transition:opacity .15s,transform .1s,box-shadow .15s;
 }
-.btn:active{transform:scale(.985)}
-.btn[disabled]{opacity:.4;pointer-events:none}
-.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink);font-weight:500}
-.btn.outline{background:transparent;border:1.5px solid var(--red);color:var(--red);font-weight:600}
-.btn.mint{background:var(--green);color:#fff}
+.btn:active{transform:scale(.985);box-shadow:inset 0 1px 0 var(--glass-line), 0 1px 4px rgba(214,22,29,.22)}
+.btn[disabled]{opacity:.4;pointer-events:none;box-shadow:none}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink);font-weight:500;box-shadow:none}
+.btn.outline{background:transparent;border:1.5px solid var(--red);color:var(--red);font-weight:600;box-shadow:none}
+.btn.mint{background:linear-gradient(180deg,var(--green) 0%,var(--green) 130%);color:#fff;box-shadow:inset 0 1px 0 var(--glass-line), 0 3px 10px rgba(30,150,90,.22)}
 .btn.primary-lg{min-height:56px;font-size:16.5px;font-weight:700;border-radius:14px}
 .btn.sm{min-height:44px;padding:10px 14px;font-size:13.5px;width:auto}
 
@@ -399,19 +402,6 @@ label.f span{display:block;font-size:11px;color:var(--ink-dim);margin-bottom:4px
 .mstats small{font-size:9.5px;color:var(--ink-dim)}
 .mline{font-size:12px;color:var(--ink-dim);padding:5px 0;border-top:1px dashed var(--line)}
 .mline b{color:var(--ink)}
-
-/* ---------- נעילת הגדרות ---------- */
-.lockwrap{text-align:center;padding:34px 18px}
-.lockwrap .lk{font-size:38px;opacity:.35;margin-bottom:10px}
-.lockwrap h2{font-size:16px;margin-bottom:4px}
-.lockwrap p{font-size:12.5px;color:var(--ink-dim);margin:0 0 16px}
-.pinrow{display:flex;gap:8px;max-width:260px;margin:0 auto}
-.pinrow input{
-  flex:1;text-align:center;letter-spacing:.4em;font-size:20px;font-family:'Rubik';
-  padding:11px;border-radius:12px;background:var(--glass-2);
-  border:1px solid var(--line);color:var(--ink);outline:none;
-}
-.pinrow input:focus{border-color:var(--red)}
 
 .chips{
   display:flex;gap:6px;margin-top:4px;
@@ -500,10 +490,13 @@ html[data-theme="dark"] .docs{background:rgba(24,24,28,.5);border-color:rgba(255
 .doc .thumb{width:34px;height:34px;border-radius:8px;object-fit:cover;flex:none;border:1px solid var(--line)}
 .doc{display:flex;align-items:center;flex-wrap:wrap;gap:6px 7px;min-height:56px;padding:10px 12px;border-bottom:1px dashed var(--line)}
 .doc:last-child{border-bottom:0}
-.doc .dt{font-family:'Rubik';font-size:11px;color:var(--ink-dim);white-space:nowrap}
-.doc .ttl{color:var(--ink);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.doc .dt{font-family:'Rubik';font-size:11px;color:var(--ink-dim);
+  overflow-wrap:anywhere;min-width:0;max-width:36%}
+.doc .ttl{color:var(--ink);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  min-width:0;max-width:38%}
 .doc .lead{flex:1;border-bottom:1px dotted var(--line);transform:translateY(-3px);min-width:12px}
-.doc .amt{font-family:'Rubik';font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:700;color:var(--ink);white-space:nowrap}
+.doc .amt{font-family:'Rubik';font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:700;color:var(--ink);
+  white-space:nowrap;flex:none}
 .doc .src{font-size:9.5px;padding:2px 5px;border-radius:4px;white-space:nowrap;font-weight:600}
 .src.pdf{background:var(--green-tint);color:var(--green-dim)}
 .src.link{background:var(--red-tint);color:var(--red-dim)}
@@ -567,11 +560,11 @@ html[data-theme="dark"] .modal{background:rgba(34,34,39,.9);border-color:rgba(25
 .mline:last-of-type{border-bottom:0}
 .mline b{font-family:'Rubik';font-variant-numeric:tabular-nums}
 
-/* ---------- נעילת הגדרות ---------- */
-.lockwrap{text-align:center;padding:44px 20px}
-.lockwrap .lk{font-size:40px;opacity:.35;margin-bottom:10px}
-.lockwrap h2{font-size:16px;margin-bottom:4px}
-.lockwrap p{font-size:12.5px;color:var(--ink-dim);margin:0 0 16px}
+/* ---------- נעילת אזור המפתחות בלבד (לא כל מסך ההגדרות) ---------- */
+.lockwrap{text-align:center;padding:22px 16px}
+.lockwrap .lk{font-size:28px;opacity:.35;margin-bottom:6px}
+.lockwrap h2{font-size:14px;margin-bottom:3px}
+.lockwrap p{font-size:11.5px;color:var(--ink-dim);margin:0 0 12px}
 .pinbox{max-width:230px;margin:0 auto}
 .pinbox .inp{text-align:center;letter-spacing:8px;font-size:22px;font-family:'Rubik'}
 .toolbar{display:flex;gap:7px;margin-bottom:10px}
@@ -931,7 +924,7 @@ nav button.on{color:var(--red)}
   <details class="acc">
     <summary>⚙ הגדרות</summary>
     <div class="accbody">
-      <div class="kv"><b>קוד גישה</b><span>אינך מחויב לקבוע קוד, אבל מומלץ — ההגדרות מכילות את מפתחות ה-API. נקבע בתוך ההגדרות.</span></div>
+      <div class="kv"><b>קוד גישה</b><span>אינך מחויב לקבוע קוד, אבל מומלץ — אזור המפתחות בהגדרות מכיל את מפתחות ה-API. נקבע בתוך ההגדרות.</span></div>
       <div class="kv"><b>טען מודלים</b><span>מושך את רשימת המודלים שזמינים למפתח שלך. השתמש כשמקבל שגיאת מודל.</span></div>
       <div class="kv"><b>בדוק מפתח</b><span>אומר מיד אם המפתח והמודל עובדים. תמיד הרץ אחרי שינוי.</span></div>
       <div class="kv"><b>קצב סריקה</b><span>🐢 איטי / ⚖ מאוזן / ⚡ מהיר. הרבה שגיאות? עבור לאיטי.</span></div>
@@ -1015,46 +1008,11 @@ nav button.on{color:var(--red)}
     </label>
     <p class="hint" style="margin:8px 0 0">משפיע על כל סריקה עתידית.</p>
   </div></details>
-  <div id="lockGate">
-    <div class="card">
-      <div class="lockwrap">
-        <div class="lk">🔒</div>
-        <h2>אזור מוגן</h2>
-        <p>הגדרות המפתחות והחיבורים נעולות בקוד גישה.</p>
-        <div class="pinbox">
-          <input class="inp" id="pinInput" type="password" inputmode="numeric" maxlength="8" placeholder="••••">
-          <button class="btn" id="btnUnlock" style="margin-top:10px">פתח</button>
-          <div class="plog" id="pinLog" style="margin-top:8px"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div id="setBody" style="display:none">
+  <div id="setBody">
   <div class="warn" id="pinNag" style="display:none;margin-bottom:12px">
-    <b>עדיין לא נקבע קוד גישה.</b> אזור ההגדרות מכיל את מפתחות ה-API שלך.
-    גלול ל"קוד גישה" למטה וקבע קוד בן 4-8 ספרות.
+    <b>עדיין לא נקבע קוד גישה.</b> אזור המפתחות למטה פתוח לכל מי שיפתח את ההגדרות.
+    גלול ל"קוד גישה" וקבע קוד בן 4-8 ספרות.
   </div>
-  <details class="acc" open><summary>🔑 מפתחות</summary><div class="accbody">
-    
-    <p class="hint">נשמרים רק במכשיר הזה (localStorage). לא נשלחים לשום מקום מלבד גוגל.</p>
-    <label class="f"><span>Google OAuth Client ID<button type="button" class="tip" data-tip="מזהה שיוצרים ב-Google Cloud Console תחת OAuth 2.0 Client IDs, מסוג Web application. משמש להתחברות ל-Gmail בלבד — לא לזיהוי חשבוניות.">?</button></span><input class="inp" id="cfgClient" placeholder="....apps.googleusercontent.com"></label>
-    <label class="f"><span>Gemini API Key<button type="button" class="tip" data-tip="מפתח מ-Google AI Studio (aistudio.google.com). משמש רק לזיהוי תוכן המסמכים ע'י Gemini — נפרד לגמרי מה-Client ID.">?</button></span><input class="inp" id="cfgGemini" type="password" placeholder="AIza..."></label>
-    <label class="f"><span>מודל</span>
-      <select class="inp" id="cfgModel">
-        <option value="">— לחץ "טען מודלים" למטה —</option>
-      </select>
-    </label>
-    <button class="btn ghost sm" id="btnLoadModels" style="width:100%;margin-bottom:9px">↻ טען מודלים זמינים למפתח שלי</button>
-    <p class="hint" style="margin-top:-4px">
-      גוגל מוציאה ומכניסה מודלים כל הזמן. לחץ על הכפתור למעלה כדי למשוך את הרשימה
-      <b>שבאמת זמינה למפתח שלך</b> במקום להסתמך על רשימה קבועה.
-      דגמי Flash ו-Flash-Lite כוללים שכבה חינמית; דגמי Pro הם בתשלום בלבד.
-      מקור: <a href="https://ai.google.dev/gemini-api/docs/pricing" target="_blank" rel="noopener">ai.google.dev/gemini-api/docs/pricing</a>
-    </p>
-    <button class="btn" id="btnSaveCfg">שמור</button>
-    <button class="btn outline sm" id="btnTestKey" style="width:100%;margin-top:8px">בדוק מפתח Gemini</button>
-    <div class="plog" id="keyLog" style="margin-top:8px"></div>
-  </div></details>
   <details class="acc"><summary>⏱ קצב סריקה</summary><div class="accbody">
     
     <p class="hint">אם אתה מקבל הרבה "Failed to fetch" או "429" — האט. השכבה החינמית של Gemini מגבילה בקשות לדקה.</p>
@@ -1090,7 +1048,7 @@ nav button.on{color:var(--red)}
   </div></details>
   <details class="acc"><summary>ℹ גרסה</summary><div class="accbody">
     
-    <p class="hint" style="margin:0"><span id="verTag">v3.1</span> · <span id="verDate"></span></p>
+    <p class="hint" style="margin:0"><span id="verTag">v3.2</span> · <span id="verDate"></span></p>
   </div></details>
   <details class="acc"><summary>💾 גיבוי הגדרות</summary><div class="accbody">
     
@@ -1127,9 +1085,46 @@ nav button.on{color:var(--red)}
     </div>
     <label class="chk" style="margin-top:10px"><input type="checkbox" id="cfgReduceMotion"> צמצם אנימציות</label>
   </div></details>
+
+  <!-- v3.1 — רק "מפתחות" ו"קוד גישה" נעולים (חריגים רגישים). כל שאר
+       ההגדרות למעלה זמינות מיד כשנכנסים למסך, בלי צורך בקוד. -->
+  <div class="card" id="secureLock" style="display:none;margin:10px 0">
+    <div class="lockwrap">
+      <div class="lk">🔑</div>
+      <h2>מפתחות וקוד גישה נעולים</h2>
+      <p>שאר ההגדרות פתוחות. האזור הזה מכיל את מפתחות ה-API ואת עדכון הקוד עצמו.</p>
+      <div class="pinbox">
+        <input class="inp" id="pinInput" type="password" inputmode="numeric" maxlength="8" placeholder="••••">
+        <button class="btn" id="btnUnlock" style="margin-top:10px">פתח</button>
+        <div class="plog" id="pinLog" style="margin-top:8px"></div>
+      </div>
+    </div>
+  </div>
+  <div id="secureZone">
+  <details class="acc" open><summary>🔑 מפתחות</summary><div class="accbody">
+    
+    <p class="hint">נשמרים רק במכשיר הזה (localStorage). לא נשלחים לשום מקום מלבד גוגל.</p>
+    <label class="f"><span>Google OAuth Client ID<button type="button" class="tip" data-tip="מזהה שיוצרים ב-Google Cloud Console תחת OAuth 2.0 Client IDs, מסוג Web application. משמש להתחברות ל-Gmail בלבד — לא לזיהוי חשבוניות.">?</button></span><input class="inp" id="cfgClient" placeholder="....apps.googleusercontent.com"></label>
+    <label class="f"><span>Gemini API Key<button type="button" class="tip" data-tip="מפתח מ-Google AI Studio (aistudio.google.com). משמש רק לזיהוי תוכן המסמכים ע'י Gemini — נפרד לגמרי מה-Client ID.">?</button></span><input class="inp" id="cfgGemini" type="password" placeholder="AIza..."></label>
+    <label class="f"><span>מודל</span>
+      <select class="inp" id="cfgModel">
+        <option value="">— לחץ "טען מודלים" למטה —</option>
+      </select>
+    </label>
+    <button class="btn ghost sm" id="btnLoadModels" style="width:100%;margin-bottom:9px">↻ טען מודלים זמינים למפתח שלי</button>
+    <p class="hint" style="margin-top:-4px">
+      גוגל מוציאה ומכניסה מודלים כל הזמן. לחץ על הכפתור למעלה כדי למשוך את הרשימה
+      <b>שבאמת זמינה למפתח שלך</b> במקום להסתמך על רשימה קבועה.
+      דגמי Flash ו-Flash-Lite כוללים שכבה חינמית; דגמי Pro הם בתשלום בלבד.
+      מקור: <a href="https://ai.google.dev/gemini-api/docs/pricing" target="_blank" rel="noopener">ai.google.dev/gemini-api/docs/pricing</a>
+    </p>
+    <button class="btn" id="btnSaveCfg">שמור</button>
+    <button class="btn outline sm" id="btnTestKey" style="width:100%;margin-top:8px">בדוק מפתח Gemini</button>
+    <div class="plog" id="keyLog" style="margin-top:8px"></div>
+  </div></details>
   <details class="acc"><summary>🔒 קוד גישה</summary><div class="accbody">
     
-    <p class="hint">מגן על מסך ההגדרות בלבד. נשמר במכשיר הזה.</p>
+    <p class="hint">מגן על אזור המפתחות בלבד. נשמר במכשיר הזה.</p>
     <label class="f"><span>קוד חדש (4-8 ספרות)</span><input class="inp" id="pinNew" type="password" inputmode="numeric" maxlength="8" placeholder="••••"></label>
     <button class="btn ghost sm" id="btnSavePin" style="width:100%">עדכן קוד</button>
     <label class="f" style="margin-top:10px"><span>נעילה אוטומטית אחרי חוסר פעילות (דקות, 0 = כבוי)</span>
@@ -1137,6 +1132,7 @@ nav button.on{color:var(--red)}
     <button class="btn ghost sm" id="btnSaveIdle" style="width:100%">שמור</button>
     <button class="btn outline sm" id="btnLockNow" style="width:100%;margin-top:8px">🔒 נעל עכשיו</button>
   </div></details>
+  </div>
   </div>
 </section>
 
@@ -1265,7 +1261,7 @@ let docMeta = {};        // fingerprint -> {project} (תיוג פרויקט שש
 let dupSkipped = 0;
 let junkSkipped = 0;   // קבצים שסוננו לפני AI (לוגואים, אייקונים)
 
-const VERSION = 'v3.1';
+const VERSION = 'v3.2';
 function $(id){ return document.getElementById(id); }
 /* v3.0 — toISOString מחזיר UTC. בישראל (UTC+2/+3) מסמך שהתקבל ב-01:00
    סומן ביום הקודם. localISO עובד לפי אזור הזמן של המכשיר. */
@@ -1519,7 +1515,9 @@ document.addEventListener('click', (e)=>{
 }, true);
 
 /* ============================================================
-   נעילת הגדרות
+   נעילת אזור המפתחות בלבד — פריט 3 מהמשוב: כל שאר ההגדרות פתוחות
+   מיד, "מסך אפליקטיבי" ולא חסום מאחורי קוד. רק מפתחות API ועדכון
+   הקוד עצמו נעולים.
    ============================================================ */
 let setUnlocked = false;
 function hasPin(){ return /^\d{4,8}$/.test(String(cfg.pin||'')); }
@@ -1527,15 +1525,15 @@ function lockSettings(){
   // אין קוד מוגדר -> אין מה לנעול. פותחים ומזכירים לקבוע קוד.
   if(!hasPin()){ unlockSettings(); return; }
   setUnlocked = false;
-  $('lockGate').style.display='block';
-  $('setBody').style.display='none';
+  $('secureLock').style.display='block';
+  $('secureZone').style.display='none';
   $('pinInput').value=''; $('pinLog').textContent='';
 }
 function unlockSettings(){
   setUnlocked = true;
   lastActivityAt = Date.now();
-  $('lockGate').style.display='none';
-  $('setBody').style.display='block';
+  $('secureLock').style.display='none';
+  $('secureZone').style.display='block';
   const nag = $('pinNag');
   if(nag) nag.style.display = hasPin() ? 'none' : 'block';
 }
@@ -1550,7 +1548,8 @@ $('btnUnlock').onclick = ()=>{
 };
 
 /* פריט 53 — זמן תפוגה לסשן.
-   אחרי חוסר פעילות ההגדרות ננעלות מחדש מעצמן. */
+   אחרי חוסר פעילות אזור המפתחות ננעל מחדש מעצמו (שאר ההגדרות
+   נשארות פתוחות - הן לא רגישות). */
 let lastActivityAt = Date.now();
 ['click','keydown','touchstart','scroll'].forEach(ev=>{
   document.addEventListener(ev, ()=>{ lastActivityAt = Date.now(); }, {passive:true, capture:true});
@@ -1560,7 +1559,7 @@ setInterval(()=>{
   if(!setUnlocked || !hasPin() || !mins || mins<=0) return;
   if(Date.now() - lastActivityAt > mins*60000){
     lockSettings();
-    toast('ההגדרות ננעלו מחוסר פעילות');
+    toast('אזור המפתחות ננעל מחוסר פעילות');
   }
 }, 20000);
 $('pinInput').onkeydown = (e)=>{ if(e.key==='Enter') $('btnUnlock').click(); };
@@ -1571,7 +1570,7 @@ $('btnSavePin').onclick = ()=>{
   $('pinNew').value=''; toast('קוד הגישה עודכן');
   const nag = $('pinNag'); if(nag) nag.style.display='none';
 };
-$('btnLockNow').onclick = ()=>{ lockSettings(); toast('ההגדרות ננעלו'); };
+$('btnLockNow').onclick = ()=>{ lockSettings(); toast('אזור המפתחות ננעל'); };
 $('btnSaveIdle').onclick = ()=>{
   const v = parseInt($('cfgIdle').value);
   if(isNaN(v) || v<0 || v>240){ toast('הזן מספר בין 0 ל-240'); return; }
