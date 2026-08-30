@@ -100,6 +100,11 @@ Retry ל-Gmail          | let gmailRetries
 כותרת משנה דינמית         | function updateHeaderSub
 כפתור "התחבר" בכותרת      | acct.clickable
 נמצאו X מתוך Y            | searchCount
+דשבורד מסך בית            | dashstats
+כותרות קבוצה              | section-title
+קבוצת ייצוא קומפקטית      | expitem
+גיליון סינון + מונה       | function activeFilterCount
+אייקוני SVG בניווט        | nav button i svg
 Enter=שמור / Esc=סגור     | function wireSettingsKeys
 */
 -->
@@ -632,14 +637,46 @@ html[data-theme="dark"] .docs-inner{background:rgba(24,24,28,.5);border-color:rg
 .empty h2{font-size:15px}
 .empty p{font-size:12.5px;margin:5px 0 0}
 
+/* משימה 1 — כרטיס דשבורד ראשי במסך הבית. אותו מבנה בדיוק כמו .sum
+   במסך התוצאות (3 תיבות צבעוניות), רק גדול יותר כי הוא הדבר הראשון
+   שרואים. c-blue/c-green/c-red כבר מוגדרים למעלה - לא כפילות. */
+.dashcard{padding:16px}
+.dashstats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.dashstats div{border-radius:14px;padding:14px 6px;text-align:center}
+.dashstats b{display:block;font-family:'Rubik';font-variant-numeric:tabular-nums;font-size:22px;line-height:1.2}
+.dashstats small{font-size:10.5px;color:var(--ink-dim)}
+/* כותרת קבוצה — בשימוש חוזר בייצוא/הגדרות/תוצאות, לא רק כאן */
+/* משימה 2 — שורת פריט קומפקטית לקבוצת "קבצים להורדה", במקום כרטיס
+   נפרד לכל פורמט. מקצר משמעותית את מסך הייצוא. */
+/* משימה 3 — באדג' מונה מסננים פעילים על כפתור הסינון */
+.fbadge{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:17px;height:17px;padding:0 5px;margin-inline-start:6px;
+  border-radius:999px;background:var(--red);color:#fff;
+  font-size:10px;font-weight:700;font-family:'Rubik';line-height:1;
+}
+.expgrid{display:flex;flex-direction:column}
+.expitem{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:11px 2px;border-bottom:1px dashed var(--line)}
+.expitem:last-child{border-bottom:0}
+.expitem-txt b{font-size:13.5px;display:block}
+.expitem-txt small{font-size:11px;color:var(--ink-dim);display:block;margin-top:1px}
+.expitem .btn{width:auto;min-width:70px;flex:none}
+.section-title{
+  font-size:12px;font-weight:700;color:var(--ink-dim);
+  margin:16px 4px 6px;padding-inline-start:2px;
+  text-transform:none;letter-spacing:.02em;
+}
 .sum{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:10px}
-/* פריט 48 — 3 צבעים עדינים למשבצות הסיכום, במקום גוון אדום אחיד לכולן */
-.sum div.c-blue b, .mstats div.c-blue b{color:var(--blue)}
-.sum div.c-green b, .mstats div.c-green b{color:var(--green)}
-.sum div.c-red b, .mstats div.c-red b{color:var(--red)}
-.sum div.c-blue, .mstats div.c-blue{background:var(--blue-tint) !important}
-.sum div.c-green, .mstats div.c-green{background:var(--green-tint) !important}
-.sum div.c-red, .mstats div.c-red{background:var(--red-tint) !important}
+/* פריט 48 — 3 צבעים עדינים למשבצות סיכום. כלל גנרי (לא רק .sum/.mstats)
+   כדי שכל תיבת-סטטיסטיקה חדשה (למשל .dashstats במסך הבית) תוכל
+   להשתמש באותן 3 מחלקות בלי להוסיף כלל CSS נפרד בכל פעם. */
+.c-blue b{color:var(--blue) !important}
+.c-green b{color:var(--green) !important}
+.c-red b{color:var(--red) !important}
+.c-blue{background:var(--blue-tint) !important}
+.c-green{background:var(--green-tint) !important}
+.c-red{background:var(--red-tint) !important}
 .sum div{
   background:rgba(255,255,255,.62);
   backdrop-filter:blur(18px) saturate(1.6);
@@ -794,7 +831,14 @@ nav{
 html[data-theme="dark"] nav{background:rgba(22,22,26,.72);border-top-color:rgba(255,255,255,.08)}
 html[data-theme="dark"] header{background:rgba(13,13,15,.72);border-bottom-color:rgba(255,255,255,.08)}
 nav button{min-height:52px;padding:7px 2px;display:grid;justify-items:center;align-content:center;gap:3px;font-size:10.5px;color:#8A8272;border-radius:10px}
-nav button i{font-style:normal;font-size:16px;line-height:1}
+nav button i{font-style:normal;display:flex;align-items:center;justify-content:center;height:20px}
+nav button i svg{width:20px;height:20px;display:block}
+/* משימה 5 — נקודת סימון למסך הפעיל, מעל האייקון */
+nav button{position:relative}
+nav button.on::before{
+  content:'';position:absolute;top:3px;left:50%;transform:translateX(-50%);
+  width:4px;height:4px;border-radius:50%;background:var(--red);
+}
 nav button.on{color:var(--red)}
 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -839,6 +883,15 @@ nav button.on{color:var(--red)}
     </div>
   </div>
 
+  <!-- משימה 1 — כרטיס דשבורד עליון: סטטוס כללי במבט אחד -->
+  <div class="card dashcard">
+    <div class="dashstats">
+      <div class="c-blue"><b id="dashDocs">0</b><small>מסמכים</small></div>
+      <div class="c-green"><b id="dashSup">0</b><small>ספקים</small></div>
+      <div class="c-red"><b id="dashTot">0</b><small>סה"כ ₪</small></div>
+    </div>
+  </div>
+
   <div class="card" id="statusCard">
     <h2>מצב נוכחי</h2>
     <div id="statusBody" class="plog"></div>
@@ -847,43 +900,44 @@ nav button.on{color:var(--red)}
     </div>
   </div>
 
+  <!-- משימה 1 — פעולה ראשית אחת וברורה; כל השאר מתחת לאקורדיון סגור -->
   <div class="card">
-    <h2>טווח וסינון</h2>
-    <p class="hint">ככל שהטווח קצר יותר — הסריקה מהירה וזולה יותר.</p>
-    <div class="chips" id="datePresets" style="margin-bottom:14px">
-      <button class="chip" data-p="1">החודש</button>
-      <button class="chip" data-p="2">חודש שעבר</button>
-      <button class="chip on" data-p="3">3 חודשים</button>
-      <button class="chip" data-p="12">השנה</button>
-      <button class="chip" data-p="0">הכל</button>
-    </div>
-    <div class="row2">
-      <label class="f"><span>מתאריך</span><input type="date" class="inp" id="dFrom"></label>
-      <label class="f"><span>עד תאריך</span><input type="date" class="inp" id="dTo"></label>
-    </div>
-    <details class="acc" style="margin:10px 0">
-      <summary>⚙ אפשרויות סריקה</summary>
+    <button class="btn primary-lg" id="btnScan">⚡ סריקה מהירה</button>
+    <button class="btn ghost sm" id="btnStop" style="width:100%;margin-top:8px;display:none">עצור</button>
+    <details class="acc" style="margin-top:12px">
+      <summary>⚙ הגדרות סריקה מתקדמות</summary>
       <div class="accbody">
-    <label class="f">
-      <span>מה לתפוס</span>
-      <div class="chips" id="modes">
-        <button class="chip on" data-m="pdf">קבצים מצורפים</button>
-        <button class="chip on" data-m="link">קישורים למערכות</button>
-        <button class="chip on" data-m="body">גוף המייל</button>
-      </div>
-    </label>
-        <div class="chips">
+        <p class="hint">ככל שהטווח קצר יותר — הסריקה מהירה וזולה יותר.</p>
+        <div class="chips" id="datePresets" style="margin-bottom:14px">
+          <button class="chip" data-p="1">החודש</button>
+          <button class="chip" data-p="2">חודש שעבר</button>
+          <button class="chip on" data-p="3">3 חודשים</button>
+          <button class="chip" data-p="12">השנה</button>
+          <button class="chip" data-p="0">הכל</button>
+        </div>
+        <div class="row2">
+          <label class="f"><span>מתאריך</span><input type="date" class="inp" id="dFrom"></label>
+          <label class="f"><span>עד תאריך</span><input type="date" class="inp" id="dTo"></label>
+        </div>
+        <label class="f" style="margin-top:10px">
+          <span>מה לתפוס</span>
+          <div class="chips" id="modes">
+            <button class="chip on" data-m="pdf">קבצים מצורפים</button>
+            <button class="chip on" data-m="link">קישורים למערכות</button>
+            <button class="chip on" data-m="body">גוף המייל</button>
+          </div>
+        </label>
+        <div class="chips" style="margin-top:8px">
           <button class="chip" id="chipRescan">↻ סרוק מחדש גם מיילים שכבר עובדו</button>
         </div>
         <p class="hint" style="margin:8px 0 0">מילות החיפוש וכמות המיילים עברו להגדרות.</p>
       </div>
     </details>
-    <button class="btn primary-lg" id="btnScan">🔍 סרוק חשבוניות מהמייל</button>
-    <button class="btn ghost sm" id="btnStop" style="width:100%;margin-top:8px;display:none">עצור</button>
   </div>
 
+  <!-- משימה 1 — הוספה ידנית מופרדת ויזואלית מהסריקה, לא מעורבבת -->
+  <div class="section-title">➕ הוספה ידנית</div>
   <div class="card">
-    <h2>הוספה ידנית</h2>
     <p class="hint">חשבונית שלא הגיעה במייל — צלם אותה או בחר קובץ מהמכשיר. אותו זיהוי בדיוק.</p>
     <div class="row2">
       <label class="btn outline sm" for="camFile" style="width:100%;display:flex">📷 צלם</label>
@@ -920,26 +974,20 @@ nav button.on{color:var(--red)}
 <!-- ========== תוצאות ========== -->
 <section class="view" id="v-res">
   <div id="resHead"></div>
+  <!-- משימה 3 — שורת כלים מצומצמת: חיפוש + כפתור סינון עם מונה פעילים.
+       שיקול דעת: תפריט "⋯" היה מסתיר *כמה* מסננים דלוקים. באדג' עם
+       מספר עונה על השאלה הזאת במבט אחד, וזה מה שאפליקציות מקצועיות
+       עושות בדיוק במצב הזה. -->
   <div class="toolbar sticky" id="resToolbar" style="display:none;flex-wrap:wrap">
     <span class="clearwrap" style="flex:1;display:block">
       <input class="inp" id="resSearch" style="width:100%" placeholder="חיפוש: ספק, מספר, נושא… או ‎>5000">
       <button class="clr" id="resSearchClr" type="button" aria-label="נקה חיפוש">✕</button>
     </span>
-    <select class="inp" id="resSort">
-      <option value="date-desc">תאריך: חדש→ישן</option>
-      <option value="date-asc">תאריך: ישן→חדש</option>
-      <option value="amt-desc">סכום: גבוה→נמוך</option>
-      <option value="amt-asc">סכום: נמוך→גבוה</option>
-      <option value="supplier">לפי ספק (א-ת)</option>
-      <option value="docnum">לפי מספר מסמך</option>
-    </select>
+    <button class="chip" id="btnFilters" style="flex:none">⚙ סינון<span class="fbadge" id="filterBadge" style="display:none">0</span></button>
   </div>
   <div class="toolbar" id="resToolbar2" style="display:none;flex-wrap:wrap">
-    <select class="inp" id="resProject" style="flex:1 1 140px;min-width:120px"><option value="">כל הפרויקטים</option></select>
-    <button class="chip" id="btnReviewOnly" style="flex:none">⚠ רק לבדיקה</button>
     <button class="chip" id="btnTrendToggle" style="flex:none">📊 מגמה</button>
     <button class="chip" id="btnViewMode" style="flex:none">☰ טבלה</button>
-    <button class="chip" id="btnDoneOnly" style="flex:none">✓ לא טופלו</button>
   </div>
   <div id="trendBox" style="display:none"></div>
   <div id="missingBox"></div>
@@ -949,37 +997,44 @@ nav button.on{color:var(--red)}
 
 <!-- ========== ייצוא ========== -->
 <section class="view" id="v-exp">
+
+  <div class="section-title">☁ ענן</div>
   <div class="card">
     <h2>שמירה ל-Google Drive</h2>
-    <p class="hint">נוצרת תיקייה ראשית, תיקיית משנה לכל ספק, וקובץ ריכוז.xlsx בשורש.</p>
+    <p class="hint">תיקייה לכל ספק + קובץ ריכוז.xlsx בשורש.</p>
     <label class="f"><span>שם התיקייה הראשית</span><input class="inp" id="rootName" value="חשבוניות"></label>
     <button class="btn mint" id="btnDrive">העלה ל-Drive</button>
     <div class="plog" id="driveLog" style="margin-top:10px"></div>
   </div>
+
+  <!-- משימה 2 — קבצים להורדה כקבוצה קומפקטית אחת במקום 4 כרטיסים נפרדים -->
+  <div class="section-title">📦 קבצים להורדה</div>
   <div class="card">
-    <h2>הורדה כ-ZIP</h2>
-    <p class="hint">קובץ אחד עם אותו מבנה תיקיות, נשמר בהורדות של הטלפון.</p>
-    <button class="btn outline" id="btnZip">הורד ZIP</button>
-    <div class="plog" id="zipLog" style="margin-top:10px"></div>
+    <div class="expgrid">
+      <div class="expitem">
+        <div class="expitem-txt"><b>ZIP</b><small>קבצים מלאים + תיקיות לפי ספק</small></div>
+        <button class="btn outline sm" id="btnZip">הורד</button>
+      </div>
+      <div class="expitem">
+        <div class="expitem-txt"><b>Excel</b><small>טבלת ריכוז בלבד, בלי קבצים</small></div>
+        <button class="btn ghost sm" id="btnXlsx">הורד</button>
+      </div>
+      <div class="expitem">
+        <div class="expitem-txt"><b>CSV<button type="button" class="tip" data-tip="עמודות סטנדרטיות (תאריך/ספק/ח.פ/מספר/סכומים). לא בדוק מול פורמט היבוא המדויק של חשבשבת/רווית — בדוק מול התוכנה שלך לפני ייבוא.">?</button></b><small>להנהלת חשבונות</small></div>
+        <button class="btn ghost sm" id="btnCsv">הורד</button>
+      </div>
+      <div class="expitem">
+        <div class="expitem-txt"><b>JSON</b><small>כל הנתונים, לגיבוי או העברה</small></div>
+        <button class="btn ghost sm" id="btnJson">הורד</button>
+      </div>
+    </div>
+    <div class="plog" id="zipLog" style="margin-top:8px"></div>
   </div>
-  <div class="card">
-    <h2>ריכוז.xlsx בלבד</h2>
-    <p class="hint">רק הטבלה, בלי הקבצים.</p>
-    <button class="btn ghost" id="btnXlsx">הורד ריכוז.xlsx</button>
-  </div>
-  <div class="card">
-    <h2>CSV להנהלת חשבונות</h2>
-    <p class="hint">עמודות סטנדרטיות (תאריך/ספק/ח.פ/מספר/סכומים). <b>לא בדוק מול פורמט היבוא המדויק</b> של חשבשבת/רווית — תבדוק מול התוכנה שלך לפני ייבוא.</p>
-    <button class="btn ghost" id="btnCsv">הורד CSV</button>
-  </div>
-  <div class="card">
-    <h2>ייצוא JSON</h2>
-    <p class="hint">כל הנתונים כפי שהם, כולל תגיות ותיוג פרויקטים. לגיבוי או להעברה למערכת אחרת.</p>
-    <button class="btn ghost" id="btnJson">הורד JSON</button>
-  </div>
+
+  <div class="section-title">📊 דוחות</div>
   <div class="card">
     <h2>דוח מע"מ</h2>
-    <p class="hint">ריכוז מע"מ תשומות לפי חודש או רבעון, לפי תאריך המסמך.</p>
+    <p class="hint">ריכוז מע"מ תשומות לפי חודש/רבעון.</p>
     <div class="chips" id="vatPeriod" style="margin-bottom:10px">
       <button class="chip on" data-p="month">חודשי</button>
       <button class="chip" data-p="quarter">רבעוני</button>
@@ -988,8 +1043,7 @@ nav button.on{color:var(--red)}
     <div id="vatBox"></div>
     <button class="btn outline" id="btnVatXlsx" style="margin-top:10px">הורד דוח מע"מ (xlsx)</button>
     <div class="warn" style="margin-top:10px;font-size:11.5px">
-      הדוח מבוסס על זיהוי AI ועל תיקונים שביצעת. <b>עבור עליו מול רו"ח לפני הגשה.</b>
-      שורות ללא מע"מ מזוהה מוצגות בנפרד.
+      מבוסס על זיהוי AI ותיקונים שביצעת. <b>עבור עליו מול רו"ח לפני הגשה.</b>
     </div>
   </div>
   <div class="card">
@@ -999,7 +1053,7 @@ nav button.on{color:var(--red)}
   </div>
   <div class="card">
     <h2>שליחת סיכום לוואטסאפ</h2>
-    <p class="hint">פותח וואטסאפ עם טקסט סיכום מוכן — אתה בוחר למי לשלוח ולוחץ שליחה. לא אוטומטי (לשליחה אוטומטית אמיתית צריך את פרטי ה-Green API שלך).</p>
+    <p class="hint">טקסט מוכן — אתה בוחר למי לשלוח ולוחץ שליחה.</p>
     <button class="btn outline" id="btnWa">פתח בוואטסאפ</button>
   </div>
 </section>
@@ -1161,10 +1215,14 @@ nav button.on{color:var(--red)}
     <p class="hint" style="margin:8px 0 0">משפיע על כל סריקה עתידית.</p>
   </div></details>
   <div id="setBody">
+
   <div class="warn" id="pinNag" style="display:none;margin-bottom:12px">
     <b>עדיין לא נקבע קוד גישה.</b> אזור המפתחות למטה פתוח לכל מי שיפתח את ההגדרות.
     גלול ל"קוד גישה" וקבע קוד בן 4-8 ספרות.
   </div>
+
+  <div class="section-title">⚙ ביצועי סריקה</div>
+
   <details class="acc"><summary>⏱ קצב סריקה</summary><div class="accbody">
     
     <p class="hint">אם אתה מקבל הרבה "Failed to fetch" או "429" — האט. השכבה החינמית של Gemini מגבילה בקשות לדקה.</p>
@@ -1175,6 +1233,25 @@ nav button.on{color:var(--red)}
     </div>
     <div class="plog" id="speedInfo" style="margin-top:8px"></div>
   </div></details>
+
+  <details class="acc"><summary>⚠ סף לבדיקה</summary><div class="accbody">
+    
+    <p class="hint">חשבוניות מעל הסכום הזה יסומנו לבדיקה שלך לפני שאתה סומך עליהן. 0 = כבוי.</p>
+    <label class="f"><span>סכום בש"ח</span><input class="inp num" id="cfgThreshold" type="number" value="0" min="0" step="100"></label>
+    <button class="btn ghost sm" id="btnSaveThreshold">שמור סף</button>
+  </div></details>
+
+  <details class="acc"><summary>🧠 זיכרון עיבוד</summary><div class="accbody">
+    
+    <p class="hint">מיילים שכבר עובדו מדולגים בסריקה הבאה.</p>
+    <div class="plog" id="memInfo"></div>
+    <button class="btn ghost sm" id="btnClearMem" style="width:100%;margin-top:10px">נקה זיכרון עיבוד</button>
+    <button class="btn outline sm" id="btnForgetRecent" style="width:100%;margin-top:8px">שכח את 50 האחרונים</button>
+    <p class="hint" style="margin:8px 0 0">"שכח את האחרונים" מאפשר לסרוק מחדש רק את המיילים החדשים שנכשלו, בלי לאבד את כל הזיכרון.</p>
+  </div></details>
+
+  <div class="section-title">🎨 מראה והתנהגות</div>
+
   <details class="acc"><summary>🎨 ערכת נושא</summary><div class="accbody">
     
     <p class="hint">בהיר (נייר) או כהה (שחור-אדום, בסגנון אפליקציית הצעות המחיר).</p>
@@ -1184,49 +1261,7 @@ nav button.on{color:var(--red)}
       <button class="chip" data-t="dark">🌙 כהה</button>
     </div>
   </div></details>
-  <details class="acc"><summary>⚠ סף לבדיקה</summary><div class="accbody">
-    
-    <p class="hint">חשבוניות מעל הסכום הזה יסומנו לבדיקה שלך לפני שאתה סומך עליהן. 0 = כבוי.</p>
-    <label class="f"><span>סכום בש"ח</span><input class="inp num" id="cfgThreshold" type="number" value="0" min="0" step="100"></label>
-    <button class="btn ghost sm" id="btnSaveThreshold">שמור סף</button>
-  </div></details>
-  <details class="acc"><summary>🧠 זיכרון עיבוד</summary><div class="accbody">
-    
-    <p class="hint">מיילים שכבר עובדו מדולגים בסריקה הבאה.</p>
-    <div class="plog" id="memInfo"></div>
-    <button class="btn ghost sm" id="btnClearMem" style="width:100%;margin-top:10px">נקה זיכרון עיבוד</button>
-    <button class="btn outline sm" id="btnForgetRecent" style="width:100%;margin-top:8px">שכח את 50 האחרונים</button>
-    <p class="hint" style="margin:8px 0 0">"שכח את האחרונים" מאפשר לסרוק מחדש רק את המיילים החדשים שנכשלו, בלי לאבד את כל הזיכרון.</p>
-  </div></details>
-  <details class="acc"><summary>ℹ גרסה</summary><div class="accbody">
-    
-    <p class="hint" style="margin:0"><span id="verTag">v3.4</span> · <span id="verDate"></span></p>
-  </div></details>
-  <details class="acc"><summary>💾 גיבוי הגדרות</summary><div class="accbody">
-    
-    <p class="hint">שומר קובץ עם המפתחות וההגדרות שלך — כדי שלא תצטרך לחפש אותם שוב אם תעבור מכשיר, דפדפן, או כתובת אתר.</p>
-    <button class="btn outline sm" id="btnExportCfg" style="width:100%">⬇ הורד גיבוי הגדרות</button>
-    <label class="btn ghost sm" for="importCfgFile" style="width:100%;margin-top:8px;display:flex">⬆ שחזר מגיבוי</label>
-    <input type="file" id="importCfgFile" accept="application/json" style="display:none">
-    <div class="plog" id="cfgIoLog" style="margin-top:8px"></div>
-  </div></details>
-  <details class="acc"><summary>🧾 עסק ותקציב</summary><div class="accbody">
-    <p class="hint">משמש לסינון מיילים שאתה עצמך שלחת, ולהתראת חריגה מתקציב.</p>
-    <label class="f"><span>כתובות המייל שלך (מופרדות בפסיק)</span>
-      <input class="inp" id="cfgOwnMails" data-save="btnSaveBiz" placeholder="my@mail.com, office@mail.com"></label>
-    <label class="chk"><input type="checkbox" id="cfgOwnFilter"> דלג על מיילים שנשלחו מהכתובות האלה</label>
-    <label class="f" style="margin-top:10px"><span>תקציב שנתי בש"ח (0 = כבוי)</span>
-      <input class="inp num" id="cfgBudget" type="number" min="0" step="1000" value="0"></label>
-    <button class="btn ghost sm" id="btnSaveBiz" style="width:100%">שמור</button>
-  </div></details>
-  <details class="acc"><summary>💱 שערי המרה</summary><div class="accbody">
-    <p class="hint">מסמך במטבע זר מוצג גם בשקלים לפי השער שתגדיר כאן. לא נמשך אוטומטית — אין מקור מוסמך חינמי, ולא ארצה להמציא שער.</p>
-    <div class="row2">
-      <label class="f"><span>1 דולר = ₪</span><input class="inp num" id="cfgRateUSD" data-save="btnSaveRates" type="number" step="0.01" value="3.70"></label>
-      <label class="f"><span>1 אירו = ₪</span><input class="inp num" id="cfgRateEUR" data-save="btnSaveRates" type="number" step="0.01" value="4.00"></label>
-    </div>
-    <button class="btn ghost sm" id="btnSaveRates" style="width:100%">שמור שערים</button>
-  </div></details>
+
   <details class="acc"><summary>♿ נגישות ותצוגה</summary><div class="accbody">
     <p class="hint">גודל הטקסט בכל האפליקציה, ונטרול אנימציות.</p>
     <div class="chips" id="fontChips">
@@ -1238,8 +1273,44 @@ nav button.on{color:var(--red)}
     <label class="chk" style="margin-top:10px"><input type="checkbox" id="cfgReduceMotion"> צמצם אנימציות</label>
   </div></details>
 
-  <!-- v3.1 — רק "מפתחות" ו"קוד גישה" נעולים (חריגים רגישים). כל שאר
-       ההגדרות למעלה זמינות מיד כשנכנסים למסך, בלי צורך בקוד. -->
+  <div class="section-title">🧾 עסק וכספים</div>
+
+  <details class="acc"><summary>🧾 עסק ותקציב</summary><div class="accbody">
+    <p class="hint">משמש לסינון מיילים שאתה עצמך שלחת, ולהתראת חריגה מתקציב.</p>
+    <label class="f"><span>כתובות המייל שלך (מופרדות בפסיק)</span>
+      <input class="inp" id="cfgOwnMails" data-save="btnSaveBiz" placeholder="my@mail.com, office@mail.com"></label>
+    <label class="chk"><input type="checkbox" id="cfgOwnFilter"> דלג על מיילים שנשלחו מהכתובות האלה</label>
+    <label class="f" style="margin-top:10px"><span>תקציב שנתי בש"ח (0 = כבוי)</span>
+      <input class="inp num" id="cfgBudget" type="number" min="0" step="1000" value="0"></label>
+    <button class="btn ghost sm" id="btnSaveBiz" style="width:100%">שמור</button>
+  </div></details>
+
+  <details class="acc"><summary>💱 שערי המרה</summary><div class="accbody">
+    <p class="hint">מסמך במטבע זר מוצג גם בשקלים לפי השער שתגדיר כאן. לא נמשך אוטומטית — אין מקור מוסמך חינמי, ולא ארצה להמציא שער.</p>
+    <div class="row2">
+      <label class="f"><span>1 דולר = ₪</span><input class="inp num" id="cfgRateUSD" data-save="btnSaveRates" type="number" step="0.01" value="3.70"></label>
+      <label class="f"><span>1 אירו = ₪</span><input class="inp num" id="cfgRateEUR" data-save="btnSaveRates" type="number" step="0.01" value="4.00"></label>
+    </div>
+    <button class="btn ghost sm" id="btnSaveRates" style="width:100%">שמור שערים</button>
+  </div></details>
+
+  <div class="section-title">💾 גיבוי וניהול</div>
+
+  <details class="acc"><summary>💾 גיבוי הגדרות</summary><div class="accbody">
+    
+    <p class="hint">שומר קובץ עם המפתחות וההגדרות שלך — כדי שלא תצטרך לחפש אותם שוב אם תעבור מכשיר, דפדפן, או כתובת אתר.</p>
+    <button class="btn outline sm" id="btnExportCfg" style="width:100%">⬇ הורד גיבוי הגדרות</button>
+    <label class="btn ghost sm" for="importCfgFile" style="width:100%;margin-top:8px;display:flex">⬆ שחזר מגיבוי</label>
+    <input type="file" id="importCfgFile" accept="application/json" style="display:none">
+    <div class="plog" id="cfgIoLog" style="margin-top:8px"></div>
+  </div></details>
+
+  <details class="acc"><summary>ℹ גרסה</summary><div class="accbody">
+    
+    <p class="hint" style="margin:0"><span id="verTag">v4.0</span> · <span id="verDate"></span></p>
+  </div></details>
+
+  <div class="section-title">🔐 חשבון ומפתחות</div>
   <div class="card" id="secureLock" style="display:none;margin:10px 0">
     <div class="lockwrap">
       <div class="lk">🔑</div>
@@ -1253,7 +1324,7 @@ nav button.on{color:var(--red)}
     </div>
   </div>
   <div id="secureZone">
-  <details class="acc" open><summary>🔑 מפתחות</summary><div class="accbody">
+  <details class="acc"><summary>🔑 מפתחות</summary><div class="accbody">
     
     <p class="hint">נשמרים רק במכשיר הזה (localStorage). לא נשלחים לשום מקום מלבד גוגל.</p>
     <label class="f"><span>Google OAuth Client ID<button type="button" class="tip" data-tip="מזהה שיוצרים ב-Google Cloud Console תחת OAuth 2.0 Client IDs, מסוג Web application. משמש להתחברות ל-Gmail בלבד — לא לזיהוי חשבוניות.">?</button></span><input class="inp" id="cfgClient" data-save="btnSaveCfg" placeholder="....apps.googleusercontent.com"></label>
@@ -1289,6 +1360,33 @@ nav button.on{color:var(--red)}
 </section>
 
 </main>
+<div class="modalbg" id="filterSheet">
+  <div class="modal">
+    <h2>סינון ומיון</h2>
+    <div class="msub">התוצאות מתעדכנות מיד.</div>
+    <label class="f"><span>מיון</span>
+      <select class="inp" id="resSort">
+        <option value="date-desc">תאריך: חדש→ישן</option>
+        <option value="date-asc">תאריך: ישן→חדש</option>
+        <option value="amt-desc">סכום: גבוה→נמוך</option>
+        <option value="amt-asc">סכום: נמוך→גבוה</option>
+        <option value="supplier">לפי ספק (א-ת)</option>
+        <option value="docnum">לפי מספר מסמך</option>
+      </select>
+    </label>
+    <label class="f"><span>פרויקט</span>
+      <select class="inp" id="resProject"><option value="">כל הפרויקטים</option></select>
+    </label>
+    <div class="section-title" style="margin:14px 2px 6px">מסננים מהירים</div>
+    <div class="chips">
+      <button class="chip" id="btnReviewOnly">⚠ רק לבדיקה</button>
+      <button class="chip" id="btnDoneOnly">✓ לא טופלו</button>
+    </div>
+    <button class="btn ghost sm" id="btnClearFilters" style="width:100%;margin-top:14px">נקה את כל המסננים</button>
+    <button class="btn" id="btnFiltersDone" style="margin-top:8px">סגור</button>
+  </div>
+</div>
+
 <div class="modalbg" id="editSheet">
   <div class="modal">
     <h2>עריכת מסמך</h2>
@@ -1350,11 +1448,11 @@ nav button.on{color:var(--red)}
 <datalist id="supList"></datalist>
 
 <nav role="tablist" aria-label="ניווט ראשי">
-  <button class="on" data-v="scan" role="tab" aria-selected="true" aria-controls="v-scan"><i aria-hidden="true">◎</i>סריקה</button>
-  <button data-v="res" role="tab" aria-selected="false" aria-controls="v-res"><i aria-hidden="true">🗂</i>תוצאות</button>
-  <button data-v="exp" role="tab" aria-selected="false" aria-controls="v-exp"><i aria-hidden="true">⇩</i>ייצוא</button>
-  <button data-v="set" role="tab" aria-selected="false" aria-controls="v-set"><i aria-hidden="true">⚙</i>הגדרות</button>
-  <button data-v="help" role="tab" aria-selected="false" aria-controls="v-help"><i aria-hidden="true">?</i>מדריך</button>
+  <button class="on" data-v="scan" role="tab" aria-selected="true" aria-controls="v-scan"><i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></i>סריקה</button>
+  <button data-v="res" role="tab" aria-selected="false" aria-controls="v-res"><i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></i>תוצאות</button>
+  <button data-v="exp" role="tab" aria-selected="false" aria-controls="v-exp"><i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M4 20h16"/></svg></i>ייצוא</button>
+  <button data-v="set" role="tab" aria-selected="false" aria-controls="v-set"><i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7.9 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0-1.1-2.7H2a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 7.9a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V2a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H22a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg></i>הגדרות</button>
+  <button data-v="help" role="tab" aria-selected="false" aria-controls="v-help"><i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.2a2.8 2.8 0 0 1 5.5.8c0 1.9-2.8 2.8-2.8 2.8"/><path d="M12 17.5h.01"/></svg></i>מדריך</button>
 </nav>
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -1413,7 +1511,7 @@ let docMeta = {};        // fingerprint -> {project} (תיוג פרויקט שש
 let dupSkipped = 0;
 let junkSkipped = 0;   // קבצים שסוננו לפני AI (לוגואים, אייקונים)
 
-const VERSION = 'v3.4';
+const VERSION = 'v4.0';
 function $(id){ return document.getElementById(id); }
 /* v3.0 — toISOString מחזיר UTC. בישראל (UTC+2/+3) מסמך שהתקבל ב-01:00
    סומן ביום הקודם. localISO עובד לפי אזור הזמן של המכשיר. */
@@ -1568,6 +1666,16 @@ function updStatusCard(){
   const nSeen = Object.keys(seen).length;
   const rescanOn = $('chipRescan') && $('chipRescan').classList.contains('on');
   const when = docsSavedAt ? new Date(docsSavedAt).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : null;
+
+  /* מסך בית — סטטוס כללי (משימה 1 בפרומפט העיצוב).
+     נגזר מאותם נתונים בדיוק שכבר קיימים ל-.sum במסך התוצאות -
+     לא לוגיקת חישוב נוספת, רק תצוגה נוספת לאותם מספרים. */
+  const dd = $('dashDocs'), ds = $('dashSup'), dt = $('dashTot');
+  if(dd){
+    dd.textContent = docs.length;
+    ds.textContent = Object.keys(groups()).length;
+    dt.textContent = Math.round(docs.reduce((s,d)=>s+(toILS(d)||0),0)).toLocaleString('he-IL');
+  }
 
   let html = '';
   html += docs.length
@@ -3509,12 +3617,17 @@ function wireTips(){
     btn._tipWired = true;
     btn.onclick = (e)=>{
       e.preventDefault(); e.stopPropagation();
-      let box = btn.parentElement.nextElementSibling;
+      /* v3.5 — היה תלוי ב-label.f תמיד; כפתור טיפ מחוץ להקשר שדה
+         (למשל בתוך שורת ייצוא קומפקטית) היה זורק כי closest('label.f')
+         מחזיר null. עכשיו יש שרשרת נפילה בטוחה. */
+      const anchor = btn.closest('label.f') || btn.closest('.expitem') || btn.parentElement;
+      if(!anchor) return;
+      let box = anchor.nextElementSibling;
       if(!box || !box.classList.contains('tipbox')){
         box = document.createElement('div');
         box.className = 'tipbox';
         box.textContent = btn.dataset.tip || '';
-        btn.closest('label.f').insertAdjacentElement('afterend', box);
+        anchor.insertAdjacentElement('afterend', box);
       }
       box.classList.toggle('show');
     };
@@ -3746,6 +3859,37 @@ $('btnViewMode').onclick = ()=>{
 };
 $('btnDoneOnly').onclick = ()=>{ hideDoneOn=!hideDoneOn; $('btnDoneOnly').classList.toggle('on',hideDoneOn); render(); };
 
+/* משימה 3 — גיליון סינון. הפקדים עצמם לא נוצרו מחדש, הם הועברו
+   לתוך הגיליון עם אותם IDs בדיוק, ולכן כל ה-handlers הקיימים
+   ממשיכים לעבוד בלי שינוי. כאן רק פתיחה/סגירה, מונה, וניקוי. */
+function activeFilterCount(){
+  let n = 0;
+  if(resSort !== 'date-desc') n++;
+  if(resProjectFilter) n++;
+  if(reviewOnlyOn) n++;
+  if(hideDoneOn) n++;
+  return n;
+}
+function updFilterBadge(){
+  const b = $('filterBadge'); if(!b) return;
+  const n = activeFilterCount();
+  b.textContent = n;
+  b.style.display = n ? 'inline-flex' : 'none';
+  const btn = $('btnFilters');
+  if(btn) btn.classList.toggle('on', n>0);
+}
+$('btnFilters').onclick = ()=>{ $('filterSheet').classList.add('show'); };
+$('btnFiltersDone').onclick = ()=>{ $('filterSheet').classList.remove('show'); };
+$('filterSheet').onclick = (e)=>{ if(e.target.id==='filterSheet') $('filterSheet').classList.remove('show'); };
+$('btnClearFilters').onclick = ()=>{
+  resSort = 'date-desc'; $('resSort').value = 'date-desc';
+  resProjectFilter = ''; $('resProject').value = '';
+  reviewOnlyOn = false; $('btnReviewOnly').classList.remove('on');
+  hideDoneOn = false;   $('btnDoneOnly').classList.remove('on');
+  render();
+  toast('המסננים נוקו');
+};
+
 function groups(list){
   const g={};
   let base = list||docs;
@@ -3906,6 +4050,7 @@ function render(){
   if(resTabOn && resTabOn.classList.contains('on')) updateHeaderSub('res');   // פריט 46 - ספירה טרייה תוך כדי שהייה במסך
   const sig = resSearch+'|'+resSort+'|'+resProjectFilter+'|'+reviewOnlyOn+'|'+hideDoneOn+'|'+cfg.viewMode;
   if(sig !== lastFilterSig){ tablePage = 1; lastFilterSig = sig; }
+  updFilterBadge();   // משימה 3 - מונה המסננים תמיד תואם למצב האמיתי
   if(!docs.length){
     head.innerHTML=''; toolbar.style.display='none'; toolbar2.style.display='none';
     trendBox.style.display='none'; trendBox.innerHTML=''; missingBox.innerHTML='';
