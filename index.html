@@ -86,6 +86,21 @@ Retry ל-Gmail          | let gmailRetries
 טעינה בגושים (טבלה)      | let tablePage
 טיפים ליד שדות           | function wireTips
 תמונה ממוזערת            | async function makeThumb
+מדבקות לפי סוג מסמך      | function docTypeCls
+תיבות סיכום 3-צבעים      | c-blue
+הדגשת סכום גבוה           | .amt.hi
+סגנון ספק לא ידוע         | nm.unknown
+פתיחת תיקייה מונפשת       | grid-template-rows:0fr
+פוקוס תיקייה שנפתחה       | folderFlash
+אפקט Ripple               | function wireRipple
+רטט לשדה שגוי             | shakeBad
+דעיכה במחיקה              | swiperow.deleting
+וי מונפש אחרי ייצוא       | function bigCheck
+אחוז קריא + נקודות ציון על הפס | barPct
+כותרת משנה דינמית         | function updateHeaderSub
+כפתור "התחבר" בכותרת      | acct.clickable
+נמצאו X מתוך Y            | searchCount
+Enter=שמור / Esc=סגור     | function wireSettingsKeys
 */
 -->
 
@@ -121,6 +136,11 @@ Retry ל-Gmail          | let gmailRetries
   --green-glass:rgba(15,122,74,.86);
   --rose:#B3261E;
   --rose-tint:rgba(179,38,30,.10);
+  /* v3.4 — פלטת סוגי מסמך (פריט 52): חשבונית=כחול, קבלה=ירוק (כבר קיים),
+     דרישת תשלום=כתום, הזמנה=סגול. לא נוגע בזהות האדום הראשית של המותג. */
+  --blue:#1B5FBF; --blue-dim:#164C99; --blue-tint:rgba(27,95,191,.10);
+  --amber:#B5750C; --amber-dim:#8F5C09; --amber-tint:rgba(181,117,12,.12);
+  --purple:#6B3FA0; --purple-dim:#552F82; --purple-tint:rgba(107,63,160,.10);
   --blur:16px;
   --r:14px;
 }
@@ -146,6 +166,9 @@ html[data-theme="dark"]{
   --green-glass:rgba(46,204,128,.80);
   --rose:#FF6B63;
   --rose-tint:rgba(255,107,99,.14);
+  --blue:#5B9BFF; --blue-dim:#8FBBFF; --blue-tint:rgba(91,155,255,.16);
+  --amber:#E0A430; --amber-dim:#F0C36A; --amber-tint:rgba(224,164,48,.16);
+  --purple:#A87DE0; --purple-dim:#C4A6EE; --purple-tint:rgba(168,125,224,.16);
 }
 /* הילות צבע ברקע - מה שנותן לזכוכית מה לשבור */
 body::before{
@@ -237,6 +260,12 @@ header{
 header h1{font-size:16px;line-height:1.15;color:var(--ink)}
 header .sub{font-size:10.5px;color:var(--ink-dim);letter-spacing:.01em}
 .acct{margin-inline-start:auto;text-align:left;font-size:10.5px;color:var(--ink-dim);max-width:36%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acct.clickable{
+  cursor:pointer;padding:5px 12px;border-radius:999px;
+  background:var(--rose-tint);border:1px solid var(--rose);
+  transition:transform .12s ease, background .15s ease;
+}
+.acct.clickable:active{transform:scale(.96)}
 .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--line);margin-inline-start:5px}
 .dot.on{background:var(--green);box-shadow:0 0 6px rgba(30,158,99,.5)}
 
@@ -311,7 +340,21 @@ main{padding:12px;max-width:680px;margin:0 auto}
 .dtable tr:nth-child(even) td{background:var(--card-2)}
 .dtable tr.rowdone td{opacity:.5}
 /* ---------- שדה חובה שגוי (UX 10, 36) ---------- */
-.inp.bad{border-color:var(--rose) !important;box-shadow:0 0 0 3px var(--rose-tint)}
+/* פריט 3 — אפקט גל אמיתי בלחיצה, לא רק scale */
+.ripple{
+  position:absolute;border-radius:50%;transform:scale(0);
+  background:rgba(255,255,255,.5);pointer-events:none;
+  animation:rippleAnim .55s ease-out;
+}
+@keyframes rippleAnim{to{transform:scale(2.6);opacity:0}}
+/* פריט 36 — רטט קצר לשדה שגוי, לא רק שינוי צבע סטטי */
+@keyframes shakeBad{
+  10%,90%{transform:translateX(-1px)}
+  20%,80%{transform:translateX(2px)}
+  30%,50%,70%{transform:translateX(-4px)}
+  40%,60%{transform:translateX(4px)}
+}
+.inp.bad{border-color:var(--rose) !important;box-shadow:0 0 0 3px var(--rose-tint);animation:shakeBad .5s ease}
 .reqstar{color:var(--rose);margin-inline-start:3px}
 /* ---------- כפתור ניקוי בשדה (UX 40) ---------- */
 .clearwrap{position:relative}
@@ -365,6 +408,7 @@ label.f span{display:block;font-size:11px;color:var(--ink-dim);margin-bottom:4px
   backdrop-filter:blur(14px) saturate(160%);-webkit-backdrop-filter:blur(14px) saturate(160%);
   box-shadow:inset 0 1px 0 var(--glass-line), inset 0 -1px 0 rgba(0,0,0,.10), 0 4px 14px rgba(214,22,29,.28);
   transition:opacity .15s,transform .1s,box-shadow .15s;
+  position:relative;overflow:hidden;
 }
 .btn:active{transform:scale(.985);box-shadow:inset 0 1px 0 var(--glass-line), 0 1px 5px rgba(214,22,29,.20)}
 .btn[disabled]{opacity:.4;pointer-events:none;box-shadow:none}
@@ -436,6 +480,7 @@ label.f span{display:block;font-size:11px;color:var(--ink-dim);margin-bottom:4px
   backdrop-filter:blur(12px) saturate(160%);-webkit-backdrop-filter:blur(12px) saturate(160%);
   box-shadow:inset 0 1px 0 var(--glass-line), 0 2px 6px rgba(0,0,0,.05);
   transition:transform .12s, background .15s, border-color .15s, box-shadow .15s;
+  position:relative;overflow:hidden;
 }
 .chip:active{transform:scale(.94)}
 .chip.on{border-color:var(--red);color:var(--red);background:var(--red-tint);font-weight:600;box-shadow:inset 0 1px 0 var(--glass-line), 0 2px 8px rgba(214,22,29,.12)}
@@ -453,7 +498,28 @@ label.f span{display:block;font-size:11px;color:var(--ink-dim);margin-bottom:4px
 .step.on::before{background:var(--red);box-shadow:0 0 0 3px var(--red-tint)}
 .step.done::before{background:var(--green)}
 
-.bar{height:4px;border-radius:99px;background:var(--glass-2);border:1px solid var(--line);overflow:hidden;margin:8px 0 6px}
+.barrow{display:flex;align-items:center;gap:8px;margin:8px 0 6px}
+.barrow .bar{flex:1;margin:0}
+.barpct{font-family:'Rubik';font-variant-numeric:tabular-nums;font-size:11.5px;font-weight:700;
+  color:var(--ink-dim);min-width:32px;text-align:left}
+.bar{
+  height:4px;border-radius:99px;background:var(--glass-2);border:1px solid var(--line);overflow:hidden;
+  position:relative;
+}
+/* פריט 26 — נקודות ציון על הפס (25/50/75%) */
+.bar::after{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:2;
+  background-image:
+    linear-gradient(90deg, transparent 24.3%, rgba(0,0,0,.16) 24.3% 25.7%, transparent 25.7%),
+    linear-gradient(90deg, transparent 49.3%, rgba(0,0,0,.16) 49.3% 50.7%, transparent 50.7%),
+    linear-gradient(90deg, transparent 74.3%, rgba(0,0,0,.16) 74.3% 75.7%, transparent 75.7%);
+}
+html[data-theme="dark"] .bar::after{
+  background-image:
+    linear-gradient(90deg, transparent 24.3%, rgba(255,255,255,.22) 24.3% 25.7%, transparent 25.7%),
+    linear-gradient(90deg, transparent 49.3%, rgba(255,255,255,.22) 49.3% 50.7%, transparent 50.7%),
+    linear-gradient(90deg, transparent 74.3%, rgba(255,255,255,.22) 74.3% 75.7%, transparent 75.7%);
+}
 .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--red-dim),var(--red));width:0;transition:width .3s}
 .plog{font-size:11.5px;color:var(--ink-dim)}
 .plog:empty{display:none}
@@ -485,15 +551,38 @@ html[data-theme="dark"] .tab{
 .tab.open .car{transform:rotate(90deg)}
 
 .docs{
+  /* פריט 22 — פתיחה/סגירה חלקה במקום display:none/block מיידי.
+     תרגיל ה-grid-rows: 0fr→1fr הוא הדרך התקנית לאנימציה חלקה של
+     height:auto בלי לחשב גבהים ב-JS. */
+  display:grid;grid-template-rows:0fr;
+  transition:grid-template-rows .32s cubic-bezier(.4,0,.2,1);
+}
+.docs.open{grid-template-rows:1fr}
+.docs-inner{
+  overflow:hidden;min-height:0;
   border:1px solid rgba(255,255,255,.75);border-top:0;border-radius:0 0 14px 14px;
   background:rgba(255,255,255,.42);
   backdrop-filter:blur(14px) saturate(1.4);
   -webkit-backdrop-filter:blur(14px) saturate(1.4);
   padding:2px 0;
 }
-html[data-theme="dark"] .docs{background:rgba(24,24,28,.5);border-color:rgba(255,255,255,.08)}
+html[data-theme="dark"] .docs-inner{background:rgba(24,24,28,.5);border-color:rgba(255,255,255,.08)}
+/* פריט 47 — הבהוב פוקוס קצר על התיקייה שנפתחה כרגע */
+@keyframes folderFlash{
+  0%{box-shadow:0 0 0 0 var(--red-tint)}
+  30%{box-shadow:0 0 0 6px var(--red-tint)}
+  100%{box-shadow:0 0 0 0 rgba(0,0,0,0)}
+}
+.folder.flash{animation:folderFlash .7s ease-out;border-radius:14px}
 /* ---------- החלקה למחיקה/סימון (פריט 21) ---------- */
-.swiperow{position:relative;overflow:hidden}
+/* פריט 86 — דעיכה עדינה במחיקה. max-height צריך ערך התחלתי אמיתי
+   (לא auto) כדי שהמעבר ל-0 יונפש בפועל ולא יקפוץ. 200px נדיב בהרבה
+   מגובה שורה טיפוסי (min-height:56px), גם עם עטיפת תגיות. */
+.swiperow{
+  position:relative;overflow:hidden;max-height:200px;
+  transition:opacity .25s ease, max-height .25s ease .05s, margin .25s ease .05s;
+}
+.swiperow.deleting{opacity:0;max-height:0;margin:0;pointer-events:none}
 .swiperow .doc{position:relative;z-index:2;background:var(--card);touch-action:pan-y}
 .swipeu{position:absolute;top:0;bottom:0;width:110px;display:flex;align-items:center;justify-content:center;
   font-size:12.5px;font-weight:700;color:#fff;z-index:1;opacity:0;transition:opacity .15s}
@@ -508,6 +597,9 @@ html[data-theme="dark"] .docs{background:rgba(24,24,28,.5);border-color:rgba(255
 .tipbox{display:none;font-size:11px;color:var(--ink-dim);background:var(--card-2);
   border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin-top:6px;line-height:1.5}
 .tipbox.show{display:block}
+/* פריט 45 — ספק "לא ידוע": אייקון שאלה + גוון מעומעם, כדי שיבלוט
+   כמשהו שכדאי להשלים ידנית ולא יתבלבל עם ספק אמיתי בשם דומה. */
+.nm.unknown b{color:var(--ink-dim);font-style:italic}
 .doc .thumb{width:34px;height:34px;border-radius:8px;object-fit:cover;flex:none;border:1px solid var(--line)}
 .doc{display:flex;align-items:center;flex-wrap:wrap;gap:6px 7px;min-height:56px;padding:10px 12px;border-bottom:1px dashed var(--line)}
 .doc:last-child{border-bottom:0}
@@ -515,9 +607,20 @@ html[data-theme="dark"] .docs{background:rgba(24,24,28,.5);border-color:rgba(255
   overflow-wrap:anywhere;min-width:0;max-width:36%}
 .doc .ttl{color:var(--ink);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   min-width:0;max-width:38%}
+/* פריט 52 — מדבקות סוג מסמך צבעוניות */
+.dtypebadge{padding:2px 9px;border-radius:999px;font-weight:600 !important;font-size:11px !important}
+.dtypebadge.dtype-invoice{background:var(--blue-tint);color:var(--blue-dim)}
+.dtypebadge.dtype-receipt{background:var(--green-tint);color:var(--green-dim)}
+.dtypebadge.dtype-demand{background:var(--amber-tint);color:var(--amber-dim)}
+.dtypebadge.dtype-order{background:var(--purple-tint);color:var(--purple-dim)}
+.dtypebadge.dtype-other{background:var(--card-2);color:var(--ink-dim)}
 .doc .lead{flex:1;border-bottom:1px dotted var(--line);transform:translateY(-3px);min-width:12px}
+/* פריט 44 — סכום שחוצה את סף הבדיקה שהמשתמש הגדיר מודגש באדום+צל,
+   לא רק מסומן ב"לבדיקה" בצד. אותו אות needsReview הקיים, לא סף חדש. */
 .doc .amt{font-family:'Rubik';font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:700;color:var(--ink);
   white-space:nowrap;flex:none}
+.doc .amt.hi{color:var(--red);text-shadow:0 1px 3px var(--red-tint);font-size:13.5px}
+.dtable .amt.hi{color:var(--red);font-weight:800}
 .doc .src{font-size:9.5px;padding:2px 5px;border-radius:4px;white-space:nowrap;font-weight:600}
 .src.pdf{background:var(--green-tint);color:var(--green-dim)}
 .src.link{background:var(--red-tint);color:var(--red-dim)}
@@ -530,6 +633,13 @@ html[data-theme="dark"] .docs{background:rgba(24,24,28,.5);border-color:rgba(255
 .empty p{font-size:12.5px;margin:5px 0 0}
 
 .sum{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:10px}
+/* פריט 48 — 3 צבעים עדינים למשבצות הסיכום, במקום גוון אדום אחיד לכולן */
+.sum div.c-blue b, .mstats div.c-blue b{color:var(--blue)}
+.sum div.c-green b, .mstats div.c-green b{color:var(--green)}
+.sum div.c-red b, .mstats div.c-red b{color:var(--red)}
+.sum div.c-blue, .mstats div.c-blue{background:var(--blue-tint) !important}
+.sum div.c-green, .mstats div.c-green{background:var(--green-tint) !important}
+.sum div.c-red, .mstats div.c-red{background:var(--red-tint) !important}
 .sum div{
   background:rgba(255,255,255,.62);
   backdrop-filter:blur(18px) saturate(1.6);
@@ -573,10 +683,6 @@ html[data-theme="dark"] .modal{background:rgba(34,34,39,.9);border-color:rgba(25
 @keyframes pop{from{opacity:0;transform:scale(.92) translateY(10px)}to{opacity:1;transform:none}}
 .modal h2{font-size:18px;margin-bottom:3px}
 .modal .msub{font-size:12px;color:var(--ink-dim);margin-bottom:14px}
-.mstats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:12px}
-.mstats div{background:var(--red-tint);border-radius:12px;padding:10px 6px;text-align:center}
-.mstats b{display:block;font-family:'Rubik';font-variant-numeric:tabular-nums;font-size:18px;color:var(--red)}
-.mstats small{font-size:10px;color:var(--ink-dim)}
 .mline{display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;border-bottom:1px dashed var(--line)}
 .mline:last-of-type{border-bottom:0}
 .mline b{font-family:'Rubik';font-variant-numeric:tabular-nums}
@@ -588,6 +694,27 @@ html[data-theme="dark"] .modal{background:rgba(34,34,39,.9);border-color:rgba(25
 .lockwrap p{font-size:11.5px;color:var(--ink-dim);margin:0 0 12px}
 .pinbox{max-width:230px;margin:0 auto}
 .pinbox .inp{text-align:center;letter-spacing:8px;font-size:22px;font-family:'Rubik'}
+/* פריט 60 — וי גדול מונפש */
+.bigcheck{
+  position:fixed;inset:0;z-index:95;display:flex;align-items:center;justify-content:center;
+  pointer-events:none;opacity:0;transition:opacity .22s ease;
+}
+.bigcheck.show{opacity:1}
+.bc-card{
+  background:var(--glass);backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%);
+  border:1px solid var(--glass-line);border-radius:24px;padding:26px 30px;text-align:center;
+  box-shadow:0 20px 50px rgba(0,0,0,.25);
+  transform:scale(.85);transition:transform .32s cubic-bezier(.2,.9,.3,1.3);
+}
+.bigcheck.show .bc-card{transform:scale(1)}
+.bc-svg{width:64px;height:64px}
+.bc-circ{fill:none;stroke:var(--green);stroke-width:3;stroke-dasharray:151;stroke-dashoffset:151;
+  transition:stroke-dashoffset .5s ease .05s}
+.bc-tick{fill:none;stroke:var(--green);stroke-width:4;stroke-linecap:round;stroke-linejoin:round;
+  stroke-dasharray:28;stroke-dashoffset:28;transition:stroke-dashoffset .35s ease .45s}
+.bigcheck.show .bc-circ{stroke-dashoffset:0}
+.bigcheck.show .bc-tick{stroke-dashoffset:0}
+.bc-msg{margin-top:10px;font-size:13px;color:var(--ink);font-weight:600}
 .toolbar{display:flex;gap:7px;margin-bottom:10px}
 .toolbar .inp{flex:1}
 .toolbar select.inp{flex:none;width:auto;padding-inline-end:24px}
@@ -680,9 +807,9 @@ nav button.on{color:var(--red)}
     <img class="mark" src="logo.png" alt="יהודה שיפוצים">
     <div>
       <h1>איתור חשבוניות</h1>
-      <div class="sub">יהודה שיפוצים · מהמייל לתיקייה</div>
+      <div class="sub" id="headerSub">יהודה שיפוצים · מהמייל לתיקייה</div>
     </div>
-    <div class="acct" id="acct">לא מחובר<span class="dot" id="dot"></span></div>
+    <div class="acct" id="acct" role="button" tabindex="0" aria-label="התחבר עם Google">לא מחובר<span class="dot" id="dot"></span></div>
   </div>
 </header>
 <div class="installbar" id="updateBar" style="background:var(--green-tint);border-bottom-color:var(--line)">
@@ -779,7 +906,10 @@ nav button.on{color:var(--red)}
       <div style="text-align:center"><div class="sm" id="etaDone">0 / 0</div><div class="lbl">מסמכים</div></div>
       <div style="text-align:left"><div class="sm" id="etaElapsed">00:00</div><div class="lbl">חלף</div></div>
     </div>
-    <div class="bar"><i id="barI"></i></div>
+    <div class="barrow">
+      <div class="bar"><i id="barI"></i></div>
+      <span id="barPct" class="barpct">0%</span>
+    </div>
     <span id="aiStat" class="aistat" style="display:none"></span>
     <div class="plog" id="plog" role="status" aria-live="polite"></div>
     <div id="statBox"></div>
@@ -813,6 +943,7 @@ nav button.on{color:var(--red)}
   </div>
   <div id="trendBox" style="display:none"></div>
   <div id="missingBox"></div>
+  <div id="searchCount" class="hint" style="display:none;margin:0 2px 8px"></div>
   <div id="resBody"></div>
 </section>
 
@@ -1069,7 +1200,7 @@ nav button.on{color:var(--red)}
   </div></details>
   <details class="acc"><summary>ℹ גרסה</summary><div class="accbody">
     
-    <p class="hint" style="margin:0"><span id="verTag">v3.3</span> · <span id="verDate"></span></p>
+    <p class="hint" style="margin:0"><span id="verTag">v3.4</span> · <span id="verDate"></span></p>
   </div></details>
   <details class="acc"><summary>💾 גיבוי הגדרות</summary><div class="accbody">
     
@@ -1082,7 +1213,7 @@ nav button.on{color:var(--red)}
   <details class="acc"><summary>🧾 עסק ותקציב</summary><div class="accbody">
     <p class="hint">משמש לסינון מיילים שאתה עצמך שלחת, ולהתראת חריגה מתקציב.</p>
     <label class="f"><span>כתובות המייל שלך (מופרדות בפסיק)</span>
-      <input class="inp" id="cfgOwnMails" placeholder="my@mail.com, office@mail.com"></label>
+      <input class="inp" id="cfgOwnMails" data-save="btnSaveBiz" placeholder="my@mail.com, office@mail.com"></label>
     <label class="chk"><input type="checkbox" id="cfgOwnFilter"> דלג על מיילים שנשלחו מהכתובות האלה</label>
     <label class="f" style="margin-top:10px"><span>תקציב שנתי בש"ח (0 = כבוי)</span>
       <input class="inp num" id="cfgBudget" type="number" min="0" step="1000" value="0"></label>
@@ -1091,8 +1222,8 @@ nav button.on{color:var(--red)}
   <details class="acc"><summary>💱 שערי המרה</summary><div class="accbody">
     <p class="hint">מסמך במטבע זר מוצג גם בשקלים לפי השער שתגדיר כאן. לא נמשך אוטומטית — אין מקור מוסמך חינמי, ולא ארצה להמציא שער.</p>
     <div class="row2">
-      <label class="f"><span>1 דולר = ₪</span><input class="inp num" id="cfgRateUSD" type="number" step="0.01" value="3.70"></label>
-      <label class="f"><span>1 אירו = ₪</span><input class="inp num" id="cfgRateEUR" type="number" step="0.01" value="4.00"></label>
+      <label class="f"><span>1 דולר = ₪</span><input class="inp num" id="cfgRateUSD" data-save="btnSaveRates" type="number" step="0.01" value="3.70"></label>
+      <label class="f"><span>1 אירו = ₪</span><input class="inp num" id="cfgRateEUR" data-save="btnSaveRates" type="number" step="0.01" value="4.00"></label>
     </div>
     <button class="btn ghost sm" id="btnSaveRates" style="width:100%">שמור שערים</button>
   </div></details>
@@ -1125,10 +1256,10 @@ nav button.on{color:var(--red)}
   <details class="acc" open><summary>🔑 מפתחות</summary><div class="accbody">
     
     <p class="hint">נשמרים רק במכשיר הזה (localStorage). לא נשלחים לשום מקום מלבד גוגל.</p>
-    <label class="f"><span>Google OAuth Client ID<button type="button" class="tip" data-tip="מזהה שיוצרים ב-Google Cloud Console תחת OAuth 2.0 Client IDs, מסוג Web application. משמש להתחברות ל-Gmail בלבד — לא לזיהוי חשבוניות.">?</button></span><input class="inp" id="cfgClient" placeholder="....apps.googleusercontent.com"></label>
-    <label class="f"><span>Gemini API Key<button type="button" class="tip" data-tip="מפתח מ-Google AI Studio (aistudio.google.com). משמש רק לזיהוי תוכן המסמכים ע'י Gemini — נפרד לגמרי מה-Client ID.">?</button></span><input class="inp" id="cfgGemini" type="password" placeholder="AIza..."></label>
+    <label class="f"><span>Google OAuth Client ID<button type="button" class="tip" data-tip="מזהה שיוצרים ב-Google Cloud Console תחת OAuth 2.0 Client IDs, מסוג Web application. משמש להתחברות ל-Gmail בלבד — לא לזיהוי חשבוניות.">?</button></span><input class="inp" id="cfgClient" data-save="btnSaveCfg" placeholder="....apps.googleusercontent.com"></label>
+    <label class="f"><span>Gemini API Key<button type="button" class="tip" data-tip="מפתח מ-Google AI Studio (aistudio.google.com). משמש רק לזיהוי תוכן המסמכים ע'י Gemini — נפרד לגמרי מה-Client ID.">?</button></span><input class="inp" id="cfgGemini" data-save="btnSaveCfg" type="password" placeholder="AIza..."></label>
     <label class="f"><span>מודל</span>
-      <select class="inp" id="cfgModel">
+      <select class="inp" id="cfgModel" data-save="btnSaveCfg">
         <option value="">— לחץ "טען מודלים" למטה —</option>
       </select>
     </label>
@@ -1206,9 +1337,9 @@ nav button.on{color:var(--red)}
     <h2 id="mTitle">הסריקה הסתיימה</h2>
     <div class="msub" id="mSub"></div>
     <div class="mstats">
-      <div><b id="mDocs">0</b><small>מסמכים</small></div>
-      <div><b id="mSup">0</b><small>ספקים</small></div>
-      <div><b id="mTot">0</b><small>סה"כ ₪</small></div>
+      <div class="c-blue"><b id="mDocs">0</b><small>מסמכים</small></div>
+      <div class="c-green"><b id="mSup">0</b><small>ספקים</small></div>
+      <div class="c-red"><b id="mTot">0</b><small>סה"כ ₪</small></div>
     </div>
     <div id="mLines"></div>
     <button class="btn" id="mGo" style="margin-top:14px">צפה בתוצאות</button>
@@ -1282,7 +1413,7 @@ let docMeta = {};        // fingerprint -> {project} (תיוג פרויקט שש
 let dupSkipped = 0;
 let junkSkipped = 0;   // קבצים שסוננו לפני AI (לוגואים, אייקונים)
 
-const VERSION = 'v3.3';
+const VERSION = 'v3.4';
 function $(id){ return document.getElementById(id); }
 /* v3.0 — toISOString מחזיר UTC. בישראל (UTC+2/+3) מסמך שהתקבל ב-01:00
    סומן ביום הקודם. localISO עובד לפי אזור הזמן של המכשיר. */
@@ -1469,6 +1600,24 @@ function toast(msg){
   d.style.cssText='position:fixed;bottom:96px;right:50%;transform:translateX(50%);background:#211E1A;border:1px solid #ED1C24;color:#fff;padding:10px 18px;border-radius:99px;font-size:13px;z-index:99;box-shadow:0 6px 24px rgba(0,0,0,.25)';
   document.body.appendChild(d);
   setTimeout(()=>d.remove(),2600);
+}
+
+/* פריט 60 — וי ירוק גדול ומונפש אחרי ייצוא מוצלח, במקום רק טוסט טקסט.
+   SVG עם stroke-dasharray/offset - תרגיל "ציור" הקו הסטנדרטי, קליל
+   ולא תלוי בתמונות חיצוניות. נעלם לבד; לא חוסם אינטראקציה מתחתיו. */
+function bigCheck(msg){
+  if(cfg.reduceMotion){ toast(msg||'בוצע'); return; }
+  const wrap=document.createElement('div');
+  wrap.className='bigcheck';
+  wrap.innerHTML =
+    '<div class="bc-card">'+
+      '<svg viewBox="0 0 52 52" class="bc-svg"><circle cx="26" cy="26" r="24" class="bc-circ"/>'+
+      '<path d="M14 27l8 8 16-16" class="bc-tick"/></svg>'+
+      (msg? '<div class="bc-msg">'+esc(msg)+'</div>' : '')+
+    '</div>';
+  document.body.appendChild(wrap);
+  requestAnimationFrame(()=> wrap.classList.add('show'));
+  setTimeout(()=>{ wrap.classList.remove('show'); setTimeout(()=>wrap.remove(),250); }, 1400);
 }
 
 /* ============================================================
@@ -1790,9 +1939,27 @@ document.querySelectorAll('nav button').forEach(b=>{
     document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
     $('v-'+b.dataset.v).classList.add('on');
     if(b.dataset.v==='exp'){ renderVat(); renderDue(); }
+    updateHeaderSub(b.dataset.v);   // פריט 46 - כותרת משנה דינמית
     window.scrollTo(0,0);
   };
 });
+/* פריט 46 — כותרת משנה שמשתנה לפי המסך הפעיל. שם המותג (h1) קבוע -
+   רק תת-הכותרת התיאורית מתעדכנת, כדי לא לבלבל עם שינוי מיתוג. */
+function updateHeaderSub(view){
+  const el = $('headerSub'); if(!el) return;
+  if(view === 'res'){
+    const sup = Object.keys(groups()).length;
+    el.textContent = docs.length ? (docs.length+' מסמכים · '+sup+' ספקים') : 'עדיין אין תוצאות';
+  } else if(view === 'exp'){
+    el.textContent = 'ZIP · Drive · Excel · דוח מע"מ';
+  } else if(view === 'set'){
+    el.textContent = 'מפתחות · סריקה · תצוגה';
+  } else if(view === 'help'){
+    el.textContent = 'מדריך, אבחון ותמיכה';
+  } else {
+    el.textContent = 'יהודה שיפוצים · מהמייל לתיקייה';
+  }
+}
 document.querySelectorAll('#modes .chip').forEach(c=>{
   c.onclick = ()=> c.classList.toggle('on');
 });
@@ -1865,6 +2032,8 @@ function loadStoredToken(){
 function clearToken(){ token=null; store.del(K.tok); }
 function showDisconnected(reason){
   $('acct').innerHTML='<span style="color:var(--rose)">'+esc(reason||'לא מחובר')+'</span><span class="dot"></span>';
+  $('acct').classList.add('clickable');
+  $('acct').setAttribute('aria-label','התחבר עם Google');
   $('btnLogin').textContent='התחבר עם Google';
   $('btnLogout').style.display='none';
   $('btnSwitch').style.display='none';
@@ -1872,6 +2041,8 @@ function showDisconnected(reason){
 function showConnected(){
   $('dot').classList.add('on');
   $('acct').innerHTML = esc(userEmail||'מחובר') + '<span class="dot on"></span>';
+  $('acct').classList.remove('clickable');
+  $('acct').setAttribute('aria-label', userEmail||'מחובר');
   $('btnLogout').style.display='flex';
   $('btnSwitch').style.display='flex';
   $('btnLogin').textContent='מחובר ✓';
@@ -1887,14 +2058,17 @@ function silentAuth(){
   }catch(e){ showDisconnected('החיבור פג — התחבר מחדש'); }
 }
 $('btnLogin').onclick = ()=>{ if(initToken()) tokenClient.requestAccessToken({prompt:'consent'}); };
+/* פריט 84 — "לא מחובר" בכותרת הופך לכפתור ממשי, לא רק טקסט אדום.
+   מאציל לאותה לחיצה בדיוק כמו btnLogin - אין לוגיקת חיבור כפולה. */
+$('acct').addEventListener('click', ()=>{ if(!token) $('btnLogin').click(); });
+$('acct').addEventListener('keydown', e=>{
+  if((e.key==='Enter'||e.key===' ') && !token){ e.preventDefault(); $('btnLogin').click(); }
+});
 $('btnLogout').onclick = ()=>{
   if(token && google.accounts) google.accounts.oauth2.revoke(token,()=>{});
   clearToken(); userEmail='';
   store.del(K.email);
-  $('acct').innerHTML='לא מחובר<span class="dot"></span>';
-  $('btnLogout').style.display='none';
-  $('btnSwitch').style.display='none';
-  $('btnLogin').textContent='התחבר עם Google';
+  showDisconnected();   // מאחד עם אותה פונקציה - כולל הפיכת הכפתור ללחיץ
   toast('התנתקת');
 };
 /* ============================================================
@@ -2476,7 +2650,12 @@ function setStep(n){
     const el=$(id); el.classList.toggle('on', i===n-1); el.classList.toggle('done', i<n-1);
   });
 }
-function prog(p,msg){ $('barI').style.width=Math.max(0,Math.min(100,p))+'%'; if(msg!=null) $('plog').textContent=msg; }
+function prog(p,msg){
+  const pct = Math.max(0,Math.min(100,p));
+  $('barI').style.width=pct+'%';
+  const pctEl = $('barPct'); if(pctEl) pctEl.textContent = Math.round(pct)+'%';   // פריט 26 - אחוז קריא
+  if(msg!=null) $('plog').textContent=msg;
+}
 
 /* ---------- שעון / זמן נותר ---------- */
 let scanT0 = 0, etaTimer = null;
@@ -3246,6 +3425,18 @@ let deletedFps = {};   // fingerprint -> true. נשמר כדי שסריקה חו
    נשמרים לפי fingerprint כדי לשרוד סריקה חוזרת, בדיוק כמו תיוג פרויקט. */
 function docTag(fp){ return (cfg.tags && cfg.tags[fp]) || {}; }
 
+/* פריט 52 — מדבקות צבעוניות לפי סוג מסמך (לא לפי מקור - זה .src קיים).
+   קבלה (כולל "חשבונית מס קבלה", כי היא כוללת קבלה) = ירוק,
+   דרישת תשלום = כתום, הזמנה = סגול, חשבונית = כחול, אחר = אפור. */
+function docTypeCls(t){
+  t = t || '';
+  if(/קבלה/.test(t)) return 'dtype-receipt';
+  if(/דרישת תשלום/.test(t)) return 'dtype-demand';
+  if(/הזמנה/.test(t)) return 'dtype-order';
+  if(/חשבונית/.test(t)) return 'dtype-invoice';
+  return 'dtype-other';
+}
+
 /* פריט 21 — החלקה שמאלה למחיקה, ימינה לסימון טופל.
    פועל רק על סמן מגע (touch), לא עכבר - מונע התנגשות עם ריחוף/גרירה.
    סף אנכי גדול מהאופקי -> זה גלילה, לא החלקה, ומשחררים מיד.
@@ -3284,7 +3475,16 @@ function wireSwipeRows(container){
       if(dx > THRESH){
         setDocTag(fp, 'done', !docTag(fp).done); buzz(12); render();
       } else if(dx < -THRESH){
-        deleteDocByFp(fp).then(ok=>{ if(ok){ buzz([10,50,10]); render(); } else { doc.style.transform=''; } });
+        deleteDocByFp(fp).then(ok=>{
+          if(ok){
+            buzz([10,50,10]);
+            /* פריט 86 — דעיכה עדינה לפני שהמסמך נעלם, במקום היעלמות
+               מיידית כשה-render() הבא דורס את כל הרשימה. */
+            if(cfg.reduceMotion){ render(); return; }
+            row.classList.add('deleting');
+            setTimeout(render, 260);
+          } else { doc.style.transform=''; }
+        });
         return;
       } else {
         doc.style.transform = '';
@@ -3320,6 +3520,68 @@ function wireTips(){
     };
   });
 }
+
+/* פריט 3 — אפקט גל אמיתי בלחיצה על כפתורים/צ'יפים.
+   כולם סטטיים ב-DOM (לא נוצרים מחדש ע"י render()), אז מספיק לחווט
+   פעם אחת באתחול. pointerdown ולא click כדי שהגל יתחיל מיד עם המגע,
+   לא אחרי שהאצבע כבר הורמה. */
+function wireRipple(){
+  document.querySelectorAll('.btn, .chip').forEach(el=>{
+    if(el._rippleWired) return;
+    el._rippleWired = true;
+    el.addEventListener('pointerdown', e=>{
+      if(cfg.reduceMotion || el.disabled) return;
+      const r = el.getBoundingClientRect();
+      const size = Math.max(r.width, r.height);
+      const x = (typeof e.clientX==='number' ? e.clientX : r.left+r.width/2) - r.left - size/2;
+      const y = (typeof e.clientY==='number' ? e.clientY : r.top+r.height/2) - r.top - size/2;
+      const span = document.createElement('span');
+      span.className = 'ripple';
+      span.style.width = span.style.height = size+'px';
+      span.style.left = x+'px'; span.style.top = y+'px';
+      el.appendChild(span);
+      span.addEventListener('animationend', ()=> span.remove());
+    }, {passive:true});
+  });
+}
+
+/* פריט 37 — Enter=שמור, Esc=סגור סקשן, בכל שדה בתוך אקורדיון הגדרות.
+   כל סקשן עם יותר מכפתור אחד (למשל "מפתחות": טען מודלים/שמור/בדוק
+   מפתח) לא יכול להסתמך על "הכפתור הראשון בסקשן" - זה עלול להפעיל
+   פעולה לא קשורה. הסדר: 1) data-save מפורש על השדה אם יש,
+   2) הכפתור הקרוב ביותר אחרי אותו שדה (nextElementSibling עד
+   לשדה הבא), 3) אם לא נמצא כלום - לא עושים שום דבר (עדיף לא
+   להגיב מאשר להפעיל כפתור שגוי). */
+function nearestSaveBtn(el){
+  if(el.dataset.save){ const b = $(el.dataset.save); if(b) return b; }
+  let node = el.closest('label.f, label.chk') || el;
+  let sib = node.nextElementSibling;
+  while(sib){
+    if(sib.classList && sib.classList.contains('btn')) return sib;
+    if(sib.tagName === 'LABEL' && (sib.classList.contains('f') || sib.classList.contains('chk'))) return null;
+    sib = sib.nextElementSibling;
+  }
+  return null;
+}
+function wireSettingsKeys(){
+  document.querySelectorAll('#setBody input, #secureZone input, #setBody select, #secureZone select').forEach(el=>{
+    if(el._settingsKeyWired) return;
+    el._settingsKeyWired = true;
+    el.addEventListener('keydown', e=>{
+      const details = el.closest('details.acc');
+      if(!details) return;
+      if(e.key === 'Enter'){
+        const btn = nearestSaveBtn(el);
+        if(btn){ e.preventDefault(); btn.click(); }
+      } else if(e.key === 'Escape'){
+        e.preventDefault();
+        details.removeAttribute('open');
+        el.blur();
+      }
+    });
+  });
+}
+
 function setDocTag(fp, key, val){
   cfg.tags = cfg.tags || {};
   const t = cfg.tags[fp] || (cfg.tags[fp] = {});
@@ -3640,6 +3902,8 @@ function missingHtml(gAll){
 }
 function render(){
   const head=$('resHead'), body=$('resBody'), toolbar=$('resToolbar'), toolbar2=$('resToolbar2'), trendBox=$('trendBox'), missingBox=$('missingBox');
+  const resTabOn = document.querySelector('nav button[data-v="res"]');
+  if(resTabOn && resTabOn.classList.contains('on')) updateHeaderSub('res');   // פריט 46 - ספירה טרייה תוך כדי שהייה במסך
   const sig = resSearch+'|'+resSort+'|'+resProjectFilter+'|'+reviewOnlyOn+'|'+hideDoneOn+'|'+cfg.viewMode;
   if(sig !== lastFilterSig){ tablePage = 1; lastFilterSig = sig; }
   if(!docs.length){
@@ -3659,9 +3923,9 @@ function render(){
   const totAll = docs.reduce((s,d)=> s + (toILS(d)||0), 0);
   head.innerHTML =
     '<div class="sum">'+
-      '<div><b class="num">'+docs.length+'</b><small>מסמכים</small></div>'+
-      '<div><b class="num">'+Object.keys(gAll).length+'</b><small>ספקים</small></div>'+
-      '<div><b class="num">'+Math.round(totAll).toLocaleString('he-IL')+'</b><small>סה"כ ₪</small></div>'+
+      '<div class="c-blue"><b class="num">'+docs.length+'</b><small>מסמכים</small></div>'+
+      '<div class="c-green"><b class="num">'+Object.keys(gAll).length+'</b><small>ספקים</small></div>'+
+      '<div class="c-red"><b class="num">'+Math.round(totAll).toLocaleString('he-IL')+'</b><small>סה"כ ₪</small></div>'+
     '</div>'+
     (cfg.budget>0
       ? (totAll >= cfg.budget
@@ -3678,8 +3942,23 @@ function render(){
   if(trendOn){ trendBox.style.display='block'; trendBox.innerHTML = trendHtml() + supplierChartHtml(); }
   else { trendBox.style.display='none'; trendBox.innerHTML=''; }
 
-  const g = groups(visibleDocs());
+  const vis = visibleDocs();
+  const g = groups(vis);
   let names = Object.keys(g);
+
+  /* פריט 50 — "נמצאו X מתוך Y" בזמן חיפוש, מתעדכן עם כל הקלדה.
+     סופר מתוך g (אחרי כל הסינונים כולל "לא טופלו"), לא מ-vis לפני
+     groups() - אחרת המספר לא היה תואם למה שבאמת מוצג ברשימה. */
+  const scEl = $('searchCount');
+  if(scEl){
+    if(resSearch){
+      const shown = names.reduce((s,n)=> s+g[n].length, 0);
+      scEl.style.display = 'block';
+      scEl.textContent = 'נמצאו '+shown+' מתוך '+docs.length;
+    } else {
+      scEl.style.display = 'none';
+    }
+  }
 
   const latest = n => g[n][g[n].length-1].date;
   const earliest = n => g[n][0].date;
@@ -3747,8 +4026,8 @@ function render(){
         return '<tr class="'+(done?'rowdone':'')+'">'+
           '<td>'+esc(d.date)+'</td>'+
           '<td>'+esc(d.supplier)+'</td>'+
-          '<td>'+esc(d.docType+(d.docNum?' '+d.docNum:''))+'</td>'+
-          '<td>'+(d.total==null?'—':esc(moneyCur(d.total,d.currency)))+'</td>'+
+          '<td><span class="dtypebadge '+docTypeCls(d.docType)+'">'+esc(d.docType+(d.docNum?' '+d.docNum:''))+'</span></td>'+
+          '<td><span class="amt'+(d.needsReview?' hi':'')+'">'+(d.total==null?'—':esc(moneyCur(d.total,d.currency)))+'</span></td>'+
           '<td>'+(d.needsReview?'<span class="flag">לבדיקה</span>':(docTag(d.fp).paid?'<span class="tg paid">שולם</span>':'—'))+'</td>'+
           '<td><button class="edBtn" data-fp="'+esc(d.fp)+'" title="ערוך" aria-label="ערוך מסמך '+esc(d.docType+' '+(d.docNum||''))+'">✎</button></td>'+
         '</tr>';
@@ -3768,12 +4047,12 @@ function render(){
   body.innerHTML = names.map((sup,i)=>{
     const arr=g[sup];
     const t=arr.reduce((s,d)=>s+(toILS(d)||0),0);
-    return '<div class="folder">'+
+    return '<div class="folder" id="fold'+i+'">'+
       '<button class="tab" data-i="'+i+'"><span class="car">▸</span>'+
-        '<span class="nm"><b>'+esc(sup)+'</b><small>'+arr.length+' מסמכים'+(arr[0].supplierId?' · '+esc(arr[0].supplierId):'')+'</small></span>'+
+        '<span class="nm'+(sup==='לא ידוע'?' unknown':'')+'"><b>'+(sup==='לא ידוע'?'❔ ':'')+esc(sup)+'</b><small>'+arr.length+' מסמכים'+(arr[0].supplierId?' · '+esc(arr[0].supplierId):'')+'</small></span>'+
         '<span class="tot">'+Math.round(t).toLocaleString('he-IL')+' ₪</span>'+
       '</button>'+
-      '<div class="docs" id="dg'+i+'" style="display:none">'+ arr.map(d=>
+      '<div class="docs" id="dg'+i+'"><div class="docs-inner">'+ arr.map(d=>
         '<div class="swiperow" data-fp="'+esc(d.fp)+'">'+
           '<div class="swipeu swipe-done">✓ טופל</div>'+
           '<div class="swipeu swipe-del">🗑 מחק</div>'+
@@ -3781,7 +4060,7 @@ function render(){
           (d.thumb? '<img class="thumb" src="'+d.thumb+'" alt="" loading="lazy">' : '')+
           '<span class="dt">'+esc(d.date)+'</span>'+
           '<span class="src '+d.kind+'">'+(d.kind==='pdf'?'קובץ':d.kind==='link'?'קישור':'מייל')+'</span>'+
-          '<span class="ttl">'+esc(d.docType+(d.docNum?' '+d.docNum:''))+'</span>'+
+          '<span class="ttl dtypebadge '+docTypeCls(d.docType)+'">'+esc(d.docType+(d.docNum?' '+d.docNum:''))+'</span>'+
           (d.needsReview? '<span class="flag">לבדיקה</span>' : '')+
           (d.edited? '<span class="flag edited">תוקן</span>' : '')+
           (d.project? '<span class="projTag">'+esc(d.project)+'</span>' : '')+
@@ -3789,11 +4068,11 @@ function render(){
           (d.srcSize? '<span class="fsize">'+fmtSize(d.srcSize)+'</span>' : '')+
           '<span class="lead"></span>'+
           (d.link? '<a href="'+esc(d.link)+'" target="_blank" rel="noopener">פתח ↗</a>' : '')+
-          '<span class="amt">'+(d.total==null?'—':esc(moneyCur(d.total,d.currency)))+'</span>'+
+          '<span class="amt'+(d.needsReview?' hi':'')+'">'+(d.total==null?'—':esc(moneyCur(d.total,d.currency)))+'</span>'+
           '<button class="edBtn" data-fp="'+esc(d.fp)+'" title="ערוך" aria-label="ערוך מסמך '+esc(d.docType+' '+(d.docNum||''))+'">✎</button>'+
           tagRow(d)+
         '</div></div>').join('')+
-      '</div></div>';
+      '</div></div></div>';
   }).join('');
 
   wireSwipeRows(body);   // פריט 21 - החלקה לסימון/מחיקה
@@ -3801,9 +4080,19 @@ function render(){
   body.querySelectorAll('.tab').forEach(t=>{
     t.onclick=()=>{
       const d=$('dg'+t.dataset.i);
-      const open=d.style.display!=='none';
-      d.style.display=open?'none':'block';
+      const open=d.classList.contains('open');
+      d.classList.toggle('open',!open);
       t.classList.toggle('open',!open);
+      /* פריטים 22+47 — פתיחה חלקה (CSS grid-rows, לא display:none/block
+         מיידי) + גלילה עדינה לתיקייה עם הבהוב פוקוס קצר, כדי שהעין
+         תדע בדיוק מה נפתח כשיש הרבה ספקים ברשימה. */
+      if(!open){
+        const folder = t.closest('.folder');
+        setTimeout(()=>{
+          folder.scrollIntoView({behavior: cfg.reduceMotion?'auto':'smooth', block:'nearest'});
+        }, 60);
+        folder.classList.remove('flash'); void folder.offsetWidth; folder.classList.add('flash');
+      }
     };
   });
   body.querySelectorAll('.edBtn').forEach(b=>{
@@ -3954,7 +4243,7 @@ $('btnVatXlsx').onclick = ()=>{
   const out = XLSX.write(wb,{bookType:'xlsx',type:'array'});
   download(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),
            'דוח_מעמ_'+vatPeriodMode+'.xlsx');
-  toast('דוח מע"מ הורד');
+  bigCheck('דוח מע"מ הורד');
 };
 
 /* ============================================================
@@ -4007,7 +4296,7 @@ function renderDue(){
       const b = bucket(x);
       return '<div class="doc" style="border-bottom:1px dashed var(--line)">'+
         '<span class="ttl">'+esc(x.d.supplier)+'</span>'+
-        '<span class="dt">'+esc(x.d.docType+' '+(x.d.docNum||''))+'</span>'+
+        '<span class="dt dtypebadge '+docTypeCls(x.d.docType)+'">'+esc(x.d.docType+' '+(x.d.docNum||''))+'</span>'+
         '<span class="lead"></span>'+
         '<span style="font-size:10.5px;color:'+b.c+';font-weight:700;white-space:nowrap">'+esc(b.t)+'</span>'+
         '<span class="amt">'+esc(money(x.d.total))+'</span></div>';
@@ -4019,7 +4308,7 @@ function renderDue(){
    ============================================================ */
 $('btnXlsx').onclick = ()=>{
   if(!docs.length){ toast('אין נתונים'); return; }
-  download(xlsxBlob(),'ריכוז.xlsx'); toast('ריכוז.xlsx הורד');
+  download(xlsxBlob(),'ריכוז.xlsx'); bigCheck('ריכוז.xlsx הורד');
 };
 
 $('btnCsv').onclick = ()=>{
@@ -4094,6 +4383,7 @@ $('btnZip').onclick = async ()=>{
     });
     download(blob, safeName($('rootName').value||'חשבוניות')+'.zip');
     log.textContent='ה-ZIP ירד לתיקיית ההורדות.'+(zipMissing? ' ('+zipMissing+' קבצים לא נמשכו)':'');
+    bigCheck('ה-ZIP הורד בהצלחה');
   }catch(e){ log.textContent='שגיאה: '+e.message; }
 };
 
@@ -4171,7 +4461,7 @@ $('btnDrive').onclick = async ()=>{
     log.textContent='מעלה ריכוז.xlsx...';
     const x = await driveUpload('ריכוז.xlsx','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', await blobToB64(xlsxBlob()), root);
     log.innerHTML='הסתיים. <a href="https://drive.google.com/drive/folders/'+esc(root)+'" target="_blank" rel="noopener" style="color:#ED1C24;font-weight:600">פתח את התיקייה ב-Drive ↗</a>';
-    toast('הועלה ל-Drive');
+    bigCheck('הועלה ל-Drive בהצלחה');
   }catch(e){ log.textContent='שגיאה: '+e.message; }
   $('btnDrive').disabled=false;
 };
@@ -4232,6 +4522,8 @@ function wireKeyboardA11y(root){
   // אם יש קוד — היא נועלת (כרגיל); אם אין — היא פותחת ומציגה תזכורת.
   lockSettings();
   wireTips();
+  wireRipple();
+  wireSettingsKeys();
   const now=new Date();
   $('dTo').value = localISO(now);
   const from=new Date(now.getFullYear(), now.getMonth()-2, 1);
@@ -4255,11 +4547,14 @@ function wireKeyboardA11y(root){
   if(loadStoredToken()){
     showConnected();
   } else if(cfg.client){
+    showDisconnected();   // v3.4 - קובע מיד את מצב הכפתור הלחיץ; silentAuth עשוי לדרוס ל-showConnected() בהצלחה
     const trySilent = ()=>{
       if(window.google && google.accounts){ silentAuth(); }
       else setTimeout(trySilent, 400);
     };
     setTimeout(trySilent, 600);
+  } else {
+    showDisconnected();   // v3.4 - התקנה חדשה בלי Client ID עדיין: הכפתור בכותרת צריך להיראות לחיץ גם כאן
   }
 
   // רישום SW + זיהוי גרסה חדשה (פותר "אין עדכון גרסה")
