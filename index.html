@@ -108,6 +108,10 @@ Retry ל-Gmail          | let gmailRetries
 שיתוף מוואטסאפ            | function consumeSharedInbox
 עוזר אישי (צ'אט AI)       | async function askAssistant
 סיור היכרות לכניסה ראשונה | function startTour
+דמיון שמות ספקים          | function strSim
+מיזוג כפילויות            | async function doMerge
+ניתוח מגמת ספקים          | function supplierTrend
+ייצוא לרואה חשבון         | function exportForAccountant
 Enter=שמור / Esc=סגור     | function wireSettingsKeys
 */
 -->
@@ -661,6 +665,19 @@ html[data-theme="dark"] .docs-inner{background:rgba(24,24,28,.5);border-color:rg
 /* פיצ'ר 7 — הסבר שיתוף מוואטסאפ */
 /* פיצ'ר 9 — כפתור צף לעוזר. יושב מעל הניווט התחתון ומכבד notch. */
 /* משימה 6 — סיור היכרות */
+/* פיצ'ר 4 — כרטיס זוג כפילות */
+/* פיצ'ר 6 — שורת מגמת ספק */
+.trendrow{display:flex;align-items:center;gap:8px;padding:8px 2px;border-bottom:1px dashed var(--line);font-size:12px}
+.trendrow:last-of-type{border-bottom:0}
+.trendrow .tname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trendrow .tdelta{font-weight:700;font-family:'Rubik';flex:none}
+.trendrow .tdelta.up{color:var(--rose)}
+.trendrow .tdelta.down{color:var(--green)}
+.trendrow .tavg{font-size:10.5px;color:var(--ink-dim);flex:none}
+.mergepair{border:1px solid var(--line);border-radius:12px;padding:11px 12px;margin-bottom:10px;background:var(--card-2)}
+.mreason{font-size:11px;color:var(--ink-dim);margin-bottom:7px}
+.mrow{font-size:12px;line-height:1.5}
+.mrow.drop{color:var(--rose);opacity:.9}
 .tourcard{text-align:center}
 .tourdots{display:flex;justify-content:center;gap:6px;margin-bottom:14px}
 .tdot{width:6px;height:6px;border-radius:50%;background:var(--line);transition:background .2s,transform .2s}
@@ -1079,6 +1096,24 @@ nav button.on{color:var(--red)}
 
   <div class="section-title">📊 דוחות</div>
   <div class="card">
+    <h2>ייצוא לרואה חשבון</h2>
+    <p class="hint">עמודות מותאמות לפורמט הנפוץ של כל תוכנה.</p>
+    <label class="f"><span>פורמט</span>
+      <select class="inp" id="accFormat">
+        <option value="hashavshevet">חשבשבת</option>
+        <option value="rivhit">רווית</option>
+        <option value="plain">Excel רגיל (הריכוז המלא)</option>
+      </select>
+    </label>
+    <label class="f"><span>שם קובץ (אופציונלי)</span>
+      <input class="inp" id="accFileName" placeholder="ריכוז_ספטמבר"></label>
+    <button class="btn outline" id="btnAccExport">ייצא עכשיו</button>
+    <div class="warn" style="margin-top:10px;font-size:11.5px">
+      העמודות מבוססות על המבנה הנפוץ אבל <b>לא אומתו מול קובץ יבוא רשמי</b>.
+      הרץ ייבוא ניסיון אחד אצל רו"ח לפני שתסמוך על זה.
+    </div>
+  </div>
+  <div class="card">
     <h2>דוח מע"מ</h2>
     <p class="hint">ריכוז מע"מ תשומות לפי חודש/רבעון.</p>
     <div class="chips" id="vatPeriod" style="margin-bottom:10px">
@@ -1269,6 +1304,42 @@ nav button.on{color:var(--red)}
   </div>
 
   <div class="section-title">⚙ ביצועי סריקה</div>
+  <details class="acc"><summary>⏰ סריקה מתוזמנת</summary><div class="accbody">
+    <p class="hint">הרצה אוטומטית של הסריקה לפי לוח זמנים.</p>
+    <div class="warn" style="font-size:11.5px;margin-bottom:10px">
+      <b>מגבלה שחשוב להכיר:</b> דפדפן לא יכול להריץ סריקה כשהאפליקציה סגורה.
+      הסריקה תרוץ רק כשהאפליקציה פתוחה — ואם המועד עבר בזמן שהייתה סגורה,
+      היא תרוץ אוטומטית בפתיחה הבאה.
+    </div>
+    <label class="chk"><input type="checkbox" id="schedOn"> הפעל סריקה מתוזמנת</label>
+    <div class="row2" style="margin-top:10px">
+      <label class="f"><span>תדירות</span>
+        <select class="inp" id="schedFreq">
+          <option value="daily">יומית</option>
+          <option value="weekly">שבועית</option>
+          <option value="monthly">חודשית</option>
+        </select>
+      </label>
+      <label class="f"><span>שעה</span><input class="inp" id="schedTime" type="time" value="09:00"></label>
+    </div>
+    <button class="btn ghost sm" id="btnSaveSched" style="width:100%">שמור</button>
+    <button class="btn outline sm" id="btnRunSchedNow" style="width:100%;margin-top:8px">▶ הרץ עכשיו לבדיקה</button>
+    <div class="plog" id="schedLog" style="margin-top:8px"></div>
+  </div></details>
+  <details class="acc"><summary>🔔 התראות</summary><div class="accbody">
+    <p class="hint">התראה כשנמצאים מסמכים חדשים או כשיש חריגה.</p>
+    <div class="warn" style="font-size:11.5px;margin-bottom:10px">
+      אלה <b>התראות מקומיות</b>, לא Push. הן מופיעות רק כשהאפליקציה פתוחה או פעילה ברקע.
+      התראות אמיתיות כשהאפליקציה סגורה דורשות שרת ייעודי, שאין באפליקציה הזאת.
+    </div>
+    <button class="btn outline sm" id="btnNotifyPerm" style="width:100%">אפשר התראות</button>
+    <div class="plog" id="notifyLog" style="margin-top:8px"></div>
+    <div class="section-title" style="margin:12px 2px 6px">מה להתריע</div>
+    <label class="chk"><input type="checkbox" id="ntNew" checked> מסמכים חדשים נמצאו</label>
+    <label class="chk"><input type="checkbox" id="ntBudget" checked> חריגה מהתקציב</label>
+    <label class="chk"><input type="checkbox" id="ntDup" checked> חשד לתשלום כפול</label>
+    <button class="btn ghost sm" id="btnSaveNotify" style="width:100%;margin-top:10px">שמור</button>
+  </div></details>
 
   <details class="acc"><summary>⏱ קצב סריקה</summary><div class="accbody">
     
@@ -1354,7 +1425,7 @@ nav button.on{color:var(--red)}
 
   <details class="acc"><summary>ℹ גרסה</summary><div class="accbody">
     
-    <p class="hint" style="margin:0"><span id="verTag">v4.2</span> · <span id="verDate"></span></p>
+    <p class="hint" style="margin:0"><span id="verTag">v4.3</span> · <span id="verDate"></span></p>
   </div></details>
 
   <div class="section-title">🔐 חשבון ומפתחות</div>
@@ -1414,6 +1485,15 @@ nav button.on{color:var(--red)}
   </svg>
 </button>
 <!-- משימה 6 — הדרכה אינטראקטיבית לכניסה ראשונה -->
+<div class="modalbg" id="mergeSheet">
+  <div class="modal">
+    <h2>מיזוג כפילויות</h2>
+    <div class="msub">הרשומה עם יותר מידע (ובפרט עם קובץ מצורף) נשמרת.</div>
+    <div id="mergeBody" style="max-height:52vh;overflow-y:auto"></div>
+    <button class="btn ghost sm" id="mergeClose" style="width:100%;margin-top:12px">סגור</button>
+  </div>
+</div>
+
 <div class="modalbg" id="tourSheet">
   <div class="modal tourcard">
     <div class="tourdots" id="tourDots"></div>
@@ -1594,7 +1674,7 @@ let docMeta = {};        // fingerprint -> {project} (תיוג פרויקט שש
 let dupSkipped = 0;
 let junkSkipped = 0;   // קבצים שסוננו לפני AI (לוגואים, אייקונים)
 
-const VERSION = 'v4.2';
+const VERSION = 'v4.3';
 function $(id){ return document.getElementById(id); }
 /* v3.0 — toISOString מחזיר UTC. בישראל (UTC+2/+3) מסמך שהתקבל ב-01:00
    סומן ביום הקודם. localISO עובד לפי אזור הזמן של המכשיר. */
@@ -1689,6 +1769,9 @@ function applyIdle(){
   const bd = $('cfgBudget'); if(bd) bd.value = cfg.budget||0;
   const ru = $('cfgRateUSD'); if(ru) ru.value = (cfg.rates&&cfg.rates.USD)||3.7;
   const re = $('cfgRateEUR'); if(re) re.value = (cfg.rates&&cfg.rates.EUR)||4.0;
+  // פיצ'ר 7 — שחזור הבחירה השמורה, אחרת ההגדרה נשמרת אבל נראית מאופסת
+  const af = $('accFormat'); if(af && cfg.accountantFormat) af.value = cfg.accountantFormat;
+  const an = $('accFileName'); if(an) an.value = cfg.accFileName||'';
   applyFontScale(cfg.fontScale||'m');
   applyMotion();
   applyOnline();
@@ -2163,6 +2246,137 @@ $('tourNext').onclick = ()=>{
 $('tourSkip').onclick = endTour;
 $('tourSheet').onclick = (e)=>{ if(e.target.id==='tourSheet') endTour(); };
 $('btnReplayTour').onclick = startTour;
+
+/* ============================================================
+   פיצ'ר 3 — התראות מקומיות.
+   הבהרה חשובה: אלה *לא* התראות Push. Push אמיתי (כשהאפליקציה
+   סגורה) מחייב שרת עם מפתחות VAPID, ואין כזה בארכיטקטורה הזאת.
+   Notification API עובד רק כשהאפליקציה פתוחה או ברקע חי. הממשק
+   אומר את זה במפורש כדי שלא תסתמך על משהו שלא יקרה.
+   ============================================================ */
+function notifySupported(){ return typeof Notification !== 'undefined'; }
+function notifyAllowed(){ return notifySupported() && Notification.permission === 'granted'; }
+async function askNotifyPermission(){
+  if(!notifySupported()){ toast('הדפדפן הזה לא תומך בהתראות'); return false; }
+  try{
+    const p = await Notification.requestPermission();
+    if(p === 'granted'){ toast('התראות הופעלו'); return true; }
+    toast(p === 'denied' ? 'ההתראות נחסמו בהגדרות הדפדפן' : 'ההרשאה לא ניתנה');
+    return false;
+  }catch(e){ toast('בקשת ההרשאה נכשלה'); return false; }
+}
+function notify(title, body, kind){
+  // kind מאפשר לכבד את בחירת סוגי ההתראות בהגדרות
+  if(kind && cfg.notifyKinds && cfg.notifyKinds[kind] === false) return;
+  if(!notifyAllowed()) return;
+  try{ new Notification(title, {body, icon:'icon-192.png', badge:'icon-192.png', dir:'rtl', lang:'he'}); }
+  catch(e){ /* חלק מהדפדפנים דורשים ServiceWorkerRegistration.showNotification */ }
+}
+
+/* ============================================================
+   פיצ'ר 2 — סריקה מתוזמנת.
+   מגבלה אמיתית ומוצהרת: אין Background Sync אמין ב-PWA, ולכן
+   הסריקה רצה רק כשהאפליקציה פתוחה. אם המועד עבר בזמן שהיא
+   הייתה סגורה - היא תרוץ בפתיחה הבאה (catch-up), וזה ההתנהגות
+   הכי קרובה ל"מתוזמן" שאפשר להשיג בלי שרת.
+   ============================================================ */
+function schedCfg(){
+  cfg.schedule = cfg.schedule || {on:false, freq:'daily', time:'09:00', lastRun:0};
+  return cfg.schedule;
+}
+function schedIntervalMs(freq){
+  return freq==='weekly' ? 7*86400000 : freq==='monthly' ? 30*86400000 : 86400000;
+}
+// מתי הריצה הבאה אמורה להיות, על סמך הריצה האחרונה והשעה שנבחרה
+function schedDue(){
+  const s = schedCfg();
+  if(!s.on) return false;
+  const [hh,mm] = String(s.time||'09:00').split(':').map(n=>parseInt(n)||0);
+  const now = new Date();
+  const todayAt = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm, 0, 0);
+  // עוד לא הגיעה השעה היום
+  if(now < todayAt) return false;
+  // כבר רצנו אחרי המועד הזה
+  if(s.lastRun && s.lastRun >= todayAt.getTime()) return false;
+  // ומספיק זמן עבר מהריצה הקודמת לפי התדירות
+  if(s.lastRun && (Date.now() - s.lastRun) < schedIntervalMs(s.freq) - 3600000) return false;
+  return true;
+}
+async function runScheduledScan(manual){
+  const s = schedCfg();
+  if(scanRunning){ if(manual) toast('סריקה כבר רצה'); return; }
+  if(navigator.onLine === false){ if(manual) toast('אין חיבור — הסריקה המתוזמנת תרוץ מאוחר יותר'); return; }
+  const errs = validateBeforeScan();
+  if(errs.length){ if(manual) toast('לא ניתן לסרוק: '+errs[0]); return; }
+
+  s.lastRun = Date.now(); saveCfgNow();
+  const before = docs.length;
+  toast('סריקה מתוזמנת התחילה');
+  $('btnScan').click();
+
+  // ממתינים לסיום כדי לדעת אם נמצא משהו חדש (בלי לגעת ב-finish עצמה)
+  const t0 = Date.now();
+  const waitDone = setInterval(()=>{
+    if(!scanRunning || Date.now()-t0 > 30*60000){
+      clearInterval(waitDone);
+      const added = docs.length - before;
+      if(added > 0) notify('נמצאו '+added+' מסמכים חדשים', 'הסריקה המתוזמנת הסתיימה.', 'newDocs');
+      checkBudgetAlert();
+    }
+  }, 4000);
+}
+function checkBudgetAlert(){
+  if(!cfg.budget || cfg.budget<=0) return;
+  const tot = docs.reduce((s,d)=> s+(toILS(d)||0), 0);
+  if(tot >= cfg.budget){
+    notify('חריגה מהתקציב השנתי', 'סה"כ '+Math.round(tot).toLocaleString('he-IL')+' ₪ מתוך '+Math.round(cfg.budget).toLocaleString('he-IL')+' ₪.', 'budget');
+  }
+}
+// בודק כל דקה. זול מאוד, ורק כשהאפליקציה פתוחה - בדיוק כפי שהוצהר.
+setInterval(()=>{ if(schedDue()) runScheduledScan(false); }, 60000);
+
+function applySchedUI(){
+  const s = schedCfg();
+  if($('schedOn')) $('schedOn').checked = !!s.on;
+  if($('schedFreq')) $('schedFreq').value = s.freq || 'daily';
+  if($('schedTime')) $('schedTime').value = s.time || '09:00';
+  const log = $('schedLog');
+  if(log){
+    log.textContent = s.on
+      ? 'פעיל · ' + (s.freq==='weekly'?'שבועי':s.freq==='monthly'?'חודשי':'יומי') + ' בשעה ' + (s.time||'09:00') +
+        (s.lastRun ? ' · ריצה אחרונה: ' + new Date(s.lastRun).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : ' · עוד לא רץ')
+      : 'כבוי.';
+  }
+  const nl = $('notifyLog');
+  if(nl){
+    nl.textContent = !notifySupported() ? 'הדפדפן הזה לא תומך בהתראות.'
+      : Notification.permission==='granted' ? '✓ ההתראות מאושרות.'
+      : Notification.permission==='denied' ? 'ההתראות חסומות — צריך לאשר בהגדרות הדפדפן.'
+      : 'עוד לא ביקשנו הרשאה.';
+  }
+  const k = cfg.notifyKinds || {};
+  if($('ntNew')) $('ntNew').checked = k.newDocs !== false;
+  if($('ntBudget')) $('ntBudget').checked = k.budget !== false;
+  if($('ntDup')) $('ntDup').checked = k.dup !== false;
+}
+$('btnSaveSched').onclick = ()=>{
+  const s = schedCfg();
+  s.on = $('schedOn').checked;
+  s.freq = $('schedFreq').value;
+  s.time = $('schedTime').value || '09:00';
+  saveCfgNow(); applySchedUI();
+  toast(s.on ? 'סריקה מתוזמנת נשמרה' : 'סריקה מתוזמנת כובתה');
+};
+$('btnRunSchedNow').onclick = ()=> runScheduledScan(true);
+$('btnNotifyPerm').onclick = async ()=>{ await askNotifyPermission(); applySchedUI(); };
+$('btnSaveNotify').onclick = ()=>{
+  cfg.notifyKinds = {
+    newDocs: $('ntNew').checked,
+    budget:  $('ntBudget').checked,
+    dup:     $('ntDup').checked
+  };
+  saveCfgNow(); toast('הגדרות ההתראות נשמרו');
+};
 
 function askContext(){
   // סיכום קומפקטי: שורה לכל מסמך. 300 מסמכים ≈ 15KB, בתוך גבולות
@@ -4241,11 +4455,65 @@ function trendHtml(){
    ה-fingerprint הקיים תופס כפילות מדויקת (אותו מסמך פעמיים).
    כאן מחפשים את המקרה המסוכן יותר: אותו ספק, אותו סכום, תאריכים
    קרובים — כלומר חשד לחיוב כפול אמיתי, לא רק סריקה חוזרת. */
+/* ============================================================
+   פיצ'רים 4+5 — זיהוי כפילויות ומיזוג.
+   בנויים על *פונקציית זיהוי אחת*. בניית שני מנגנוני זיהוי נפרדים
+   (אחד ל"מיזוג" ואחד ל"תשלום כפול") הייתה יוצרת שתי אמיתות
+   סותרות על אותם נתונים.
+   ============================================================ */
+
+// דמיון שמות ספקים. Levenshtein גולמי נכשל על שני מקרים אמיתיים
+// שקיימים בנתונים: "אמישראגז" מול "אמישראגז בע\"מ" (סיומת תאגיד),
+// ו"יהודה שיפוצים" מול "שיפוצים יהודה" (סדר מילים הפוך). לכן
+// מנרמלים סיומות/פיסוק וממיינים מילים לפני ההשוואה.
+// הערה: לא משתמשים ב-\b לזיהוי הסיומות — ב-JS ‎\w הוא ASCII בלבד,
+// ולכן גבול-מילה לא עובד על עברית ומסנן בשקט כלום. מסננים אסימונים.
+const CORP_TOKENS = {'בעמ':1,'בע':1,'מ':1,'ltd':1,'inc':1,'llc':1,'בעם':1};
+function normSupplier(s){
+  return String(s||'')
+    .toLowerCase()
+    .replace(/["'`״׳]/g,'')
+    .replace(/[^\wא-ת\s]/g,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+function tokenSort(s){
+  return normSupplier(s).split(' ')
+    .filter(t => t && !CORP_TOKENS[t])
+    .sort().join(' ');
+}
+function strSim(a, b){
+  const A = tokenSort(a), B = tokenSort(b);
+  if(!A || !B) return 0;
+  if(A === B) return 1;
+  const m = A.length, n = B.length;
+  if(Math.abs(m-n) > Math.max(m,n)*0.5) return 0;   // רחוק מדי, לא שווה לחשב
+  let prev = Array.from({length:n+1}, (_,i)=>i);
+  for(let i=1;i<=m;i++){
+    const cur = [i];
+    for(let j=1;j<=n;j++){
+      cur[j] = Math.min(prev[j]+1, cur[j-1]+1, prev[j-1] + (A[i-1]===B[j-1]?0:1));
+    }
+    prev = cur;
+  }
+  return 1 - prev[n]/Math.max(m,n);
+}
+
 function dupSuspects(){
-  const out = [], byKey = {};
+  const out = [], seenPair = {};
+  const add = (a,b,reason,days)=>{
+    if(a.fp === b.fp) return;
+    const key = [a.fp,b.fp].sort().join('~');
+    if(seenPair[key]) return;
+    seenPair[key] = 1;
+    out.push({a, b, reason, days});
+  };
+
+  // 1) אותו ספק + אותו סכום + עד 7 ימים (הכלל המקורי)
+  const byKey = {};
   docs.forEach(d=>{
     if(d.total==null) return;
-    const k = d.supplier + '|' + Math.round(d.total*100);
+    const k = d.supplier + '|' + Math.round((toILS(d)||d.total)*100);
     (byKey[k] = byKey[k] || []).push(d);
   });
   Object.keys(byKey).forEach(k=>{
@@ -4256,24 +4524,258 @@ function dupSuspects(){
       const a = arr[i-1], b = arr[i];
       const days = Math.abs((new Date(b.date) - new Date(a.date))/86400000);
       if(isNaN(days) || days > 7) continue;   // מעל שבוע = כנראה תשלום תקופתי לגיטימי
-      out.push({a, b, days: Math.round(days)});
+      add(a, b, 'אותו ספק, אותו סכום, בהפרש '+Math.round(days)+' ימים', Math.round(days));
     }
   });
+
+  // 2) פיצ'ר 5 — אותו מספר מסמך מאותו ספק בתאריכים שונים.
+  //    מספר חשבונית אמור להיות ייחודי אצל הספק; חזרה = דגל אדום.
+  const byNum = {};
+  docs.forEach(d=>{
+    if(!d.docNum || String(d.docNum).length < 3) return;   // מספרים קצרים מדי = רועשים
+    const k = (d.supplier||'').toLowerCase() + '|' + String(d.docNum).trim().toLowerCase();
+    (byNum[k] = byNum[k] || []).push(d);
+  });
+  Object.keys(byNum).forEach(k=>{
+    const arr = byNum[k];
+    if(arr.length < 2) return;
+    for(let i=1;i<arr.length;i++) add(arr[i-1], arr[i], 'אותו מספר מסמך אצל אותו ספק', null);
+  });
+
+  // 3) פיצ'ר 5 — סכום זהה + שם ספק דומה (לא זהה) בטווח 7 ימים.
+  //    תופס מקרה שבו הזיהוי כתב את שם הספק קצת אחרת בכל פעם.
+  //    O(n²) עם Levenshtein בפנים, ו-dupSuspects נקראת בכל render() —
+  //    לכן קודם מקבצים לפי סכום (רוב הזוגות נופלים מיד) ומגבילים
+  //    את גודל הקבוצה, כדי שארכיון גדול לא יתקע את הרינדור.
+  const byAmt = {};
+  docs.forEach(d=>{
+    if(d.total==null) return;
+    const k = Math.round((toILS(d)||d.total)*100);
+    (byAmt[k] = byAmt[k] || []).push(d);
+  });
+  Object.keys(byAmt).forEach(k=>{
+    const arr = byAmt[k];
+    if(arr.length < 2 || arr.length > 40) return;   // קבוצה ענקית = סכום נפוץ, לא אינדיקציה
+    for(let i=0;i<arr.length;i++){
+      for(let j=i+1;j<arr.length;j++){
+        const a = arr[i], b = arr[j];
+        if(a.supplier === b.supplier) continue;              // כבר נתפס בכלל 1
+        const days = Math.abs((new Date(b.date) - new Date(a.date))/86400000);
+        if(isNaN(days) || days > 7) continue;                // בודקים תאריך לפני Levenshtein - זול יותר
+        if(strSim(a.supplier, b.supplier) < 0.8) continue;
+        add(a, b, 'סכום זהה, שם ספק דומה ("'+a.supplier+'" / "'+b.supplier+'")', Math.round(days));
+      }
+    }
+  });
+
   return out;
 }
+/* ============================================================
+   פיצ'ר 6 — ניתוח מגמת ספקים.
+   משווה ממוצע חודשי ב-6 החודשים האחרונים מול התקופה שלפניהם.
+   דורש לפחות 2 מסמכים בכל צד, אחרת "מגמה" מחשבונית בודדת היא
+   רעש ולא מידע.
+   ============================================================ */
+/* ============================================================
+   פיצ'ר 7 — ייצוא בפורמט רואה חשבון.
+   העמודות מבוססות על מבנה נפוץ, אבל *לא אומתו* מול קובץ יבוא
+   אמיתי של חשבשבת/רווית. הממשק אומר את זה במפורש - לא מתיימר
+   להיות תואם רשמית.
+   ============================================================ */
+const ACC_FORMATS = {
+  hashavshevet: {
+    label: 'חשבשבת',
+    cols: d => ({
+      'תאריך': d.date, 'שם ספק': d.supplier, 'ח.פ / ע.מ': d.supplierId||'',
+      'סוג מסמך': d.docType, 'מספר מסמך': d.docNum||'',
+      'סכום לפני מע"מ': d.before, 'מע"מ': d.vat, 'סה"כ': d.total
+    }),
+    widths: [11,26,13,14,13,15,10,12]
+  },
+  rivhit: {
+    label: 'רווית',
+    cols: d => ({
+      'תאריך': d.date, 'ספק': d.supplier, 'מספר חשבונית': d.docNum||'',
+      'סכום': d.before, 'מע"מ': d.vat, 'סה"כ': d.total
+    }),
+    widths: [11,26,14,12,10,12]
+  },
+  plain: { label:'Excel רגיל', cols:null, widths:null }
+};
+
+function exportForAccountant(fmtKey){
+  const fmt = ACC_FORMATS[fmtKey] || ACC_FORMATS.plain;
+  if(!docs.length){ toast('אין נתונים לייצוא'); return; }
+
+  // "Excel רגיל" = בדיוק הקובץ הקיים, לא גרסה מקבילה שתתפצל בעתיד
+  if(!fmt.cols){
+    download(xlsxBlob(), (cfg.accFileName||'ריכוז')+'.xlsx');
+    bigCheck('הקובץ הורד');
+    return;
+  }
+
+  const sorted = docs.slice().sort((a,b)=> String(a.date).localeCompare(String(b.date)));
+  const ws = XLSX.utils.json_to_sheet(sorted.map(fmt.cols));
+  if(fmt.widths) ws['!cols'] = fmt.widths.map(w=>({wch:w}));
+  const wb = XLSX.utils.book_new();
+  wb.Workbook = {Views:[{RTL:true}]};
+  XLSX.utils.book_append_sheet(wb, ws, fmt.label);
+  const out = XLSX.write(wb,{bookType:'xlsx',type:'array'});
+  const name = (cfg.accFileName || ('ייצוא_'+fmt.label)) + '.xlsx';
+  download(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}), name);
+  bigCheck('הקובץ ל'+fmt.label+' הורד');
+}
+
+function supplierTrend(){
+  const now = Date.now(), MON = 2629800000;   // חודש ממוצע במילישניות
+  const cut = now - 6*MON;
+  const agg = {};
+  docs.forEach(d=>{
+    const v = toILS(d);
+    if(v == null || !d.date) return;
+    const t = new Date(d.date).getTime();
+    if(isNaN(t)) return;
+    const a = (agg[d.supplier] = agg[d.supplier] || {recent:[], prior:[]});
+    (t >= cut ? a.recent : a.prior).push(v);
+  });
+  const out = [];
+  Object.keys(agg).forEach(sup=>{
+    const {recent, prior} = agg[sup];
+    if(recent.length < 2 || prior.length < 2) return;   // מדגם קטן מדי למסקנה
+    const avg = arr => arr.reduce((s,x)=>s+x,0)/arr.length;
+    const rAvg = avg(recent), pAvg = avg(prior);
+    if(pAvg <= 0) return;
+    const pct = (rAvg - pAvg) / pAvg;
+    out.push({supplier:sup, pct, rAvg, pAvg, nRecent:recent.length, nPrior:prior.length});
+  });
+  out.sort((a,b)=> b.pct - a.pct);
+  return out;
+}
+
+function trendReportHtml(){
+  const rows = supplierTrend().filter(r=> Math.abs(r.pct) >= 0.2);   // רק שינוי מהותי
+  if(!rows.length) return '';
+  const up = rows.filter(r=> r.pct > 0);
+  return '<div class="card"><h2>📈 שינויי מחיר אצל ספקים</h2>'+
+    '<p class="hint">ממוצע 6 חודשים אחרונים מול התקופה שלפני. רק שינוי מעל 20%.</p>'+
+    rows.slice(0,10).map(r=>
+      '<div class="trendrow">'+
+        '<span class="tname">'+esc(r.supplier)+'</span>'+
+        '<span class="tdelta '+(r.pct>0?'up':'down')+'">'+(r.pct>0?'▲':'▼')+Math.abs(Math.round(r.pct*100))+'%</span>'+
+        '<span class="tavg">'+Math.round(r.pAvg).toLocaleString('he-IL')+' → '+Math.round(r.rAvg).toLocaleString('he-IL')+' ₪</span>'+
+      '</div>').join('')+
+    (up.length ? '<div class="note err" style="margin-top:10px;font-size:11.5px">'+
+      up.length+' ספקים העלו מחירים מעל 20%. שווה בדיקה מול הצעת מחיר מתחרה.</div>' : '')+
+    '<button class="btn outline sm" id="btnTrendXlsx" style="width:100%;margin-top:10px">הורד דוח מגמות (xlsx)</button>'+
+  '</div>';
+}
+
+function trendXlsx(){
+  const rows = supplierTrend().map(r=>({
+    'ספק': r.supplier,
+    'ממוצע קודם ₪': Math.round(r.pAvg),
+    'ממוצע נוכחי ₪': Math.round(r.rAvg),
+    'שינוי %': Math.round(r.pct*100),
+    'מסמכים בתקופה הקודמת': r.nPrior,
+    'מסמכים ב-6 חודשים אחרונים': r.nRecent
+  }));
+  if(!rows.length){ toast('אין מספיק היסטוריה לניתוח מגמה'); return; }
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols']=[{wch:28},{wch:15},{wch:15},{wch:10},{wch:22},{wch:26}];
+  const wb = XLSX.utils.book_new();
+  wb.Workbook = {Views:[{RTL:true}]};
+  XLSX.utils.book_append_sheet(wb, ws, 'מגמות ספקים');
+  const out = XLSX.write(wb,{bookType:'xlsx',type:'array'});
+  download(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}), 'מגמות_ספקים.xlsx');
+  bigCheck('דוח המגמות הורד');
+}
+
 function dupHtml(){
   const sus = dupSuspects();
   if(!sus.length) return '';
   return '<div class="note err" style="margin-bottom:10px">' +
     '<b>⚠ חשד לכפילות (' + sus.length + ')</b><br>' +
-    '<span style="font-size:11px">אותו ספק, אותו סכום, בהפרש של עד שבוע. ייתכן שזו חשבונית שנשלחה פעמיים — בדוק לפני תשלום.</span><br>' +
+    '<span style="font-size:11px">ייתכן שאותו מסמך נקלט פעמיים, או שחשבונית נשלחה כפול — בדוק לפני תשלום.</span><br>' +
     sus.slice(0,6).map(p=>
       '• ' + esc(p.a.supplier) + ' · ' + esc(moneyCur(p.a.total, p.a.currency)) +
       ' · ' + esc(p.a.date) + ' מול ' + esc(p.b.date)
     ).join('<br>') +
     (sus.length>6 ? '<br>ועוד ' + (sus.length-6) + '...' : '') +
+    '<button class="btn outline sm" id="btnOpenMerge" style="width:100%;margin-top:10px">🔀 בדוק ומזג</button>' +
     '</div>';
 }
+
+/* פיצ'ר 4 — מיזוג. איזו רשומה "עשירה" יותר: סופרים שדות מלאים,
+   ונותנים משקל גדול לקובץ מצורף אמיתי (bytes/attId), כי אובדן
+   הקובץ הוא הנזק היחיד שלא ניתן לשחזר מהמסך. */
+function mergeScore(d){
+  let s = 0;
+  ['supplier','supplierId','docNum','docType','date','project','link','fileName'].forEach(k=>{ if(d[k]) s++; });
+  if(d.before != null) s++;
+  if(d.vat != null) s++;
+  if(d.total != null) s++;
+  if(d.thumb) s++;
+  if(d.bytes || d.attId) s += 5;      // קובץ מצורף - המשקל הכבד ביותר
+  if(d.edited) s += 3;                // תיקון ידני שלך שווה יותר מזיהוי אוטומטי
+  return s;
+}
+
+function renderMergeList(){
+  const sus = dupSuspects();
+  const box = $('mergeBody');
+  if(!sus.length){
+    box.innerHTML = '<div class="empty"><div class="big">✅</div><h2>אין כפילויות</h2><p>לא נמצאו זוגות חשודים.</p></div>';
+    return;
+  }
+  box.innerHTML = sus.map((p,i)=>{
+    const keep = mergeScore(p.a) >= mergeScore(p.b) ? p.a : p.b;
+    const drop = keep === p.a ? p.b : p.a;
+    return '<div class="mergepair">'+
+      '<div class="mreason">'+esc(p.reason||'זוג חשוד')+'</div>'+
+      '<div class="mrow"><b>נשמר:</b> '+esc(keep.date)+' · '+esc(keep.docType)+' '+esc(keep.docNum||'')+
+        ' · '+esc(moneyCur(keep.total,keep.currency))+(keep.bytes||keep.attId?' · 📎 עם קובץ':'')+'</div>'+
+      '<div class="mrow drop"><b>יימחק:</b> '+esc(drop.date)+' · '+esc(drop.docType)+' '+esc(drop.docNum||'')+
+        ' · '+esc(moneyCur(drop.total,drop.currency))+(drop.bytes||drop.attId?' · 📎 עם קובץ':'')+'</div>'+
+      '<button class="btn ghost sm mergebtn" data-keep="'+esc(keep.fp)+'" data-drop="'+esc(drop.fp)+'" '+
+        'style="width:100%;margin-top:8px">מזג לרשומה אחת</button>'+
+    '</div>';
+  }).join('');
+
+  box.querySelectorAll('.mergebtn').forEach(b=>{
+    b.onclick = ()=> doMerge(b.dataset.keep, b.dataset.drop);
+  });
+}
+
+async function doMerge(keepFp, dropFp){
+  const keep = docs.find(d=>d.fp===keepFp);
+  const drop = docs.find(d=>d.fp===dropFp);
+  if(!keep || !drop){ toast('אחת הרשומות כבר לא קיימת'); renderMergeList(); return; }
+
+  // משלימים לרשומה הנשמרת רק שדות שחסרים לה - לא דורסים מידע קיים
+  ['supplierId','docNum','docType','project','link','fileName','before','vat','total','thumb','bytes','attId','msgId','srcSize']
+    .forEach(k=>{ if((keep[k]==null || keep[k]==='') && drop[k]!=null && drop[k]!=='') keep[k] = drop[k]; });
+  if(drop.edited) keep.edited = true;
+
+  // מוחקים דרך הפונקציה הקיימת, כדי שהמסמך גם ייכנס ל-deletedFps
+  // ולא יחזור בסריקה הבאה. skipConfirm=true - כבר אישרנו כאן.
+  const ok = await deleteDocByFp(dropFp, true);
+  if(!ok){ toast('המיזוג נכשל'); return; }
+  await saveDocs();
+  render(); updStatusCard(); renderMergeList();
+  buzz(12);
+  toast('מוזג לרשומה אחת');
+}
+
+$('mergeClose').onclick = ()=> $('mergeSheet').classList.remove('show');
+$('mergeSheet').onclick = (e)=>{ if(e.target.id==='mergeSheet') $('mergeSheet').classList.remove('show'); };
+
+/* פיצ'ר 7 — ייצוא לרו"ח. הבחירה נשמרת כדי שלא תצטרך לבחור כל פעם. */
+$('btnAccExport').onclick = ()=>{
+  cfg.accountantFormat = $('accFormat').value;
+  cfg.accFileName = $('accFileName').value.trim();
+  saveCfgNow();
+  exportForAccountant(cfg.accountantFormat);
+};
 
 function missingHtml(gAll){
   const today = new Date();
@@ -4334,8 +4836,15 @@ function render(){
       : '');
 
   missingBox.innerHTML = dupHtml() + missingHtml(gAll);
-  if(trendOn){ trendBox.style.display='block'; trendBox.innerHTML = trendHtml() + supplierChartHtml(); }
+  /* פיצ'ר 4 — הכפתור נוצר מחדש בכל render() (dupHtml בונה HTML חדש),
+     ולכן חייבים לחווט אותו כאן ולא פעם אחת באתחול. */
+  const mb = $('btnOpenMerge');
+  if(mb) mb.onclick = ()=>{ renderMergeList(); $('mergeSheet').classList.add('show'); };
+  if(trendOn){ trendBox.style.display='block'; trendBox.innerHTML = trendHtml() + supplierChartHtml() + trendReportHtml(); }
   else { trendBox.style.display='none'; trendBox.innerHTML=''; }
+  /* פיצ'ר 6 — הכפתור נוצר מחדש עם ה-HTML, ולכן מחווט כאן ולא באתחול */
+  const tx = $('btnTrendXlsx');
+  if(tx) tx.onclick = trendXlsx;
 
   const vis = visibleDocs();
   const g = groups(vis);
