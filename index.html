@@ -65,6 +65,9 @@ Retry ל-Gmail          | let gmailRetries
 תגיות ומצב טופל         | function docTag
 תצוגת טבלה              | dtable
 המרת מטבע                | function toILS
+חידוש טוקן אוטומטי       | function renewToken
+בדיקת עדכון גרסה         | btnCheckUpdate
+שחרור אודיו במגע ראשון   | function unlockAudio
 תקציב שנתי               | cfg.budget
 נגישות טקסט/אנימציה    | function applyFontScale
 נעילה אוטומטית מחוסר פעילות | lastActivityAt
@@ -691,10 +694,12 @@ html[data-theme="dark"] .docs-inner{background:rgba(24,24,28,.5);border-color:rg
   bottom:calc(70px + env(safe-area-inset-bottom));
   width:52px;height:52px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;
-  background:linear-gradient(180deg,var(--red-glass) 0%,var(--red-glass-dim) 130%);
+  /* פריט 3 — ירוק זכוכית, כדי להבדיל את העוזר מפעולות אדומות
+     (סריקה/מחיקה) ולסמן אותו כעזרה ולא כפעולה הרסנית. */
+  background:linear-gradient(180deg,var(--green-glass) 0%,var(--green-dim) 130%);
   color:#fff;border:1px solid var(--glass-line);
   backdrop-filter:blur(14px) saturate(160%);-webkit-backdrop-filter:blur(14px) saturate(160%);
-  box-shadow:inset 0 1px 0 var(--glass-line), 0 6px 20px rgba(214,22,29,.34);
+  box-shadow:inset 0 1px 0 var(--glass-line), 0 6px 20px rgba(20,140,90,.34);
   transition:transform .12s ease;
 }
 .fab:active{transform:scale(.92)}
@@ -713,6 +718,13 @@ html[data-theme="dark"] .docs-inner{background:rgba(24,24,28,.5);border-color:rg
 .wa-share b{font-size:12.5px}
 .wa-share p{font-size:11.5px;color:var(--ink-dim);margin:5px 0 0;line-height:1.55}
 .wa-share .wa-note{font-size:10.5px;opacity:.85}
+.wa-steps{margin:8px 0 0;padding-inline-start:18px;font-size:11.5px;color:var(--ink-dim);line-height:1.85}
+.wa-steps li{margin-bottom:2px}
+/* פריט 7 — מצב הרשאת התראות בצבע */
+.permstate{padding:8px 11px;border-radius:10px;font-size:12px;font-weight:600}
+.permstate.ok{background:var(--green-tint);color:var(--green);border:1px solid var(--green)}
+.permstate.bad{background:var(--rose-tint);color:var(--rose);border:1px solid var(--rose)}
+.permstate.ask,.permstate.none{background:var(--card-2);color:var(--ink-dim);border:1px solid var(--line);font-weight:500}
 .expgrid{display:flex;flex-direction:column}
 .expitem{display:flex;align-items:center;justify-content:space-between;gap:12px;
   padding:11px 2px;border-bottom:1px dashed var(--line)}
@@ -1006,8 +1018,15 @@ nav button.on{color:var(--red)}
     <div class="dropzone" id="dropZone">גרור לכאן קבצים (PDF או תמונה)</div>
     <div class="wa-share">
       <b>📲 שיתוף ישיר מוואטסאפ</b>
-      <p>בוואטסאפ: החזק על החשבונית → <b>שתף</b> → בחר <b>איתור חשבוניות</b>. הקובץ ייקלט לכאן אוטומטית ויזוהה.</p>
-      <p class="wa-note">עובד רק כשהאפליקציה <b>מותקנת במסך הבית</b> (אנדרואיד). ב-iPhone אפל לא תומכת בזה — שם השתמש ב"בחר קובץ".</p>
+      <p>ספק שולח לך חשבונית בוואטסאפ? במקום להוריד ואז לבחור קובץ — שלח אותה ישר לכאן:</p>
+      <ol class="wa-steps">
+        <li>פתח את השיחה בוואטסאפ ולחץ על החשבונית (תמונה או PDF)</li>
+        <li>לחץ על כפתור <b>השיתוף</b> (חץ / שלוש נקודות → שתף)</li>
+        <li>ברשימת האפליקציות בחר <b>איתור חשבוניות</b></li>
+        <li>האפליקציה תיפתח, תקלוט את הקובץ ותזהה אותו אוטומטית</li>
+      </ol>
+      <p class="wa-note"><b>תנאי:</b> האפליקציה חייבת להיות <b>מותקנת במסך הבית</b> (תפריט הדפדפן → "התקן אפליקציה"), אחרת היא לא תופיע ברשימת השיתוף.
+      עובד ב<b>אנדרואיד</b> בלבד — אפל לא תומכת בתקן הזה, ובאייפון צריך "בחר קובץ".</p>
     </div>
     <div class="plog" id="manualLog" style="margin-top:8px"></div>
   </div>
@@ -1115,7 +1134,7 @@ nav button.on{color:var(--red)}
   </div>
   <div class="card">
     <h2>דוח מע"מ</h2>
-    <p class="hint">ריכוז מע"מ תשומות לפי חודש/רבעון.</p>
+    <p class="hint">ריכוז מע"מ תשומות לפי חודש/רבעון. <b>שיעור המע"מ במדינה: 18%</b> — הסכומים נלקחים מהמסמך עצמו ולא מחושבים מחדש.</p>
     <div class="chips" id="vatPeriod" style="margin-bottom:10px">
       <button class="chip on" data-p="month">חודשי</button>
       <button class="chip" data-p="quarter">רבעוני</button>
@@ -1403,14 +1422,6 @@ nav button.on{color:var(--red)}
     <button class="btn ghost sm" id="btnSaveBiz" style="width:100%">שמור</button>
   </div></details>
 
-  <details class="acc"><summary>💱 שערי המרה</summary><div class="accbody">
-    <p class="hint">מסמך במטבע זר מוצג גם בשקלים לפי השער שתגדיר כאן. לא נמשך אוטומטית — אין מקור מוסמך חינמי, ולא ארצה להמציא שער.</p>
-    <div class="row2">
-      <label class="f"><span>1 דולר = ₪</span><input class="inp num" id="cfgRateUSD" data-save="btnSaveRates" type="number" step="0.01" value="3.70"></label>
-      <label class="f"><span>1 אירו = ₪</span><input class="inp num" id="cfgRateEUR" data-save="btnSaveRates" type="number" step="0.01" value="4.00"></label>
-    </div>
-    <button class="btn ghost sm" id="btnSaveRates" style="width:100%">שמור שערים</button>
-  </div></details>
 
   <div class="section-title">💾 גיבוי וניהול</div>
 
@@ -1425,7 +1436,10 @@ nav button.on{color:var(--red)}
 
   <details class="acc"><summary>ℹ גרסה</summary><div class="accbody">
     
-    <p class="hint" style="margin:0"><span id="verTag">v4.3</span> · <span id="verDate"></span></p>
+    <p class="hint" style="margin:0 0 10px"><span id="verTag">v4.4</span> · <span id="verDate"></span></p>
+    <button class="btn outline sm" id="btnCheckUpdate" style="width:100%">🔄 בדוק עדכון גרסה</button>
+    <div class="plog" id="updLog" style="margin-top:8px"></div>
+    <p class="hint" style="margin:8px 0 0">בודק מול השרת אם הועלתה גרסה חדשה, ומתקין אותה מיד. שימושי אם העלית קובץ חדש והאפליקציה עדיין מציגה את הישן.</p>
   </div></details>
 
   <div class="section-title">🔐 חשבון ומפתחות</div>
@@ -1674,7 +1688,7 @@ let docMeta = {};        // fingerprint -> {project} (תיוג פרויקט שש
 let dupSkipped = 0;
 let junkSkipped = 0;   // קבצים שסוננו לפני AI (לוגואים, אייקונים)
 
-const VERSION = 'v4.3';
+const VERSION = 'v4.4';
 function $(id){ return document.getElementById(id); }
 /* v3.0 — toISOString מחזיר UTC. בישראל (UTC+2/+3) מסמך שהתקבל ב-01:00
    סומן ביום הקודם. localISO עובד לפי אזור הזמן של המכשיר. */
@@ -1767,8 +1781,6 @@ function applyIdle(){
   const om = $('cfgOwnMails'); if(om) om.value = cfg.ownMails||'';
   const of = $('cfgOwnFilter'); if(of) of.checked = cfg.ownEmailFilter !== false;
   const bd = $('cfgBudget'); if(bd) bd.value = cfg.budget||0;
-  const ru = $('cfgRateUSD'); if(ru) ru.value = (cfg.rates&&cfg.rates.USD)||3.7;
-  const re = $('cfgRateEUR'); if(re) re.value = (cfg.rates&&cfg.rates.EUR)||4.0;
   // פיצ'ר 7 — שחזור הבחירה השמורה, אחרת ההגדרה נשמרת אבל נראית מאופסת
   const af = $('accFormat'); if(af && cfg.accountantFormat) af.value = cfg.accountantFormat;
   const an = $('accFileName'); if(an) an.value = cfg.accFileName||'';
@@ -1935,6 +1947,20 @@ function buzz(ms){
   try{ if(navigator.vibrate) navigator.vibrate(ms||8); }catch(e){}
 }
 let audioCtx = null;
+/* v4.4 — שחרור האודיו במחווה הראשונה של המשתמש.
+   AudioContext שנוצר לראשונה בסוף סריקה (בלי מגע ישיר) נולד
+   'suspended' בכרום מובייל, ו-resume() אסינכרוני — כלומר הצלילים
+   שכבר תוזמנו לא נשמעים כלל. זו הסיבה שלא נשמע צליל סיום. */
+function unlockAudio(){
+  try{
+    audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)();
+    if(audioCtx.state==='suspended') audioCtx.resume();
+  }catch(e){}
+}
+['pointerdown','touchstart','keydown'].forEach(ev=>{
+  document.addEventListener(ev, unlockAudio, {once:true, passive:true, capture:true});
+});
+
 function chime(){
   if(cfg.sound===false) return;
   try{
@@ -2026,11 +2052,6 @@ $('btnSaveBiz').onclick = ()=>{
   const b = parseFloat($('cfgBudget').value);
   cfg.budget = isNaN(b) || b<0 ? 0 : b;
   saveCfgNow(); render(); toast('נשמר');
-};
-$('btnSaveRates').onclick = ()=>{
-  const u = parseFloat($('cfgRateUSD').value), e = parseFloat($('cfgRateEUR').value);
-  if(isNaN(u) || u<=0 || isNaN(e) || e<=0){ toast('שערים חייבים להיות מספרים חיוביים'); return; }
-  cfg.rates = {USD:u, EUR:e}; saveCfgNow(); render(); toast('השערים נשמרו');
 };
 document.querySelectorAll('#fontChips .chip').forEach(c=>{
   c.onclick = ()=>{ applyFontScale(c.dataset.fs); saveCfgNow(); };
@@ -2347,12 +2368,19 @@ function applySchedUI(){
         (s.lastRun ? ' · ריצה אחרונה: ' + new Date(s.lastRun).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : ' · עוד לא רץ')
       : 'כבוי.';
   }
+  /* פריט 7 — מצב ההרשאה צבעוני וברור במקום שורת טקסט אפורה */
   const nl = $('notifyLog');
+  const nbtn = $('btnNotifyPerm');
   if(nl){
-    nl.textContent = !notifySupported() ? 'הדפדפן הזה לא תומך בהתראות.'
-      : Notification.permission==='granted' ? '✓ ההתראות מאושרות.'
-      : Notification.permission==='denied' ? 'ההתראות חסומות — צריך לאשר בהגדרות הדפדפן.'
+    const st = !notifySupported() ? 'none'
+             : Notification.permission==='granted' ? 'ok'
+             : Notification.permission==='denied' ? 'bad' : 'ask';
+    nl.className = 'permstate ' + st;
+    nl.textContent = st==='none' ? 'הדפדפן הזה לא תומך בהתראות.'
+      : st==='ok'  ? '✓ ההתראות מאושרות ופעילות'
+      : st==='bad' ? '✕ ההתראות חסומות — צריך לאשר בהגדרות הדפדפן'
       : 'עוד לא ביקשנו הרשאה.';
+    if(nbtn) nbtn.style.display = (st==='ok' || st==='none') ? 'none' : 'flex';
   }
   const k = cfg.notifyKinds || {};
   if($('ntNew')) $('ntNew').checked = k.newDocs !== false;
@@ -2629,6 +2657,42 @@ function silentAuth(){
     setTimeout(()=>{ if(!token) showDisconnected('החיבור פג — התחבר מחדש'); }, 4000);
   }catch(e){ showDisconnected('החיבור פג — התחבר מחדש'); }
 }
+
+/* ============================================================
+   v4.4 — חידוש חיבור אוטומטי (פריט 4 בצ'קליסט).
+   עד כה: טוקן שפג -> clearToken + זריקת שגיאה, והמשתמש היה חייב
+   לרענן את הדף ידנית. עכשיו שתי שכבות:
+   1. רענון יזום כמה דקות לפני הפקיעה, בזמן שהאפליקציה פתוחה.
+   2. ניסיון חידוש חד-פעמי כשמתקבל 401 בפועל, ואז חזרה על הבקשה.
+   ============================================================ */
+let renewing = null;
+function renewToken(){
+  // מאחד קריאות מקבילות לאותו חידוש - 5 בקשות שנכשלו יחד
+  // לא יפתחו 5 חלונות הרשאה.
+  if(renewing) return renewing;
+  renewing = new Promise(resolve=>{
+    if(!cfg.client || !initToken()){ resolve(false); return; }
+    let done = false;
+    const t0 = Date.now();
+    const poll = setInterval(()=>{
+      if(token){ done = true; clearInterval(poll); renewing = null; resolve(true); }
+      else if(Date.now()-t0 > 5000){ clearInterval(poll); renewing = null; resolve(false); }
+    }, 150);
+    try{ tokenClient.requestAccessToken({prompt:''}); }
+    catch(e){ if(!done){ clearInterval(poll); renewing = null; resolve(false); } }
+  });
+  return renewing;
+}
+
+// רענון יזום: בודק כל דקה, ומחדש 5 דקות לפני הפקיעה
+setInterval(()=>{
+  if(!token) return;
+  if(document.visibilityState !== 'visible') return;
+  // זמן הפקיעה נשמר יחד עם הטוקן ב-store (K.tok.e), אין משתנה נפרד
+  const rec = store.get(K.tok, null);
+  if(!rec || !rec.e) return;
+  if(rec.e - Date.now() < 5*60000) renewToken();
+}, 60000);
 $('btnLogin').onclick = ()=>{ if(initToken()) tokenClient.requestAccessToken({prompt:'consent'}); };
 /* פריט 84 — "לא מחובר" בכותרת הופך לכפתור ממשי, לא רק טקסט אדום.
    מאציל לאותה לחיצה בדיוק כמו btnLogin - אין לוגיקת חיבור כפולה. */
@@ -2875,7 +2939,21 @@ async function api(url, opts){
   for(let attempt=1; attempt<=MAX; attempt++){
     try{
       const r = await fetch(url, opts);
-      if(r.status===401){ clearToken(); throw new Error('פג תוקף החיבור — התחבר מחדש'); }
+      if(r.status===401){
+        // v4.4 — מנסים חידוש שקט פעם אחת ואז חוזרים על הבקשה,
+        // במקום להפיל את המשתמש למסך "התחבר" ולדרוש רענון ידני.
+        if(!opts._retried401){
+          const ok = await renewToken();
+          if(ok && token){
+            opts._retried401 = true;
+            opts.headers = Object.assign({}, opts.headers, {Authorization:'Bearer '+token});
+            continue;
+          }
+        }
+        clearToken();
+        showDisconnected('החיבור פג — התחבר מחדש');
+        throw new Error('פג תוקף החיבור — התחבר מחדש');
+      }
       if(r.ok) return r.json();
       let t=''; try{ t=(await r.json()).error.message; }catch(e){ t='HTTP '+r.status; }
       if(r.status===429 || r.status>=500){
@@ -3573,11 +3651,15 @@ $('btnScan').onclick = async ()=>{
        את השנייה. לכן ההחלטה כאן מבוססת על stopFlag ולא רק bgPaused:
        כל עצירה שלא הגיעה לסוף התור נשארת פתוחה להמשכה. רק סריקה
        שהשלימה את כל התור מנקה את הסשן ומציגה סיכום. */
-    if(stopFlag){
-      await checkpoint(true);   // v3.0 - סוגר את הפער של עד 3 מסמכים שטרם נשמרו
-      const left = jobs.length - (scanSession ? scanSession.doneIdx.length : jobs.length);
+    /* v4.4 — הקובע הוא "נשאר משהו בתור", לא stopFlag.
+       visibilitychange מדליק stopFlag בכל כיבוי מסך/יציאה רגעית,
+       ובסריקה ארוכה זה קורה כמעט תמיד. התוצאה: הסריקה סיימה את כל
+       התור אבל נחשבה "נעצרה", ולכן לא נשמע צליל ולא הוצג הפופאפ. */
+    await checkpoint(true);   // סוגר את הפער של עד 3 מסמכים שטרם נשמרו
+    const leftInQueue = scanSession ? (scanSession.specs.length - scanSession.doneIdx.length) : 0;
+    if(leftInQueue > 0){
       prog(100, (bgPaused ? 'הושהה כי האפליקציה ירדה לרקע. ' : 'נעצר. ') +
-                foundNow+' מסמכים נשמרו'+(left>0?' · '+left+' נותרו בתור':'')+
+                foundNow+' מסמכים נשמרו · '+leftInQueue+' נותרו בתור'+
                 ' — אפשר להמשיך מהמסך הראשי.');
     } else {
       await clearSession();              // הושלם במלואו - אין מה להמשיך
@@ -3672,11 +3754,12 @@ async function resumeScan(){
     docs = keepDocs.concat(docs);
     docsSavedAt = Date.now();
     await saveDocs();
-    if(stopFlag){
-      await checkpoint(true);
-      const left = scanSession ? (scanSession.specs.length - scanSession.doneIdx.length) : 0;
+    // v4.4 — זהה לסריקה הרגילה: הקובע הוא האם התור הושלם.
+    await checkpoint(true);
+    const leftInQueue = scanSession ? (scanSession.specs.length - scanSession.doneIdx.length) : 0;
+    if(leftInQueue > 0){
       prog(100, (bgPaused ? 'הושהה כי האפליקציה ירדה לרקע. ' : 'נעצר. ') +
-                foundNow+' מסמכים נשמרו'+(left>0?' · '+left+' נותרו בתור':'')+
+                foundNow+' מסמכים נשמרו · '+leftInQueue+' נותרו בתור'+
                 ' — אפשר להמשיך מהמסך הראשי.');
     } else {
       await clearSession();
@@ -4362,6 +4445,10 @@ function groups(list){
   Object.values(g).forEach(a=>a.sort((x,y)=>x.date.localeCompare(y.date)));
   return g;
 }
+/* v4.4 — הגדרת שערי המרה הוסרה לפי בקשה (פריט 6). הפונקציה נשארת
+   כי היא מרכזת את חישוב הסכומים בכל האפליקציה: מסמך בשקלים מוחזר
+   כמו שהוא, ומסמך במטבע זר מוחזר null (לא נכלל בסיכומים) במקום
+   להיספר בטעות כאילו הסכום שקלי. */
 function toILS(d){
   if(d.total==null) return null;
   if(d.currency==='ILS' || !d.currency) return d.total;
@@ -4770,6 +4857,51 @@ $('mergeClose').onclick = ()=> $('mergeSheet').classList.remove('show');
 $('mergeSheet').onclick = (e)=>{ if(e.target.id==='mergeSheet') $('mergeSheet').classList.remove('show'); };
 
 /* פיצ'ר 7 — ייצוא לרו"ח. הבחירה נשמרת כדי שלא תצטרך לבחור כל פעם. */
+/* פריט 8 — בדיקת עדכון יזומה.
+   שני שלבים: (1) מושכים version.json עם cache-bust כדי לדעת מה
+   באמת יושב על השרת, (2) מבקשים מה-Service Worker לבדוק עדכון
+   ולהתקין מיד אם יש. בלי (2) הדפדפן עלול להמשיך להגיש את הישן. */
+$('btnCheckUpdate').onclick = async ()=>{
+  const log = $('updLog');
+  const btn = $('btnCheckUpdate');
+  btn.disabled = true;
+  log.textContent = 'בודק...';
+  let serverVer = null;
+  try{
+    const r = await fetch('version.json?ts='+Date.now(), {cache:'no-store'});
+    if(r.ok){ const j = await r.json(); serverVer = j.version || null; }
+  }catch(e){ /* אולי אופליין - ממשיכים לבדיקת ה-SW בכל זאת */ }
+
+  const localVer = VERSION.replace(/^v/,'');
+  const sameVer = serverVer && (serverVer.replace(/\.0$/,'') === localVer || serverVer.startsWith(localVer));
+
+  try{
+    if('serviceWorker' in navigator){
+      const reg = await navigator.serviceWorker.getRegistration();
+      if(reg){
+        await reg.update();                       // מכריח בדיקה מול השרת
+        if(reg.waiting){                          // יש גרסה שממתינה - מפעילים אותה
+          reg.waiting.postMessage({type:'SKIP_WAITING'});
+          log.innerHTML = '<span style="color:var(--green)">נמצאה גרסה חדשה — מתקין ומרענן...</span>';
+          setTimeout(()=> location.reload(), 900);
+          return;
+        }
+      }
+    }
+  }catch(e){}
+
+  if(serverVer && !sameVer){
+    // השרת מציג גרסה אחרת אבל ה-SW לא תפס אותה - רענון קשיח
+    log.innerHTML = '<span style="color:var(--green)">בשרת יש '+esc(serverVer)+' — מרענן...</span>';
+    setTimeout(()=> location.reload(true), 900);
+    return;
+  }
+  log.innerHTML = serverVer
+    ? '<span style="color:var(--green)">✓ אתה על הגרסה העדכנית ('+esc(serverVer)+')</span>'
+    : 'לא הצלחתי לבדוק מול השרת (אולי אין חיבור). ה-Service Worker נבדק בכל זאת.';
+  btn.disabled = false;
+};
+
 $('btnAccExport').onclick = ()=>{
   cfg.accountantFormat = $('accFormat').value;
   cfg.accFileName = $('accFileName').value.trim();
