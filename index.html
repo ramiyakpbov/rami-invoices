@@ -107,6 +107,7 @@ Retry ל-Gmail          | let gmailRetries
 אייקוני SVG בניווט        | nav button i svg
 שיתוף מוואטסאפ            | function consumeSharedInbox
 עוזר אישי (צ'אט AI)       | async function askAssistant
+סיור היכרות לכניסה ראשונה | function startTour
 Enter=שמור / Esc=סגור     | function wireSettingsKeys
 */
 -->
@@ -659,6 +660,14 @@ html[data-theme="dark"] .docs-inner{background:rgba(24,24,28,.5);border-color:rg
 }
 /* פיצ'ר 7 — הסבר שיתוף מוואטסאפ */
 /* פיצ'ר 9 — כפתור צף לעוזר. יושב מעל הניווט התחתון ומכבד notch. */
+/* משימה 6 — סיור היכרות */
+.tourcard{text-align:center}
+.tourdots{display:flex;justify-content:center;gap:6px;margin-bottom:14px}
+.tdot{width:6px;height:6px;border-radius:50%;background:var(--line);transition:background .2s,transform .2s}
+.tdot.on{background:var(--red);transform:scale(1.3)}
+.tourico{font-size:40px;line-height:1;margin-bottom:10px}
+.tourbody h2{font-size:17px;margin-bottom:8px}
+.tourbody p{font-size:13px;color:var(--ink-dim);line-height:1.6;margin:0}
 .fab{
   position:fixed;z-index:70;
   inset-inline-end:16px;
@@ -1101,6 +1110,7 @@ nav button.on{color:var(--red)}
   <div class="card" style="text-align:center">
     <h2>מדריך שימוש</h2>
     <p class="hint" style="margin:4px 0 0">כל מה שצריך לדעת · גרסה <span id="helpVer"></span></p>
+    <button class="btn ghost sm" id="btnReplayTour" style="width:100%;margin-top:12px">🚀 צפה בסיור ההיכרות שוב</button>
   </div>
 
   <div class="free">
@@ -1344,7 +1354,7 @@ nav button.on{color:var(--red)}
 
   <details class="acc"><summary>ℹ גרסה</summary><div class="accbody">
     
-    <p class="hint" style="margin:0"><span id="verTag">v4.1</span> · <span id="verDate"></span></p>
+    <p class="hint" style="margin:0"><span id="verTag">v4.2</span> · <span id="verDate"></span></p>
   </div></details>
 
   <div class="section-title">🔐 חשבון ומפתחות</div>
@@ -1403,6 +1413,18 @@ nav button.on{color:var(--red)}
     <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.1 9.1 0 0 1-3.3-.6L3 21l1.8-5A8.3 8.3 0 0 1 4 11.5a8.4 8.4 0 0 1 9-8.4 8.4 8.4 0 0 1 8 8.4z"/>
   </svg>
 </button>
+<!-- משימה 6 — הדרכה אינטראקטיבית לכניסה ראשונה -->
+<div class="modalbg" id="tourSheet">
+  <div class="modal tourcard">
+    <div class="tourdots" id="tourDots"></div>
+    <div class="tourbody" id="tourBody"></div>
+    <div class="row2" style="margin-top:16px">
+      <button class="btn ghost sm" id="tourSkip">דלג</button>
+      <button class="btn sm" id="tourNext">הבא</button>
+    </div>
+  </div>
+</div>
+
 <div class="modalbg" id="askSheet">
   <div class="modal">
     <h2>עוזר אישי</h2>
@@ -1536,7 +1558,7 @@ const LINK_HOSTS = ['greeninvoice.co.il','green-invoice','icount.co.il','morning
 const K = {
   cfg:'inv_cfg', seen:'inv_seen', tok:'inv_tok', email:'inv_email',
   price:'inv_price_memory', meta:'inv_doc_meta', deleted:'inv_deleted', terms:'inv_terms',
-  install:'inv_install_dismissed'
+  install:'inv_install_dismissed', tour:'inv_tour_done'
 };
 const store = {
   get(key, fallback){
@@ -1572,7 +1594,7 @@ let docMeta = {};        // fingerprint -> {project} (תיוג פרויקט שש
 let dupSkipped = 0;
 let junkSkipped = 0;   // קבצים שסוננו לפני AI (לוגואים, אייקונים)
 
-const VERSION = 'v4.1';
+const VERSION = 'v4.2';
 function $(id){ return document.getElementById(id); }
 /* v3.0 — toISOString מחזיר UTC. בישראל (UTC+2/+3) מסמך שהתקבל ב-01:00
    סומן ביום הקודם. localISO עובד לפי אזור הזמן של המכשיר. */
@@ -2102,6 +2124,45 @@ function idbGetShared(){ return idbGet('sharedInbox'); }   // עזר לאבחו�
    מבקש JSON במפורש - לא נלחמים במנגנון, עובדים איתו.
    ============================================================ */
 const ASK_MAX_DOCS = 300;
+
+/* ============================================================
+   משימה 6 — הדרכה אינטראקטיבית לכניסה ראשונה.
+   4 שלבים, כרטיס יחיד (לא spotlight על אלמנטים אמיתיים - זה שביר
+   יותר אם הפריסה משתנה בעתיד). אפשר לצפות שוב מהמדריך.
+   ============================================================ */
+const TOUR_STEPS = [
+  {icon:'⚡', title:'ברוך הבא', body:'האפליקציה סורקת את תיבת המייל שלך ומוצאת חשבוניות וקבלות אוטומטית — בלי להעתיק ולהדביק כלום.'},
+  {icon:'🗂', title:'תוצאות מסודרות', body:'כל מסמך שנמצא מסודר לפי ספק, עם חיפוש, סינון, ותגיות "שולם"/"טופל" שאתה שולט בהן.'},
+  {icon:'⬇', title:'ייצוא בלחיצה', body:'מוכן? Drive, ZIP, Excel או דוח מע"מ מוכן להגשה — הכל במסך ייצוא אחד.'},
+  {icon:'💬', title:'יש שאלה?', body:'כפתור העוזר בפינה (💬) עונה בשפה חופשית על שאלות כמו "כמה הוצאתי החודש?" — על סמך המסמכים שלך בלבד.'}
+];
+let tourIdx = 0;
+function renderTourStep(){
+  const st = TOUR_STEPS[tourIdx];
+  $('tourBody').innerHTML =
+    '<div class="tourico">'+st.icon+'</div>'+
+    '<h2>'+esc(st.title)+'</h2>'+
+    '<p>'+esc(st.body)+'</p>';
+  $('tourDots').innerHTML = TOUR_STEPS.map((_,i)=>
+    '<span class="tdot'+(i===tourIdx?' on':'')+'"></span>').join('');
+  $('tourNext').textContent = (tourIdx === TOUR_STEPS.length-1) ? 'התחל 🚀' : 'הבא';
+}
+function endTour(){
+  store.set(K.tour, true);
+  $('tourSheet').classList.remove('show');
+}
+function startTour(){
+  tourIdx = 0;
+  renderTourStep();
+  $('tourSheet').classList.add('show');
+}
+$('tourNext').onclick = ()=>{
+  if(tourIdx < TOUR_STEPS.length-1){ tourIdx++; renderTourStep(); }
+  else endTour();
+};
+$('tourSkip').onclick = endTour;
+$('tourSheet').onclick = (e)=>{ if(e.target.id==='tourSheet') endTour(); };
+$('btnReplayTour').onclick = startTour;
 
 function askContext(){
   // סיכום קומפקטי: שורה לכל מסמך. 300 מסמכים ≈ 15KB, בתוך גבולות
@@ -4849,6 +4910,10 @@ function wireKeyboardA11y(root){
    אתחול
    ============================================================ */
 (function init(){
+  // משימה 6 — נלכד כאן, לפני ש-initShareTarget מנקה את ה-URL בהמשך.
+  // אם המשתמש הגיע מ"שתף" מוואטסאפ, זו לא הזדמנות להציג סיור -
+  // הוא בא לעשות פעולה ספציפית ולא לקבל היכרות עם האפליקציה.
+  const cameFromShare = /[?&]shared=1/.test(location.search);
   loadCfg();
   // v3.0 — בעבר לוח ההגדרות היה נעול כברירת מחדל ב-HTML סטטי, בלי קשר
   // לכך שיש קוד או לא. משתמש חדש (בלי קוד) היה נתקע מול שער נעילה
@@ -4877,6 +4942,12 @@ function wireKeyboardA11y(root){
      בשקט כשהיא מסיימת. השרשור מונע בדיוק את זה. */
   loadDocs().then(()=> initShareTarget());
   renderResumeCard();   // v3.0 - סריקה שנקטעה מוצעת להמשכה
+  /* משימה 6 — רק למי שבאמת לא ראה את הסיור, ולא כשהגיעו משיתוף
+     (cameFromShare נלכד בראש init, לפני שinitShareTarget מנקה את ה-URL).
+     השהיה קצרה כדי לא להתנגש עם הרינדור הראשוני של המסך. */
+  if(!store.get(K.tour, false) && !cameFromShare){
+    setTimeout(startTour, 700);
+  }
 
   // שחזור התחברות: טוקן שמור בתוקף -> משתמשים בו מיד.
   // אחרת מנסים חידוש שקט (עובד אם המשתמש כבר אישר בעבר, בלי מסך אישור).
