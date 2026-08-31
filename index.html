@@ -158,6 +158,17 @@ Enter=שמור / Esc=סגור     | function wireSettingsKeys
   --purple:#6B3FA0; --purple-dim:#552F82; --purple-tint:rgba(107,63,160,.10);
   --blur:16px;
   --r:14px;
+  /* v4.5 — סולם ריווח אחיד. עד כה היו 2/8/10/12/14px מפוזרים בלי
+     היגיון, וזה מה שגורם לתחושת "צפוף ולא מסודר". */
+  --s1:4px; --s2:8px; --s3:12px; --s4:18px; --s5:26px;
+  /* סולם טיפוגרפי עם מרווחים אמיתיים בין הרמות. קודם הכל היה
+     בטווח 11.5-14.5px, כלומר בלי היררכיה נראית לעין. */
+  --t-hero:30px;    /* מספר ראשי בדשבורד */
+  --t-h1:19px;      /* כותרת מסך */
+  --t-h2:16px;      /* כותרת כרטיס */
+  --t-body:14px;    /* טקסט רגיל */
+  --t-meta:12px;    /* משני */
+  --t-micro:10.5px; /* תוויות */
 }
 /* ---------- ערכת נושא כהה (שחור-אדום, זכוכית) ---------- */
 html[data-theme="dark"]{
@@ -233,24 +244,25 @@ html,body{margin:0;padding:0}
 body{
   background:var(--bg);
   background-image:
-    radial-gradient(900px 500px at 110% -5%, rgba(237,28,36,.13), transparent 60%),
-    radial-gradient(700px 450px at -10% 8%, rgba(237,28,36,.07), transparent 60%),
-    radial-gradient(600px 400px at 50% 105%, rgba(120,110,95,.10), transparent 65%);
+    /* v4.5 — ההילות היו ב-.13/.07 וצבעו את כל המסך בוורוד חיוור. */
+    radial-gradient(900px 500px at 110% -5%, rgba(237,28,36,.04), transparent 62%),
+    radial-gradient(700px 450px at -10% 8%, rgba(120,110,95,.05), transparent 62%);
   background-attachment:fixed;
   color:var(--ink);
   font-family:'Heebo',system-ui,sans-serif;
-  font-size:14px;line-height:1.45;
-  padding-bottom:76px;
+  font-size:var(--t-body);line-height:1.55;
+  padding-bottom:132px;   /* מקום לניווט התחתון + לכפתור העוזר הצף */
   min-height:100vh;
 }
 html[data-theme="dark"] body{
   background-image:
-    radial-gradient(900px 500px at 110% -5%, rgba(237,28,36,.20), transparent 60%),
-    radial-gradient(700px 450px at -10% 8%, rgba(237,28,36,.10), transparent 60%),
-    radial-gradient(600px 400px at 50% 105%, rgba(90,90,120,.14), transparent 65%);
+    radial-gradient(900px 500px at 110% -5%, rgba(237,28,36,.10), transparent 62%),
+    radial-gradient(700px 450px at -10% 8%, rgba(90,90,120,.09), transparent 62%);
 }
-h1,h2,h3{font-family:'Frank Ruhl Libre',Georgia,serif;margin:0;font-weight:700;letter-spacing:-.01em}
-.num{font-family:'Rubik',sans-serif;font-variant-numeric:tabular-nums}
+h1,h2,h3{font-family:'Frank Ruhl Libre',Georgia,serif;margin:0;font-weight:700;letter-spacing:-.015em;line-height:1.25}
+/* טיפול במספרים: הסכום הוא התוכן, לא התווית. סימן המטבע קטן
+   ועמום יותר כדי שהעין תקרא קודם את המספר עצמו. */
+.num{font-family:'Rubik',sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 button{font-family:inherit;font-size:inherit;cursor:pointer;border:0;background:none;color:inherit}
 input,select,textarea{font-family:inherit;font-size:16px}
 
@@ -394,25 +406,37 @@ main{padding:12px;max-width:680px;margin:0 auto}
   -webkit-backdrop-filter:blur(18px) saturate(1.6);
   border:1px solid rgba(255,255,255,.75);
   box-shadow:0 1px 2px rgba(30,25,15,.04), 0 8px 28px rgba(30,25,15,.06);
-  border-radius:16px;padding:13px;margin-bottom:10px;
+  border-radius:16px;padding:var(--s4);margin-bottom:var(--s3);
 }
+/* כרטיס ראשי (דשבורד/פעולה) — נוכחות חזקה יותר. לא כל הכרטיסים
+   שווים בחשיבותם, ולכן הם לא צריכים להיראות זהים. */
+.card.hero{
+  padding:var(--s5) var(--s4);
+  border-radius:20px;
+  box-shadow:0 2px 4px rgba(30,25,15,.05), 0 14px 40px rgba(30,25,15,.09);
+}
+/* כרטיס משני — שקט יותר, לתוכן עזר */
+.card.quiet{padding:var(--s3);box-shadow:0 1px 2px rgba(30,25,15,.04)}
 html[data-theme="dark"] .card{
   background:rgba(32,32,37,.55);
   border-color:rgba(255,255,255,.09);
   box-shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 28px rgba(0,0,0,.35);
 }
-.card h2{font-size:14.5px;margin-bottom:2px;color:var(--ink)}
+.card h2{font-size:var(--t-h2);margin-bottom:var(--s1);color:var(--ink)}
+.card > .hint:first-of-type{margin-top:0}
 .card .hint{font-size:11.5px;color:var(--ink-dim);margin:0 0 10px;line-height:1.4}
 
-label.f{display:block;margin-bottom:9px}
-label.f span{display:block;font-size:11px;color:var(--ink-dim);margin-bottom:4px;letter-spacing:.01em}
+label.f{display:block;margin-bottom:var(--s3)}
+label.f span{display:block;font-size:var(--t-meta);color:var(--ink-dim);margin-bottom:var(--s1);letter-spacing:0}
+/* v4.5 — שדות: יותר גובה מגע, ומיקוד ברור. שדה בגובה 9px פדינג
+   הוא קטן מדי לאצבע על מסך טלפון. */
 .inp{
-  width:100%;padding:9px 11px;border-radius:9px;
+  width:100%;padding:12px 13px;border-radius:11px;
   background:var(--glass-2);border:1px solid var(--line);color:var(--ink);
   backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
-  outline:none;transition:border-color .15s,box-shadow .15s;
+  outline:none;transition:border-color .15s,box-shadow .15s,background .15s;
 }
-.inp:focus{border-color:var(--red)}
+.inp:focus{border-color:var(--red);box-shadow:0 0 0 3px var(--red-tint)}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 
 .btn{
@@ -421,7 +445,9 @@ label.f span{display:block;font-size:11px;color:var(--ink-dim);margin-bottom:4px
   background:linear-gradient(180deg,var(--red-glass) 0%,var(--red-glass-dim) 130%);
   color:#fff;border:1px solid var(--glass-line);
   backdrop-filter:blur(14px) saturate(160%);-webkit-backdrop-filter:blur(14px) saturate(160%);
-  box-shadow:inset 0 1px 0 var(--glass-line), inset 0 -1px 0 rgba(0,0,0,.10), 0 4px 14px rgba(214,22,29,.28);
+  /* v4.5 — הצל היה ב-.28 ונתן לכפתור מראה זוהר/ניאון. צל רך
+     ונמוך יותר קורא כאיכותי במקום כרועש. */
+  box-shadow:inset 0 1px 0 var(--glass-line), inset 0 -1px 0 rgba(0,0,0,.08), 0 3px 10px rgba(150,20,26,.16);
   transition:opacity .15s,transform .1s,box-shadow .15s;
   position:relative;overflow:hidden;
 }
@@ -477,7 +503,7 @@ label.f span{display:block;font-size:11px;color:var(--ink-dim);margin-bottom:4px
 .modal .msub{font-size:12px;color:var(--ink-dim);margin-bottom:13px}
 .mstats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:12px}
 .mstats div{background:var(--glass-2);border:1px solid var(--line);border-radius:12px;padding:10px 5px;text-align:center}
-.mstats b{display:block;font-family:'Rubik';font-variant-numeric:tabular-nums;font-size:18px;color:var(--red)}
+.mstats b{display:block;font-family:'Rubik';font-variant-numeric:tabular-nums;font-size:18px;color:var(--ink)}
 .mstats small{font-size:9.5px;color:var(--ink-dim)}
 .mline{font-size:12px;color:var(--ink-dim);padding:5px 0;border-top:1px dashed var(--line)}
 .mline b{color:var(--ink)}
@@ -542,13 +568,15 @@ html[data-theme="dark"] .bar::after{
 /* ---------- תיקיות ספקים (אלמנט החתימה) ---------- */
 .folder{margin-bottom:8px}
 .tab{
-  display:flex;align-items:center;gap:9px;width:100%;
+  display:flex;align-items:center;gap:var(--s3);width:100%;
   background:rgba(255,255,255,.62);
   backdrop-filter:blur(18px) saturate(1.6);
   -webkit-backdrop-filter:blur(18px) saturate(1.6);
   border:1px solid rgba(255,255,255,.75);
-  border-inline-start:3px solid var(--red);
-  border-radius:14px;padding:11px 12px;text-align:start;
+  /* v4.5 — הפס היה אדום בכל כרטיס ספק, כלומר 15 פסים אדומים על
+     מסך אחד. אדום צריך לסמן חריגה, לא להיות קישוט חוזר. */
+  border-inline-start:3px solid var(--line);
+  border-radius:14px;padding:var(--s3);text-align:start;
   box-shadow:0 1px 2px rgba(30,25,15,.04);
 }
 html[data-theme="dark"] .tab{
@@ -561,7 +589,9 @@ html[data-theme="dark"] .tab{
 .tab .nm{flex:1;min-width:0}
 .tab .nm b{display:block;font-size:13.5px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tab .nm small{color:var(--ink-dim);font-size:11px}
-.tab .tot{font-family:'Rubik';font-variant-numeric:tabular-nums;font-weight:700;color:var(--red);font-size:13.5px;white-space:nowrap}
+/* v4.5 — סכום ספק בצבע דיו ולא באדום. כשכל מספר אדום, האדום
+   מפסיק לסמן משהו; הוא נשמר עכשיו לאזהרות ולסכום חריג בלבד. */
+.tab .tot{font-family:'Rubik';font-variant-numeric:tabular-nums;font-weight:600;color:var(--ink);font-size:14px;white-space:nowrap}
 .tab .car{color:var(--ink-dim);transition:transform .2s;font-size:11px}
 .tab.open .car{transform:rotate(90deg)}
 
@@ -616,11 +646,12 @@ html[data-theme="dark"] .docs-inner{background:rgba(24,24,28,.5);border-color:rg
    כמשהו שכדאי להשלים ידנית ולא יתבלבל עם ספק אמיתי בשם דומה. */
 .nm.unknown b{color:var(--ink-dim);font-style:italic}
 .doc .thumb{width:34px;height:34px;border-radius:8px;object-fit:cover;flex:none;border:1px solid var(--line)}
-.doc{display:flex;align-items:center;flex-wrap:wrap;gap:6px 7px;min-height:56px;padding:10px 12px;border-bottom:1px dashed var(--line)}
+.doc{display:flex;align-items:center;flex-wrap:wrap;gap:var(--s2) 7px;min-height:60px;
+  padding:var(--s3) var(--s3);border-bottom:1px solid var(--line)}
 .doc:last-child{border-bottom:0}
 .doc .dt{font-family:'Rubik';font-size:11px;color:var(--ink-dim);
   overflow-wrap:anywhere;min-width:0;max-width:36%}
-.doc .ttl{color:var(--ink);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+.doc .ttl{color:var(--ink);font-size:var(--t-meta);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   min-width:0;max-width:38%}
 /* פריט 52 — מדבקות סוג מסמך צבעוניות */
 .dtypebadge{padding:2px 9px;border-radius:999px;font-weight:600 !important;font-size:11px !important}
@@ -632,8 +663,8 @@ html[data-theme="dark"] .docs-inner{background:rgba(24,24,28,.5);border-color:rg
 .doc .lead{flex:1;border-bottom:1px dotted var(--line);transform:translateY(-3px);min-width:12px}
 /* פריט 44 — סכום שחוצה את סף הבדיקה שהמשתמש הגדיר מודגש באדום+צל,
    לא רק מסומן ב"לבדיקה" בצד. אותו אות needsReview הקיים, לא סף חדש. */
-.doc .amt{font-family:'Rubik';font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:700;color:var(--ink);
-  white-space:nowrap;flex:none}
+.doc .amt{font-family:'Rubik';font-variant-numeric:tabular-nums;font-size:14px;font-weight:600;color:var(--ink);
+  white-space:nowrap;flex:none;letter-spacing:-.01em}
 .doc .amt.hi{color:var(--red);text-shadow:0 1px 3px var(--red-tint);font-size:13.5px}
 .dtable .amt.hi{color:var(--red);font-weight:800}
 .doc .src{font-size:9.5px;padding:2px 5px;border-radius:4px;white-space:nowrap;font-weight:600}
@@ -642,19 +673,28 @@ html[data-theme="dark"] .docs-inner{background:rgba(24,24,28,.5);border-color:rg
 .src.body{background:#EFECE3;color:var(--ink-dim)}
 .doc a{color:var(--red);text-decoration:none;font-size:11px;font-weight:600}
 
-.empty{text-align:center;padding:36px 18px;color:var(--ink-dim)}
-.empty .big{font-size:34px;opacity:.3;margin-bottom:8px}
-.empty h2{font-size:15px}
-.empty p{font-size:12.5px;margin:5px 0 0}
+.empty{text-align:center;padding:var(--s5) var(--s4);color:var(--ink-dim)}
+.empty .big{font-size:38px;opacity:.28;margin-bottom:var(--s3)}
+.empty h2{font-size:var(--t-h2);color:var(--ink)}
+.empty p{font-size:var(--t-meta);margin:var(--s2) 0 var(--s4);line-height:1.6}
 
 /* משימה 1 — כרטיס דשבורד ראשי במסך הבית. אותו מבנה בדיוק כמו .sum
    במסך התוצאות (3 תיבות צבעוניות), רק גדול יותר כי הוא הדבר הראשון
    שרואים. c-blue/c-green/c-red כבר מוגדרים למעלה - לא כפילות. */
-.dashcard{padding:16px}
-.dashstats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.dashstats div{border-radius:14px;padding:14px 6px;text-align:center}
-.dashstats b{display:block;font-family:'Rubik';font-variant-numeric:tabular-nums;font-size:22px;line-height:1.2}
-.dashstats small{font-size:10.5px;color:var(--ink-dim)}
+/* v4.5 — הדשבורד הוא האלמנט שנושא את העיצוב: הסכום הוא הגיבור,
+   ושני המספרים המשניים יושבים מתחתיו בשקט. קודם שלושתם היו באותו
+   גודל ובאותה בליטות, ולכן שום דבר לא הוביל. */
+.dashcard{text-align:center}
+.dashhero{display:flex;align-items:baseline;justify-content:center;gap:6px;direction:ltr}
+.dashhero .num{font-size:var(--t-hero);font-weight:600;line-height:1;color:var(--ink)}
+.dashcur{font-size:17px;color:var(--ink-dim);font-family:'Rubik',sans-serif}
+.dashlabel{font-size:var(--t-meta);color:var(--ink-dim);margin-top:var(--s2)}
+.dashsplit{
+  display:flex;justify-content:center;gap:var(--s5);
+  margin-top:var(--s4);padding-top:var(--s3);border-top:1px solid var(--line);
+}
+.dashsplit b{display:block;font-size:17px;font-weight:600;line-height:1.2;color:var(--ink)}
+.dashsplit span{font-size:var(--t-micro);color:var(--ink-dim)}
 /* כותרת קבוצה — בשימוש חוזר בייצוא/הגדרות/תוצאות, לא רק כאן */
 /* משימה 2 — שורת פריט קומפקטית לקבוצת "קבצים להורדה", במקום כרטיס
    נפרד לכל פורמט. מקצר משמעותית את מסך הייצוא. */
@@ -733,34 +773,40 @@ html[data-theme="dark"] .docs-inner{background:rgba(24,24,28,.5);border-color:rg
 .expitem-txt small{font-size:11px;color:var(--ink-dim);display:block;margin-top:1px}
 .expitem .btn{width:auto;min-width:70px;flex:none}
 .section-title{
-  font-size:12px;font-weight:700;color:var(--ink-dim);
-  margin:16px 4px 6px;padding-inline-start:2px;
-  text-transform:none;letter-spacing:.02em;
+  font-size:var(--t-meta);font-weight:600;color:var(--ink-dim);
+  margin:var(--s5) var(--s1) var(--s2);padding-inline-start:2px;
+  letter-spacing:0;
 }
 .sum{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:10px}
 /* פריט 48 — 3 צבעים עדינים למשבצות סיכום. כלל גנרי (לא רק .sum/.mstats)
    כדי שכל תיבת-סטטיסטיקה חדשה (למשל .dashstats במסך הבית) תוכל
    להשתמש באותן 3 מחלקות בלי להוסיף כלל CSS נפרד בכל פעם. */
-.c-blue b{color:var(--blue) !important}
-.c-green b{color:var(--green) !important}
-.c-red b{color:var(--red) !important}
-.c-blue{background:var(--blue-tint) !important}
-.c-green{background:var(--green-tint) !important}
-.c-red{background:var(--red-tint) !important}
+/* v4.5 — רקע ניטרלי, צבע במספר בלבד. שלושה בלוקים צבעוניים
+   התחרו זה בזה ובאדום של המותג. */
+/* v4.5 — כל שלושת המספרים בדיו. הצבע לא הוסיף מידע (התווית מתחת
+   כבר אומרת מה זה), רק רעש שהתחרה באדום של המותג. */
+.c-blue b, .c-green b, .c-red b{color:var(--ink) !important}
 .sum div{
   background:rgba(255,255,255,.62);
   backdrop-filter:blur(18px) saturate(1.6);
   -webkit-backdrop-filter:blur(18px) saturate(1.6);
   border:1px solid rgba(255,255,255,.75);
-  border-radius:14px;padding:9px 6px;text-align:center;
+  border-radius:14px;padding:var(--s3) var(--s2);text-align:center;
 }
 html[data-theme="dark"] .sum div{background:rgba(32,32,37,.55);border-color:rgba(255,255,255,.09)}
-.sum b{display:block;font-family:'Rubik';font-variant-numeric:tabular-nums;font-size:16px;color:var(--red)}
-.sum small{font-size:10px;color:var(--ink-dim)}
+.sum b{display:block;font-family:'Rubik';font-variant-numeric:tabular-nums;font-size:18px;
+  font-weight:600;color:var(--ink);letter-spacing:-.01em;line-height:1.2}
+.sum small{font-size:var(--t-micro);color:var(--ink-dim)}
 
 .note{
   border-inline-start:3px solid var(--red);background:var(--red-tint);
-  padding:9px 11px;border-radius:0 9px 9px 0;font-size:11.5px;color:var(--red-dim);margin-bottom:10px;line-height:1.4;
+  padding:var(--s3);border-radius:0 10px 10px 0;font-size:var(--t-meta);color:var(--red-dim);
+  margin-bottom:var(--s3);line-height:1.55;
+}
+/* v4.5 — מידע קבוע (לא אזהרה) בגוון ניטרלי. באדום מלא הוא צעק
+   בכל כניסה למסך התוצאות, וכך אדום מאבד את המשמעות שלו. */
+.note.info{
+  border-inline-start-color:var(--line);background:var(--card-2);color:var(--ink-dim);
 }
 .note.err{border-color:var(--rose);background:var(--rose-tint);color:var(--rose)}
 
@@ -954,11 +1000,14 @@ nav button.on{color:var(--red)}
   </div>
 
   <!-- משימה 1 — כרטיס דשבורד עליון: סטטוס כללי במבט אחד -->
-  <div class="card dashcard">
-    <div class="dashstats">
-      <div class="c-blue"><b id="dashDocs">0</b><small>מסמכים</small></div>
-      <div class="c-green"><b id="dashSup">0</b><small>ספקים</small></div>
-      <div class="c-red"><b id="dashTot">0</b><small>סה"כ ₪</small></div>
+  <div class="card hero dashcard">
+    <div class="dashhero">
+      <span class="dashcur">₪</span><b id="dashTot" class="num">0</b>
+    </div>
+    <div class="dashlabel">סך החשבוניות שנקלטו</div>
+    <div class="dashsplit">
+      <div><b id="dashDocs" class="num">0</b><span>מסמכים</span></div>
+      <div><b id="dashSup" class="num">0</b><span>ספקים</span></div>
     </div>
   </div>
 
@@ -1436,7 +1485,7 @@ nav button.on{color:var(--red)}
 
   <details class="acc"><summary>ℹ גרסה</summary><div class="accbody">
     
-    <p class="hint" style="margin:0 0 10px"><span id="verTag">v4.4</span> · <span id="verDate"></span></p>
+    <p class="hint" style="margin:0 0 10px"><span id="verTag">v4.5</span> · <span id="verDate"></span></p>
     <button class="btn outline sm" id="btnCheckUpdate" style="width:100%">🔄 בדוק עדכון גרסה</button>
     <div class="plog" id="updLog" style="margin-top:8px"></div>
     <p class="hint" style="margin:8px 0 0">בודק מול השרת אם הועלתה גרסה חדשה, ומתקין אותה מיד. שימושי אם העלית קובץ חדש והאפליקציה עדיין מציגה את הישן.</p>
@@ -1688,7 +1737,7 @@ let docMeta = {};        // fingerprint -> {project} (תיוג פרויקט שש
 let dupSkipped = 0;
 let junkSkipped = 0;   // קבצים שסוננו לפני AI (לוגואים, אייקונים)
 
-const VERSION = 'v4.4';
+const VERSION = 'v4.5';
 function $(id){ return document.getElementById(id); }
 /* v3.0 — toISOString מחזיר UTC. בישראל (UTC+2/+3) מסמך שהתקבל ב-01:00
    סומן ביום הקודם. localISO עובד לפי אזור הזמן של המכשיר. */
@@ -4964,7 +5013,7 @@ function render(){
             : '')
       : '')+
     (docs.some(d=>d.kind==='link')
-      ? '<div class="note">מסמכים המסומנים <b>קישור</b> יושבים במערכת חיצונית (חשבונית ירוקה / iCount וכו\'). הדפדפן חסום מלהוריד אותם אוטומטית — הם מופיעים בטבלה עם קישור להורדה ידנית.</div>'
+      ? '<div class="note info">מסמכים המסומנים <b>קישור</b> יושבים במערכת חיצונית (חשבונית ירוקה / iCount). הדפדפן חסום מלהוריד אותם — הם מופיעים עם קישור להורדה ידנית.</div>'
       : '');
 
   missingBox.innerHTML = dupHtml() + missingHtml(gAll);
