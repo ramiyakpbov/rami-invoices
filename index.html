@@ -105,6 +105,8 @@ Retry ל-Gmail          | let gmailRetries
 קבוצת ייצוא קומפקטית      | expitem
 גיליון סינון + מונה       | function activeFilterCount
 אייקוני SVG בניווט        | nav button i svg
+שיתוף מוואטסאפ            | function consumeSharedInbox
+עוזר אישי (צ'אט AI)       | async function askAssistant
 Enter=שמור / Esc=סגור     | function wireSettingsKeys
 */
 -->
@@ -655,6 +657,36 @@ html[data-theme="dark"] .docs-inner{background:rgba(24,24,28,.5);border-color:rg
   border-radius:999px;background:var(--red);color:#fff;
   font-size:10px;font-weight:700;font-family:'Rubik';line-height:1;
 }
+/* פיצ'ר 7 — הסבר שיתוף מוואטסאפ */
+/* פיצ'ר 9 — כפתור צף לעוזר. יושב מעל הניווט התחתון ומכבד notch. */
+.fab{
+  position:fixed;z-index:70;
+  inset-inline-end:16px;
+  bottom:calc(70px + env(safe-area-inset-bottom));
+  width:52px;height:52px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(180deg,var(--red-glass) 0%,var(--red-glass-dim) 130%);
+  color:#fff;border:1px solid var(--glass-line);
+  backdrop-filter:blur(14px) saturate(160%);-webkit-backdrop-filter:blur(14px) saturate(160%);
+  box-shadow:inset 0 1px 0 var(--glass-line), 0 6px 20px rgba(214,22,29,.34);
+  transition:transform .12s ease;
+}
+.fab:active{transform:scale(.92)}
+.fab svg{width:24px;height:24px}
+.askex{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.askex .chip{font-size:11.5px;min-height:32px;padding:6px 11px}
+.askout{margin-top:12px;min-height:20px;font-size:13px;line-height:1.6}
+.askans{
+  background:var(--card-2);border:1px solid var(--line);
+  border-radius:12px;padding:12px 13px;color:var(--ink);
+}
+.wa-share{
+  margin-top:10px;padding:11px 13px;border-radius:12px;
+  background:var(--green-tint);border:1px solid var(--line);
+}
+.wa-share b{font-size:12.5px}
+.wa-share p{font-size:11.5px;color:var(--ink-dim);margin:5px 0 0;line-height:1.55}
+.wa-share .wa-note{font-size:10.5px;opacity:.85}
 .expgrid{display:flex;flex-direction:column}
 .expitem{display:flex;align-items:center;justify-content:space-between;gap:12px;
   padding:11px 2px;border-bottom:1px dashed var(--line)}
@@ -946,6 +978,11 @@ nav button.on{color:var(--red)}
     <input type="file" id="camFile" accept="image/*" capture="environment" style="display:none">
     <input type="file" id="pickFile" accept="image/*,application/pdf" multiple style="display:none">
     <div class="dropzone" id="dropZone">גרור לכאן קבצים (PDF או תמונה)</div>
+    <div class="wa-share">
+      <b>📲 שיתוף ישיר מוואטסאפ</b>
+      <p>בוואטסאפ: החזק על החשבונית → <b>שתף</b> → בחר <b>איתור חשבוניות</b>. הקובץ ייקלט לכאן אוטומטית ויזוהה.</p>
+      <p class="wa-note">עובד רק כשהאפליקציה <b>מותקנת במסך הבית</b> (אנדרואיד). ב-iPhone אפל לא תומכת בזה — שם השתמש ב"בחר קובץ".</p>
+    </div>
     <div class="plog" id="manualLog" style="margin-top:8px"></div>
   </div>
   <div class="card" id="progCard" style="display:none">
@@ -1307,7 +1344,7 @@ nav button.on{color:var(--red)}
 
   <details class="acc"><summary>ℹ גרסה</summary><div class="accbody">
     
-    <p class="hint" style="margin:0"><span id="verTag">v4.0</span> · <span id="verDate"></span></p>
+    <p class="hint" style="margin:0"><span id="verTag">v4.1</span> · <span id="verDate"></span></p>
   </div></details>
 
   <div class="section-title">🔐 חשבון ומפתחות</div>
@@ -1360,6 +1397,30 @@ nav button.on{color:var(--red)}
 </section>
 
 </main>
+<!-- פיצ'ר 9 — עוזר אישי -->
+<button id="fabAsk" class="fab" aria-label="שאל את העוזר על החשבוניות">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.1 9.1 0 0 1-3.3-.6L3 21l1.8-5A8.3 8.3 0 0 1 4 11.5a8.4 8.4 0 0 1 9-8.4 8.4 8.4 0 0 1 8 8.4z"/>
+  </svg>
+</button>
+<div class="modalbg" id="askSheet">
+  <div class="modal">
+    <h2>עוזר אישי</h2>
+    <div class="msub">שאל בשפה חופשית על המסמכים שכבר נסרקו.</div>
+    <div class="askex" id="askExamples">
+      <button class="chip" data-q="כמה הוצאתי החודש?">כמה הוצאתי החודש?</button>
+      <button class="chip" data-q="מי הספק הכי יקר שלי?">מי הספק הכי יקר?</button>
+      <button class="chip" data-q="אילו חשבוניות עדיין לא שולמו?">מה לא שולם?</button>
+    </div>
+    <label class="f"><span>השאלה שלך</span>
+      <input class="inp" id="askInput" placeholder="למשל: כמה הוצאתי על חשמל במרץ?" aria-label="השאלה שלך">
+    </label>
+    <button class="btn" id="btnAsk">שאל</button>
+    <div id="askOut" class="askout" role="status" aria-live="polite"></div>
+    <button class="btn ghost sm" id="askClose" style="width:100%;margin-top:10px">סגור</button>
+  </div>
+</div>
+
 <div class="modalbg" id="filterSheet">
   <div class="modal">
     <h2>סינון ומיון</h2>
@@ -1511,7 +1572,7 @@ let docMeta = {};        // fingerprint -> {project} (תיוג פרויקט שש
 let dupSkipped = 0;
 let junkSkipped = 0;   // קבצים שסוננו לפני AI (לוגואים, אייקונים)
 
-const VERSION = 'v4.0';
+const VERSION = 'v4.1';
 function $(id){ return document.getElementById(id); }
 /* v3.0 — toISOString מחזיר UTC. בישראל (UTC+2/+3) מסמך שהתקבל ב-01:00
    סומן ביום הקודם. localISO עובד לפי אזור הזמן של המכשיר. */
@@ -1991,6 +2052,134 @@ async function acquireWakeLock(){
 function releaseWakeLock(){
   try{ if(wakeLockRef){ wakeLockRef.release(); wakeLockRef = null; } }catch(e){}
 }
+
+/* ============================================================
+   פיצ'ר 7 — קליטת קבצים ששותפו מוואטסאפ (Web Share Target).
+   ה-Service Worker קולט את ה-POST ושומר את הקבצים ב-IndexedDB
+   תחת 'sharedInbox', ואז מפנה לכאן עם ?shared=1. הצד הזה מרוקן
+   את התיבה ומזרים אותה ל-ingestFiles הקיים - אותו מסלול זיהוי
+   בדיוק כמו "בחר קובץ", בלי כפילות לוגיקה.
+   ============================================================ */
+async function consumeSharedInbox(){
+  let rec = null;
+  try{ rec = await idbGet('sharedInbox'); }catch(e){ rec = null; }
+  if(!rec || !rec.files || !rec.files.length) return false;
+  try{ await idbDel('sharedInbox'); }catch(e){}   // מרוקנים מיד כדי שלא ייקלט פעמיים
+
+  // ה-SW שומר {blob,name,type}. ingestFiles צריך אובייקטים עם
+  // size/type/name אמיתיים, ולכן בונים מחדש File.
+  const files = rec.files.map(f=>{
+    try{ return new File([f.blob], f.name || 'share.jpg', {type: f.type || 'application/octet-stream'}); }
+    catch(e){ return null; }
+  }).filter(Boolean);
+  if(!files.length) return false;
+
+  document.querySelector('nav button[data-v="scan"]').click();
+  toast(files.length===1 ? 'התקבל קובץ ששיתפת' : 'התקבלו '+files.length+' קבצים ששיתפת');
+  buzz(12);
+  await ingestFiles(files);
+  return true;
+}
+
+async function initShareTarget(){
+  const shared = /[?&]shared=1/.test(location.search);
+  // מנקים את הפרמטר מיד, כדי שרענון לא ייראה כשיתוף חוזר
+  if(shared){
+    try{ history.replaceState({}, '', location.pathname); }catch(e){}
+  }
+  // בודקים תמיד ולא רק כשיש דגל: אם ה-redirect אבד את הפרמטר
+  // (קרה בחלק מגרסאות אנדרואיד), הקבצים עדיין ממתינים ב-IDB.
+  await consumeSharedInbox();
+}
+
+function idbGetShared(){ return idbGet('sharedInbox'); }   // עזר לאבחון
+
+/* ============================================================
+   פיצ'ר 9 — עוזר אישי. שואל שאלות בשפה חופשית על המסמכים.
+   משתמש ב-gemini() הקיימת ולא בקריאה חדשה, ולכן יורש אוטומטית
+   את ה-retry, מגביל הקצב, והמעבר למודל חלופי כשנגמרת מכסה.
+   gemini() כופה responseMimeType:'application/json', לכן הפרומפט
+   מבקש JSON במפורש - לא נלחמים במנגנון, עובדים איתו.
+   ============================================================ */
+const ASK_MAX_DOCS = 300;
+
+function askContext(){
+  // סיכום קומפקטי: שורה לכל מסמך. 300 מסמכים ≈ 15KB, בתוך גבולות
+  // הפרומפט בנוחות. חותכים את הישנים כי שאלות נוטות להיות על עכשיו.
+  const list = docs.slice(-ASK_MAX_DOCS);
+  const lines = list.map(d=>{
+    const t = docTag(d.fp) || {};
+    return [
+      d.date || '?',
+      d.supplier || 'לא ידוע',
+      d.docType || 'מסמך',
+      d.docNum || '',
+      (d.total==null ? '' : Math.round(toILS(d)||d.total)),
+      d.project || '',
+      t.paid ? 'שולם' : '',
+      t.done ? 'טופל' : ''
+    ].join('|');
+  });
+  return { lines, truncated: docs.length > list.length, used: list.length };
+}
+
+async function askAssistant(question){
+  const out = $('askOut');
+  if(!question.trim()){ out.innerHTML = '<span style="color:var(--rose)">כתוב שאלה קודם.</span>'; return; }
+  if(!cfg.gemini){
+    out.innerHTML = '<span style="color:var(--rose)">חסר Gemini API Key — לך להגדרות → מפתחות.</span>';
+    return;
+  }
+  if(!docs.length){
+    out.innerHTML = '<span style="color:var(--rose)">אין עדיין מסמכים לשאול עליהם. הרץ סריקה קודם.</span>';
+    return;
+  }
+
+  const ctx = askContext();
+  out.innerHTML = '<span class="aistat">חושב…</span>';
+  $('btnAsk').disabled = true;
+
+  const prompt =
+    'אתה עוזר לקבלן שיפוצים שמנהל חשבוניות. להלן רשימת המסמכים שלו.\n' +
+    'כל שורה: תאריך|ספק|סוג|מספר|סכום בשקלים|פרויקט|שולם|טופל\n' +
+    'שדה ריק = לא ידוע/לא מסומן.\n\n' +
+    ctx.lines.join('\n') +
+    '\n\nהיום: ' + localISO(new Date()) +
+    (ctx.truncated ? '\n(שים לב: מוצגים רק ' + ctx.used + ' המסמכים האחרונים)' : '') +
+    '\n\nשאלת המשתמש: ' + question +
+    '\n\nענה בעברית, קצר ולעניין, על סמך הנתונים בלבד. ' +
+    'אל תמציא מספרים שלא נמצאים ברשימה. אם אין מספיק מידע בנתונים - אמור זאת במפורש. ' +
+    'החזר JSON בלבד בפורמט: {"answer":"התשובה שלך כאן"}';
+
+  try{
+    const r = await gemini([{text: prompt}]);
+    let ans = '';
+    if(r && typeof r === 'object' && r.answer) ans = String(r.answer);
+    else if(typeof r === 'string') ans = r;
+    if(!ans) throw new Error('תשובה ריקה');
+    out.innerHTML = '<div class="askans">'+esc(ans).replace(/\n/g,'<br>')+'</div>'+
+      (ctx.truncated ? '<div class="hint" style="margin-top:6px">מבוסס על '+ctx.used+' המסמכים האחרונים מתוך '+docs.length+'.</div>' : '');
+    buzz(10);
+  }catch(e){
+    out.innerHTML = '<span style="color:var(--rose)">לא הצלחתי לענות: '+esc(e.message||'שגיאה')+'</span>';
+  }
+  $('btnAsk').disabled = false;
+}
+
+$('fabAsk').onclick = ()=>{
+  $('askSheet').classList.add('show');
+  setTimeout(()=> $('askInput').focus(), 120);
+};
+$('askClose').onclick = ()=> $('askSheet').classList.remove('show');
+$('askSheet').onclick = (e)=>{ if(e.target.id==='askSheet') $('askSheet').classList.remove('show'); };
+$('btnAsk').onclick = ()=> askAssistant($('askInput').value);
+$('askInput').onkeydown = (e)=>{
+  if(e.key==='Enter'){ e.preventDefault(); askAssistant($('askInput').value); }
+  if(e.key==='Escape'){ $('askSheet').classList.remove('show'); }
+};
+document.querySelectorAll('#askExamples .chip').forEach(c=>{
+  c.onclick = ()=>{ $('askInput').value = c.dataset.q; askAssistant(c.dataset.q); };
+});
 
 async function saveDocs(){
   try{
@@ -4683,7 +4872,10 @@ function wireKeyboardA11y(root){
   renderChecks();
   showSkeleton();          // UX 1 - מוצג עד ש-loadDocs מסיים
   render();
-  loadDocs();   // שחזור תוצאות הסריקה האחרונה מ-IndexedDB
+  /* פיצ'ר 7 — חייב לרוץ *אחרי* loadDocs. loadDocs עושה docs = s.docs
+     (החלפה מלאה), ולכן קובץ ששותף ונקלט לפני שהיא סיימה היה נמחק
+     בשקט כשהיא מסיימת. השרשור מונע בדיוק את זה. */
+  loadDocs().then(()=> initShareTarget());
   renderResumeCard();   // v3.0 - סריקה שנקטעה מוצעת להמשכה
 
   // שחזור התחברות: טוקן שמור בתוקף -> משתמשים בו מיד.

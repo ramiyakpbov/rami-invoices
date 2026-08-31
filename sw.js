@@ -2,8 +2,36 @@
    אסטרטגיה: network-first לקליפה, כדי שגרסה חדשה תמיד תיתפס.
    קריאות ל-API של גוגל ו-Gemini לא נכנסות לקאש בכלל. */
 
-const CACHE = 'invoices-v4.0';
+const CACHE = 'invoices-v4.1';
 const SHELL = ['./', './index.html', './manifest.json', './logo.png', './version.json'];
+
+/* פיצ'ר 7 — כתיבה ל-IndexedDB מתוך ה-SW.
+   ה-SW לא יכול להשתמש בעוזרי ה-IDB שב-index.html, ולכן יש כאן
+   מימוש מינימלי משלו. שם ה-DB וה-store זהים בדיוק לאלה שבאפליקציה
+   ('invoices_db' / 'kv'), אחרת האפליקציה לא תמצא את מה שנשמר.
+   שומרים Blob-ים כמו שהם - IndexedDB תומך בזה מובנה. */
+function swIdbOpen(){
+  return new Promise((res, rej) => {
+    const r = indexedDB.open('invoices_db', 1);
+    r.onupgradeneeded = () => { if(!r.result.objectStoreNames.contains('kv')) r.result.createObjectStore('kv'); };
+    r.onsuccess = () => res(r.result);
+    r.onerror   = () => rej(r.error);
+  });
+}
+async function swStashShared(files){
+  const payload = files.map(f => ({
+    blob: f,
+    name: f.name || ('share-' + Date.now() + (/pdf/i.test(f.type) ? '.pdf' : '.jpg')),
+    type: f.type || 'application/octet-stream'
+  }));
+  const db = await swIdbOpen();
+  return new Promise((res, rej) => {
+    const t = db.transaction('kv', 'readwrite');
+    t.objectStore('kv').put({ at: Date.now(), files: payload }, 'sharedInbox');
+    t.oncomplete = () => res();
+    t.onerror = () => rej(t.error);
+  });
+}
 
 self.addEventListener('install', e => {
   // לא מפעילים אוטומטית - הבאנר באפליקציה שולט מתי לעבור לגרסה החדשה
@@ -20,6 +48,23 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = e.request.url;
+
+  /* פיצ'ר 7 — יעד שיתוף (WhatsApp / כל אפליקציה אחרת).
+     המערכת שולחת POST עם multipart/form-data ל-./share-target.
+     אנחנו קולטים כאן, שומרים את הקבצים ב-IndexedDB (אותו DB
+     שהאפליקציה משתמשת בו), ומחזירים redirect לאפליקציה עם דגל.
+     חייב לרוץ לפני שאר הלוגיקה כי זה POST ולא GET. */
+  if (e.request.method === 'POST' && url.includes('share-target')) {
+    e.respondWith((async () => {
+      try {
+        const fd = await e.request.formData();
+        const files = fd.getAll('file').filter(f => f && f.size);
+        if (files.length) await swStashShared(files);
+      } catch (err) { /* אם נכשל - עדיין מפנים, האפליקציה תציג שאין קבצים */ }
+      return Response.redirect('./index.html?shared=1', 303);
+    })());
+    return;
+  }
 
   // אף פעם לא לגעת בבקשות מזוהות / דינמיות
   if (e.request.method !== 'GET') return;
