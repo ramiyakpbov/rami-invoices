@@ -65,6 +65,7 @@ Retry ל-Gmail          | let gmailRetries
 תגיות ומצב טופל         | function docTag
 תצוגת טבלה              | dtable
 המרת מטבע                | function toILS
+גרסה באבחון מכשיר         | add('גרסה מותקנת'
 חידוש טוקן אוטומטי       | function renewToken
 בדיקת עדכון גרסה         | btnCheckUpdate
 שחרור אודיו במגע ראשון   | function unlockAudio
@@ -1485,7 +1486,7 @@ nav button.on{color:var(--red)}
 
   <details class="acc"><summary>ℹ גרסה</summary><div class="accbody">
     
-    <p class="hint" style="margin:0 0 10px"><span id="verTag">v4.5</span> · <span id="verDate"></span></p>
+    <p class="hint" style="margin:0 0 10px"><span id="verTag">v4.6</span> · <span id="verDate"></span></p>
     <button class="btn outline sm" id="btnCheckUpdate" style="width:100%">🔄 בדוק עדכון גרסה</button>
     <div class="plog" id="updLog" style="margin-top:8px"></div>
     <p class="hint" style="margin:8px 0 0">בודק מול השרת אם הועלתה גרסה חדשה, ומתקין אותה מיד. שימושי אם העלית קובץ חדש והאפליקציה עדיין מציגה את הישן.</p>
@@ -1737,7 +1738,7 @@ let docMeta = {};        // fingerprint -> {project} (תיוג פרויקט שש
 let dupSkipped = 0;
 let junkSkipped = 0;   // קבצים שסוננו לפני AI (לוגואים, אייקונים)
 
-const VERSION = 'v4.5';
+const VERSION = 'v4.6';
 function $(id){ return document.getElementById(id); }
 /* v3.0 — toISOString מחזיר UTC. בישראל (UTC+2/+3) מסמך שהתקבל ב-01:00
    סומן ביום הקודם. localISO עובד לפי אזור הזמן של המכשיר. */
@@ -3962,6 +3963,10 @@ async function runDiagnostics(){
     ).join('');
   };
   out.innerHTML = '<div class="plog">מריץ...</div>';
+
+  // 0. גרסה — כדי לדעת בוודאות שהגרסה שנבדקת היא הגרסה שחושבים שנבדקת,
+  // ולא עותק ישן שנתקע ב-Service Worker.
+  add('גרסה מותקנת', true, VERSION);
 
   // 1. אחסון מקומי - כתיבה וקריאה בפועל
   try{

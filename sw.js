@@ -2,7 +2,7 @@
    אסטרטגיה: network-first לקליפה, כדי שגרסה חדשה תמיד תיתפס.
    קריאות ל-API של גוגל ו-Gemini לא נכנסות לקאש בכלל. */
 
-const CACHE = 'invoices-v4.5';
+const CACHE = 'invoices-v4.6';
 const SHELL = ['./', './index.html', './manifest.json', './logo.png', './version.json'];
 
 /* פיצ'ר 7 — כתיבה ל-IndexedDB מתוך ה-SW.
