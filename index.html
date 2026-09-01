@@ -66,6 +66,8 @@ Retry ל-Gmail          | let gmailRetries
 תצוגת טבלה              | dtable
 המרת מטבע                | function toILS
 גרסה באבחון מכשיר         | add('גרסה מותקנת'
+ספרות מתגלגלות בדשבורד    | function animateNumber
+טביעת אצבע הוצאה לספק     | function sparklineSvg
 חידוש טוקן אוטומטי       | function renewToken
 בדיקת עדכון גרסה         | btnCheckUpdate
 שחרור אודיו במגע ראשון   | function unlockAudio
@@ -593,6 +595,8 @@ html[data-theme="dark"] .tab{
 /* v4.5 — סכום ספק בצבע דיו ולא באדום. כשכל מספר אדום, האדום
    מפסיק לסמן משהו; הוא נשמר עכשיו לאזהרות ולסכום חריג בלבד. */
 .tab .tot{font-family:'Rubik';font-variant-numeric:tabular-nums;font-weight:600;color:var(--ink);font-size:14px;white-space:nowrap}
+/* ✨ אלתור — טביעת אצבע הוצאה, זעירה ושקטה ליד הסכום */
+.tab .spark{width:42px;height:16px;flex:none;opacity:.75}
 .tab .car{color:var(--ink-dim);transition:transform .2s;font-size:11px}
 .tab.open .car{transform:rotate(90deg)}
 
@@ -1486,7 +1490,7 @@ nav button.on{color:var(--red)}
 
   <details class="acc"><summary>ℹ גרסה</summary><div class="accbody">
     
-    <p class="hint" style="margin:0 0 10px"><span id="verTag">v4.6</span> · <span id="verDate"></span></p>
+    <p class="hint" style="margin:0 0 10px"><span id="verTag">v4.7</span> · <span id="verDate"></span></p>
     <button class="btn outline sm" id="btnCheckUpdate" style="width:100%">🔄 בדוק עדכון גרסה</button>
     <div class="plog" id="updLog" style="margin-top:8px"></div>
     <p class="hint" style="margin:8px 0 0">בודק מול השרת אם הועלתה גרסה חדשה, ומתקין אותה מיד. שימושי אם העלית קובץ חדש והאפליקציה עדיין מציגה את הישן.</p>
@@ -1738,7 +1742,7 @@ let docMeta = {};        // fingerprint -> {project} (תיוג פרויקט שש
 let dupSkipped = 0;
 let junkSkipped = 0;   // קבצים שסוננו לפני AI (לוגואים, אייקונים)
 
-const VERSION = 'v4.6';
+const VERSION = 'v4.7';
 function $(id){ return document.getElementById(id); }
 /* v3.0 — toISOString מחזיר UTC. בישראל (UTC+2/+3) מסמך שהתקבל ב-01:00
    סומן ביום הקודם. localISO עובד לפי אזור הזמן של המכשיר. */
@@ -2578,6 +2582,30 @@ let docsSavedAt = null;
 /* ============================================================
    ניווט
    ============================================================ */
+/* ============================================================
+   ✨ אלתור — ספרות מתגלגלות למספר הראשי בדשבורד.
+   לא בכל עדכון נתונים (updStatusCard נקראת מ-11 מקומות — אם זה
+   היה מונפש בכל פעם, עריכת מסמך בודד הייתה מטריחה אנימציה גדולה
+   ולא הייתה מרגישה כמו הפתעה נעימה, אלא כרעש). מונפש רק כשמגיעים
+   למסך הבית - הרגע שבו באמת מסתכלים על המספר.
+   ============================================================ */
+function animateNumber(el, target, opts){
+  if(!el) return;
+  opts = opts || {};
+  const dur = cfg.reduceMotion ? 0 : (opts.dur || 900);
+  const fmt = opts.fmt || (n => Math.round(n).toLocaleString('he-IL'));
+  const from = 0;
+  if(dur <= 0){ el.textContent = fmt(target); return; }
+  const t0 = performance.now();
+  const ease = t => 1 - Math.pow(1-t, 3);   // ease-out - מהיר בהתחלה, נוחת ברכות
+  function step(now){
+    const p = Math.min(1, (now-t0)/dur);
+    el.textContent = fmt(from + (target-from)*ease(p));
+    if(p < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
 document.querySelectorAll('nav button').forEach(b=>{
   b.onclick = ()=>{
     document.querySelectorAll('nav button').forEach(x=>{
@@ -2589,6 +2617,10 @@ document.querySelectorAll('nav button').forEach(b=>{
     document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
     $('v-'+b.dataset.v).classList.add('on');
     if(b.dataset.v==='exp'){ renderVat(); renderDue(); }
+    if(b.dataset.v==='scan'){
+      const dt = $('dashTot');
+      if(dt) animateNumber(dt, docs.reduce((s,d)=>s+(toILS(d)||0),0));
+    }
     updateHeaderSub(b.dataset.v);   // פריט 46 - כותרת משנה דינמית
     window.scrollTo(0,0);
   };
@@ -5134,12 +5166,43 @@ function render(){
     return;
   }
 
+/* ============================================================
+   ✨ אלתור — טביעת אצבע של הוצאה לכל ספק. קו זעיר לצד הסכום,
+   6 חודשים אחרונים. לא עוד מסך, לא עוד לחיצה - המידע כבר שם
+   כשגוללים ברשימה. נעלם לגמרי אם אין לפחות 2 חודשים עם פעילות,
+   כי קו משטח אחד לא אומר כלום ורק מוסיף רעש. */
+function sparklineSvg(arr){
+  const now = new Date();
+  const buckets = [];
+  for(let i=5;i>=0;i--) buckets.push({y:now.getFullYear(), m:now.getMonth()-i, sum:0});
+  buckets.forEach(b=>{ while(b.m<0){ b.m+=12; b.y--; } });
+  let activeMonths = 0;
+  arr.forEach(doc=>{
+    const dt = new Date(doc.date);
+    if(isNaN(dt)) return;
+    const b = buckets.find(x=> x.y===dt.getFullYear() && x.m===dt.getMonth());
+    if(!b) return;
+    const v = toILS(doc);
+    if(v){ if(b.sum===0) activeMonths++; b.sum += v; }
+  });
+  if(activeMonths < 2) return '';
+  const vals = buckets.map(b=>b.sum);
+  const max = Math.max.apply(null, vals) || 1;
+  const W=42, H=16, N=vals.length;
+  const pts = vals.map((v,i)=> (i/(N-1)*W).toFixed(1)+','+(H-1-(v/max)*(H-3)).toFixed(1)).join(' ');
+  const rising = vals[N-1] >= (vals[0]||0);
+  return '<svg class="spark" viewBox="0 0 '+W+' '+H+'" aria-hidden="true" preserveAspectRatio="none">'+
+    '<polyline points="'+esc(pts)+'" fill="none" stroke="'+(rising?'var(--rose)':'var(--green)')+
+    '" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+}
+
   body.innerHTML = names.map((sup,i)=>{
     const arr=g[sup];
     const t=arr.reduce((s,d)=>s+(toILS(d)||0),0);
     return '<div class="folder" id="fold'+i+'">'+
       '<button class="tab" data-i="'+i+'"><span class="car">▸</span>'+
         '<span class="nm'+(sup==='לא ידוע'?' unknown':'')+'"><b>'+(sup==='לא ידוע'?'❔ ':'')+esc(sup)+'</b><small>'+arr.length+' מסמכים'+(arr[0].supplierId?' · '+esc(arr[0].supplierId):'')+'</small></span>'+
+        sparklineSvg(arr)+
         '<span class="tot">'+Math.round(t).toLocaleString('he-IL')+' ₪</span>'+
       '</button>'+
       '<div class="docs" id="dg'+i+'"><div class="docs-inner">'+ arr.map(d=>
