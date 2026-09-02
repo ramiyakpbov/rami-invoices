@@ -85,6 +85,9 @@ FAB נסוג בגלילה           | function wireFabScroll
 החזק כדי לאשר             | function wireHoldButton
 חיפוש בהגדרות             | function filterSettings
 כותרת ספק דביקה           | .tab.open
+שלד בצורת שורה אמיתית     | .skelrow
+כיוון מגמה לא רק בצבע     | מגמת הוצאה עולה
+הצעת פרויקט לפי ספק       | function suggestProject
 חידוש טוקן אוטומטי       | function renewToken
 בדיקת עדכון גרסה         | btnCheckUpdate
 שחרור אודיו במגע ראשון   | function unlockAudio
@@ -348,6 +351,18 @@ main{padding:12px;max-width:680px;margin:0 auto}
   background-size:200% 100%;animation:shimmer 1.3s linear infinite;border-radius:8px;height:14px;margin:8px 0}
 .skel.big{height:34px}
 .skel.w60{width:60%}.skel.w40{width:40%}.skel.w80{width:80%}
+/* פריט 5 — שלד בצורת שורת ספק אמיתית. המידות תואמות ל-.tab:
+   עיגול 30px (כמו .mono), גובה שורה ~60px, וסכום בצד. */
+.skelrow{
+  display:flex;align-items:center;gap:var(--s3);
+  background:var(--card);border:1px solid var(--line);
+  border-radius:14px;padding:var(--s3);margin-bottom:var(--s2);min-height:60px;
+}
+.skel.circ{width:30px;height:30px;border-radius:50%;flex:none;margin:0}
+.skelcol{flex:1;min-width:0}
+.skelcol .skel{margin:4px 0}
+.skel.sm{height:10px}
+.skel.amtw{width:64px;flex:none;margin:0}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 /* ---------- מצב ריק מעוצב (UX 6, 28, 70) ---------- */
 .empty{text-align:center;padding:34px 18px;color:var(--ink-dim)}
@@ -1586,7 +1601,7 @@ nav button.on{color:var(--red)}
 
   <details class="acc"><summary>ℹ גרסה</summary><div class="accbody">
     
-    <p class="hint" style="margin:0 0 10px"><span id="verTag">v4.9</span> · <span id="verDate"></span></p>
+    <p class="hint" style="margin:0 0 10px"><span id="verTag">v5.0</span> · <span id="verDate"></span></p>
     <button class="btn outline sm" id="btnCheckUpdate" style="width:100%">🔄 בדוק עדכון גרסה</button>
     <div class="plog" id="updLog" style="margin-top:8px"></div>
     <p class="hint" style="margin:8px 0 0">בודק מול השרת אם הועלתה גרסה חדשה, ומתקין אותה מיד. שימושי אם העלית קובץ חדש והאפליקציה עדיין מציגה את הישן.</p>
@@ -1735,6 +1750,7 @@ nav button.on{color:var(--red)}
       <label class="f"><span>סה"כ</span><input class="inp num" id="edTotal" type="number" step="0.01"></label>
       <label class="f"><span>פרויקט</span><input class="inp" id="edProject" list="projList"></label>
     </div>
+    <div class="hint" id="edProjectHint" style="display:none;margin:-6px 2px 10px"></div>
     <label class="f"><span>תנאי תשלום לספק זה (שוטף + ימים)</span>
       <select class="inp" id="edTerms">
         <option value="0">שוטף</option>
@@ -1838,7 +1854,7 @@ let docMeta = {};        // fingerprint -> {project} (תיוג פרויקט שש
 let dupSkipped = 0;
 let junkSkipped = 0;   // קבצים שסוננו לפני AI (לוגואים, אייקונים)
 
-const VERSION = 'v4.9';
+const VERSION = 'v5.0';
 function $(id){ return document.getElementById(id); }
 /* v3.0 — toISOString מחזיר UTC. בישראל (UTC+2/+3) מסמך שהתקבל ב-01:00
    סומן ביום הקודם. localISO עובד לפי אזור הזמן של המכשיר. */
@@ -4318,6 +4334,16 @@ function relTime(ts){
   if(d < 7) return 'לפני '+d+' ימים';
   return new Date(ts).toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit'});
 }
+/* פריט 8 — זמן יחסי לשורת מסמך. relTime מקבל timestamp; כאן מגיע
+   תאריך מסמך כמחרוזת. מעבר לשבוע מציג תאריך רגיל - "לפני 47 ימים"
+   לא עוזר לאף אחד, ובחשבוניות רוב הערך הוא דווקא בישן. */
+function relDocDate(dateStr){
+  const t = new Date(dateStr).getTime();
+  if(isNaN(t)) return dateStr || '';
+  const days = Math.floor((Date.now() - t) / 86400000);
+  if(days < 0 || days >= 7) return dateStr;   // עתידי או ישן - תאריך מלא
+  return relTime(t);
+}
 function relTimeShort(ts){
   if(!ts) return '';
   const m = Math.floor((Date.now() - ts) / 60000);
@@ -4670,8 +4696,33 @@ function openEdit(fp){
   $('edTotal').value    = d.total==null?'':d.total;
   $('edProject').value  = d.project||'';
   $('edTerms').value    = String(termsFor(d.supplier));
+  /* פריט 25 — הצעת פרויקט לפי היסטוריה של אותו ספק. אם תמיד תייגת
+     חשבוניות של ספק מסוים לפרויקט מסוים, זה יופיע כהצעה כשהשדה ריק.
+     הצעה בלבד - לא ממלא בשבילך, כי תיוג שגוי מתגלגל לדוחות. */
+  const ph = $('edProjectHint');
+  if(ph){
+    const guess = (!d.project) ? suggestProject(d.supplier) : null;
+    if(guess){
+      ph.innerHTML = 'לרוב אתה מתייג ספק זה כ<button type="button" class="linklike" id="edProjectApply">'+esc(guess)+'</button>';
+      ph.style.display = 'block';
+      const ap = $('edProjectApply');
+      if(ap) ap.onclick = ()=>{ $('edProject').value = guess; ph.style.display='none'; haptic('select'); };
+    } else ph.style.display = 'none';
+  }
   checkVatMath();
   $('editSheet').classList.add('show');
+}
+/* מוצא את הפרויקט הנפוץ ביותר עבור ספק. דורש לפחות 2 מסמכים מתויגים
+   כדי להציע - הצעה על סמך דוגמה בודדת היא ניחוש, לא למידה. */
+function suggestProject(supplier){
+  if(!supplier) return null;
+  const counts = {};
+  docs.forEach(d=>{
+    if(d.supplier === supplier && d.project) counts[d.project] = (counts[d.project]||0) + 1;
+  });
+  let best = null, n = 0;
+  Object.keys(counts).forEach(p=>{ if(counts[p] > n){ n = counts[p]; best = p; } });
+  return n >= 2 ? best : null;
 }
 function closeEdit(){ $('editSheet').classList.remove('show'); editingFp=null; }
 
@@ -5549,7 +5600,7 @@ function render(){
       shown.map(d=>{
         const done = docTag(d.fp).done;
         return '<tr class="'+(done?'rowdone':'')+'">'+
-          '<td>'+esc(d.date)+'</td>'+
+          '<td title="'+esc(d.date)+'">'+esc(relDocDate(d.date))+'</td>'+
           '<td>'+esc(d.supplier)+'</td>'+
           '<td><span class="dtypebadge '+docTypeCls(d.docType)+'">'+esc(d.docType+(d.docNum?' '+d.docNum:''))+'</span></td>'+
           '<td><span class="amt'+(d.needsReview?' hi':'')+(isRoundHigh(d.total)?' round':'')+'" title="'+(isRoundHigh(d.total)?'סכום עגול גדול - שווה בדיקה שנייה':'')+'">'+(d.total==null?'—':esc(moneyCur(d.total,d.currency)))+'</span></td>'+
@@ -5594,9 +5645,18 @@ function sparklineSvg(arr){
   const W=42, H=16, N=vals.length;
   const pts = vals.map((v,i)=> (i/(N-1)*W).toFixed(1)+','+(H-1-(v/max)*(H-3)).toFixed(1)).join(' ');
   const rising = vals[N-1] >= (vals[0]||0);
-  return '<svg class="spark" viewBox="0 0 '+W+' '+H+'" aria-hidden="true" preserveAspectRatio="none">'+
+  /* פריט 16 — הקו העביר כיוון *בצבע בלבד*. כ-8% מהגברים לא מבחינים
+     אדום-ירוק, ובאפליקציה שמדברת על כסף זה לא קוסמטי. מוסיפים נקודה
+     בקצה (מיקומה האנכי מראה עלייה/ירידה בלי תלות בצבע) ותווית
+     טקסטואלית לקורא מסך ולריחוף. */
+  const lastY = (H-1-(vals[N-1]/max)*(H-3)).toFixed(1);
+  const label = rising ? 'מגמת הוצאה עולה' : 'מגמת הוצאה יורדת';
+  return '<svg class="spark" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+label+'" preserveAspectRatio="none">'+
+    '<title>'+label+'</title>'+
     '<polyline points="'+esc(pts)+'" fill="none" stroke="'+(rising?'var(--rose)':'var(--green)')+
-    '" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    '" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>'+
+    '<circle cx="'+W+'" cy="'+lastY+'" r="2.2" fill="'+(rising?'var(--rose)':'var(--green)')+'"/>'+
+    '</svg>';
 }
 
   body.innerHTML = names.map((sup,i)=>{
@@ -5618,7 +5678,7 @@ function sparklineSvg(arr){
           '<div class="swipeu swipe-del">🗑 מחק</div>'+
           '<div class="doc'+(d.needsReview?' review':'')+(docTag(d.fp).done?' rowdone':'')+'">'+
           (d.thumb? '<img class="thumb" src="'+d.thumb+'" alt="" loading="lazy">' : '')+
-          '<span class="dt">'+esc(d.date)+'</span>'+
+          '<span class="dt" title="'+esc(d.date)+'">'+esc(relDocDate(d.date))+'</span>'+
           '<span class="src '+d.kind+'">'+(d.kind==='pdf'?'קובץ':d.kind==='link'?'קישור':'מייל')+'</span>'+
           '<span class="ttl dtypebadge '+docTypeCls(d.docType)+'">'+esc(d.docType+(d.docNum?' '+d.docNum:''))+'</span>'+
           (d.needsReview? '<span class="flag">לבדיקה</span>' : '')+
@@ -6035,11 +6095,20 @@ $('btnDrive').onclick = async ()=>{
 function showSkeleton(){
   const body = $('resBody');
   if(!body || docs.length) return;
-  body.innerHTML = '<div class="card">' +
-    '<div class="skel big w60"></div><div class="skel w80"></div><div class="skel w40"></div>' +
-    '</div><div class="card">' +
-    '<div class="skel big w40"></div><div class="skel w80"></div><div class="skel w60"></div>' +
+  /* פריט 5 — השלד מדמה את *הצורה האמיתית* של שורת ספק: עיגול
+     מונוגרמה, שם + מספר מסמכים, וסכום בצד. שלד גנרי שלא תואם גורם
+     לקפיצת פריסה ברגע שהנתונים מגיעים, וזו בדיוק התחושה של "משהו
+     נשבר" שהשלד אמור למנוע. */
+  const row = w =>
+    '<div class="skelrow">'+
+      '<div class="skel circ"></div>'+
+      '<div class="skelcol">'+
+        '<div class="skel" style="width:'+w+'%"></div>'+
+        '<div class="skel sm" style="width:'+Math.round(w*0.6)+'%"></div>'+
+      '</div>'+
+      '<div class="skel amtw"></div>'+
     '</div>';
+  body.innerHTML = row(55) + row(70) + row(45);
 }
 
 /* UX 40 — כפתור ניקוי בשדה החיפוש */
