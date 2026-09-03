@@ -1018,6 +1018,10 @@ html[data-theme="dark"] .modal{background:rgba(34,34,39,.9);border-color:rgba(25
   font-size:9.5px;padding:1px 6px;border-radius:5px;white-space:nowrap;
   background:var(--glass-2);border:1px solid var(--line);color:var(--ink-dim);
 }
+.catTag{
+  font-size:9.5px;padding:1px 6px;border-radius:5px;white-space:nowrap;
+  background:var(--blue-tint);border:1px solid transparent;color:var(--blue-dim);
+}
 .missingNote{
   border-inline-start:3px solid var(--rose);background:var(--rose-tint);
   padding:9px 11px;border-radius:0 9px 9px 0;font-size:11.5px;color:var(--rose);margin-bottom:10px;line-height:1.5;
@@ -1750,6 +1754,9 @@ nav button.on{color:var(--red)}
     <label class="f"><span>פרויקט</span>
       <select class="inp" id="resProject"><option value="">כל הפרויקטים</option></select>
     </label>
+    <label class="f"><span>קטגוריה</span>
+      <select class="inp" id="resCategory"><option value="">כל הקטגוריות</option></select>
+    </label>
     <div class="section-title" style="margin:14px 2px 6px">מסננים מהירים</div>
     <div class="chips">
       <button class="chip" id="btnReviewOnly">⚠ רק לבדיקה</button>
@@ -1782,6 +1789,9 @@ nav button.on{color:var(--red)}
       <label class="f"><span>פרויקט</span><input class="inp" id="edProject" list="projList"></label>
     </div>
     <div class="hint" id="edProjectHint" style="display:none;margin:-6px 2px 10px"></div>
+    <label class="f"><span>קטגוריית הוצאה</span>
+      <select class="inp" id="edCategory"></select>
+    </label>
     <label class="f"><span>תנאי תשלום לספק זה (שוטף + ימים)</span>
       <select class="inp" id="edTerms">
         <option value="0">שוטף</option>
@@ -1885,7 +1895,7 @@ let docMeta = {};        // fingerprint -> {project} (תיוג פרויקט שש
 let dupSkipped = 0;
 let junkSkipped = 0;   // קבצים שסוננו לפני AI (לוגואים, אייקונים)
 
-const VERSION = 'v5.1';
+const VERSION = 'v5.2';
 function $(id){ return document.getElementById(id); }
 /* v3.0 — toISOString מחזיר UTC. בישראל (UTC+2/+3) מסמך שהתקבל ב-01:00
    סומן ביום הקודם. localISO עובד לפי אזור הזמן של המכשיר. */
@@ -1913,6 +1923,52 @@ function moneyCur(n, cur){
 function safeName(s){ return String(s||'').replace(/[\\\/:*?"<>|\r\n\t]/g,'-').replace(/\s+/g,' ').trim().slice(0,120) || 'ללא שם'; }
 function fp(d){ return [d.supplier,d.docType,d.docNum,d.date,Math.round(d.total||0)].join('|').toLowerCase(); }
 function priceKey(supplier,docType){ return (supplier+'|'+docType).toLowerCase(); }
+
+/* ============================================================
+   v5.2 — קטגוריית הוצאה.
+   docType עונה על "איזה מסמך" (חשבונית/קבלה/הזמנה). מה שחסר היה
+   "על מה הכסף" — חומרים? קבלן משנה? דלק? זה הפילוח שהנהח"ש והקבלן
+   באמת צריכים. הקטגוריה נגזרת אוטומטית משם הספק (מסווג מילות מפתח),
+   וניתן לדרוס ידנית. הדריסה נשמרת ב-docMeta בדיוק כמו project, כך
+   שהיא שורדת בין סריקות ולא נדרסת בסריקה חוזרת. */
+const EXPENSE_CATS = [
+  'חומרי בניין','קבלני משנה','חשמל ותאורה','אינסטלציה',
+  'כלי עבודה וציוד','דלק ורכב','שכירות ומחסן','משרד ותקשורת',
+  'ביטוח ואגרות','אחר'
+];
+/* מפת מילות מפתח → קטגוריה. מותאמת לעולם השיפוצים. הבדיקה היא
+   substring על שם הספק (ואם אין התאמה — על גוף המסמך), לכן די
+   בשורש המילה. הסדר קובע עדיפות: הראשון שתופס מנצח. */
+const CAT_RULES = [
+  ['חומרי בניין',   ['מלט','בטון','טמבור','חומרי בניין','חומרים','מחסני','גבס','איטונג','בלוק','חול','טיט','דבק','ספיר','נגרי','עץ','לוחות','כרמית','אלוני','פלדה','ברזל','רשת','ניסקו','אקרשטיין','נשר']],
+  ['קבלני משנה',    ['קבלן','שיפוצים','עבודות','ביצוע','צוות','פועל','אינסטלטור','חשמלאי','טייח','רצף','צבע','גבסן','אלומיניום','מסגר','זגג']],
+  ['חשמל ותאורה',   ['חשמל','תאורה','גוויס','לדים','led','שקע','מפסק','לוח חשמל','כבל','אורלייט','גשר תאורה']],
+  ['אינסטלציה',     ['אינסטלציה','צנרת','ברז','דוד','ביוב','סניטרי','כיור','אסלה','חמת','מוצרי','נגב','חרסה']],
+  ['כלי עבודה וציוד',['כלי עבודה','אבי','טרקלין','דיוולט','bosch','בוש','מקיטה','makita','השכרת','ציוד','דיסק','מקדח','ברגים','ברגי','יבורג','אחים']],
+  ['דלק ורכב',      ['דלק','פז','סונול','דור אלון','delek','paz','sonol','ten','תדלוק','חניון','חניה','כביש','נתיבי','דרך ארץ','רכב','צמיג','מוסך']],
+  ['שכירות ומחסן',  ['שכירות','שכר דירה','מחסן','אחסון','נדל','ניהול','ועד בית','ארנונה','עיריי']],
+  ['משרד ותקשורת',  ['בזק','סלקום','פרטנר','hot','הוט','פלאפון','cellcom','partner','טלפון','אינטרנט','סלולר','משרד','מחשב','office','גוגל','google','microsoft','אופיס']],
+  ['ביטוח ואגרות',  ['ביטוח','הראל','מגדל','כלל','מנורה','פניקס','איילון','ביטוח לאומי','מס','אגרה','אגרות','רשות','עמלה','בנק','לאומי','הפועלים','דיסקונט','מזרחי']]
+];
+function guessCategory(supplier, docType, bodyText){
+  const hay = String(supplier||'').toLowerCase();
+  const body = String(bodyText||'').toLowerCase();
+  for(const [cat, kws] of CAT_RULES){
+    for(const kw of kws){ if(hay.includes(kw.toLowerCase())) return cat; }
+  }
+  // אם השם לא הכריע — ניסיון על גוף המסמך (זהיר יותר, רק ספק חזק)
+  for(const [cat, kws] of CAT_RULES){
+    for(const kw of kws){ if(kw.length>=4 && body.includes(kw.toLowerCase())) return cat; }
+  }
+  return 'אחר';
+}
+/* מקור אמת אחד לקטגוריה של מסמך: דריסה ידנית (docMeta) גוברת על
+   הערך שנשמר על המסמך, שגובר על ניחוש חדש. */
+function catFor(d){
+  if(docMeta[d.fp] && docMeta[d.fp].category) return docMeta[d.fp].category;
+  if(d.category) return d.category;
+  return guessCategory(d.supplier, d.docType, d.bodyText);
+}
 
 function loadCfg(){
   cfg = Object.assign(cfg, store.get(K.cfg, {}));
@@ -2652,13 +2708,14 @@ function askContext(){
       d.docNum || '',
       (d.total==null ? '' : Math.round(toILS(d)||d.total)),
       d.project || '',
+      catFor(d),
       t.paid ? 'שולם' : '',
       t.done ? 'טופל' : ''
     ].join('|');
   });
 
   // --- סיכומים מחושבים ---
-  const bySup = {}, byMonth = {}, byProject = {};
+  const bySup = {}, byMonth = {}, byProject = {}, byCat = {};
   let total = 0, unpaid = 0, unpaidCount = 0, needsReview = 0;
   docs.forEach(d=>{
     const v = toILS(d) || 0;
@@ -2667,12 +2724,14 @@ function askContext(){
     const m = String(d.date||'').slice(0,7);
     if(/^\d{4}-\d{2}$/.test(m)) byMonth[m] = (byMonth[m]||0) + v;
     if(d.project) byProject[d.project] = (byProject[d.project]||0) + v;
+    byCat[catFor(d)] = (byCat[catFor(d)]||0) + v;
     if(!docTag(d.fp).paid){ unpaid += v; unpaidCount++; }
     if(d.needsReview) needsReview++;
   });
   const topSup = Object.entries(bySup).sort((a,b)=>b[1]-a[1]).slice(0,15);
   const months = Object.entries(byMonth).sort((a,b)=> a[0].localeCompare(b[0])).slice(-12);
   const projects = Object.entries(byProject).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const cats = Object.entries(byCat).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
   const dups = dupSuspects();
   const trends = supplierTrend().filter(r=> Math.abs(r.pct) >= 0.2).slice(0,8);
 
@@ -2686,6 +2745,7 @@ function askContext(){
     '\nסה"כ לפי ספק:\n' + topSup.map(([s,v])=> '• '+s+': '+fmt(v)+' ₪').join('\n') +
     '\n\nסה"כ לפי חודש:\n' + months.map(([m,v])=> '• '+m+': '+fmt(v)+' ₪').join('\n') +
     (projects.length ? '\n\nסה"כ לפי פרויקט:\n' + projects.map(([p,v])=> '• '+p+': '+fmt(v)+' ₪').join('\n') : '') +
+    (cats.length>1 ? '\n\nסה"כ לפי קטגוריה:\n' + cats.map(([c,v])=> '• '+c+': '+fmt(v)+' ₪').join('\n') : '') +
     (dups.length ? '\n\nחשד לכפילות: ' + dups.length + ' זוגות. לדוגמה: ' +
         dups.slice(0,3).map(p=> p.a.supplier+' '+fmt(p.a.total)+'₪ ('+p.a.date+' מול '+p.b.date+')').join('; ') : '') +
     (trends.length ? '\n\nשינויי מחיר מעל 20%:\n' + trends.map(r=>
@@ -2751,6 +2811,8 @@ function applyAskFilter(f){
   hideDoneOn = false; $('btnDoneOnly').classList.remove('on');
   resProjectFilter = f.project || '';
   if($('resProject')) $('resProject').value = resProjectFilter;
+  resCategoryFilter = (f.category && EXPENSE_CATS.includes(f.category)) ? f.category : '';
+  if($('resCategory')) $('resCategory').value = resCategoryFilter;
   $('askSheet').classList.remove('show');
   document.querySelector('nav button[data-v="res"]').click();
   render();
@@ -2784,7 +2846,7 @@ async function askAssistant(question){
   const prompt =
     'אתה עוזר לקבלן שיפוצים שמנהל חשבוניות. היום: ' + localISO(new Date()) + '\n\n' +
     ctx.summary +
-    '\n\nרשימת מסמכים (תאריך|ספק|סוג|מספר|סכום ₪|פרויקט|שולם|טופל):\n' +
+    '\n\nרשימת מסמכים (תאריך|ספק|סוג|מספר|סכום ₪|פרויקט|קטגוריה|שולם|טופל):\n' +
     ctx.lines.join('\n') +
     (ctx.truncated ? '\n(מוצגים ' + ctx.used + ' המסמכים האחרונים בלבד)' : '') +
     (prior ? '\n\n--- ההקשר של השיחה עד כה ---\n' + prior : '') +
@@ -2796,7 +2858,7 @@ async function askAssistant(question){
     '4. אם השאלה מתייחסת לקבוצת מסמכים שכדאי להציג, החזר גם filter.\n' +
     '5. הצע 2 שאלות המשך רלוונטיות.\n\n' +
     'החזר JSON בלבד:\n' +
-    '{"answer":"...","filter":{"supplier":"","project":"","needsReview":false},"followups":["",""]}\n' +
+    '{"answer":"...","filter":{"supplier":"","project":"","category":"","needsReview":false},"followups":["",""]}\n' +
     'השדה filter אופציונלי - השמט אותו אם לא רלוונטי.';
 
   try{
@@ -2804,7 +2866,7 @@ async function askAssistant(question){
     let ans = '', filter = null, followups = [];
     if(r && typeof r === 'object'){
       ans = String(r.answer || '');
-      if(r.filter && (r.filter.supplier || r.filter.project || r.filter.needsReview)) filter = r.filter;
+      if(r.filter && (r.filter.supplier || r.filter.project || r.filter.category || r.filter.needsReview)) filter = r.filter;
       if(Array.isArray(r.followups)) followups = r.followups.filter(x=>x && String(x).trim()).slice(0,2);
     } else if(typeof r === 'string') ans = r;
     if(!ans) throw new Error('תשובה ריקה');
@@ -4287,7 +4349,9 @@ function push(job, d){
     fp: docFp,
     needsReview: !!(cfg.threshold>0 && amt!=null && amt>=cfg.threshold),
     priceDeltaPct,
-    project: (docMeta[docFp] && docMeta[docFp].project) || ''
+    project: (docMeta[docFp] && docMeta[docFp].project) || '',
+    // v5.2 — קטגוריה נגזרת: דריסה ידנית קודמת, אחרת ניחוש אוטומטי
+    category: (docMeta[docFp] && docMeta[docFp].category) || guessCategory(sup, type, job.msg && job.msg.text)
   });
 }
 
@@ -4858,6 +4922,9 @@ function openEdit(fp){
   $('edVat').value      = d.vat==null?'':d.vat;
   $('edTotal').value    = d.total==null?'':d.total;
   $('edProject').value  = d.project||'';
+  // v5.2 — בורר הקטגוריה. אם אין דריסה, מוצג הניחוש האוטומטי כברירת מחדל.
+  $('edCategory').innerHTML = EXPENSE_CATS.map(c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>').join('');
+  $('edCategory').value = catFor(d);
   $('edTerms').value    = String(termsFor(d.supplier));
   /* פריט 25 — הצעת פרויקט לפי היסטוריה של אותו ספק. אם תמיד תייגת
      חשבוניות של ספק מסוים לפרויקט מסוים, זה יופיע כהצעה כשהשדה ריק.
@@ -4918,11 +4985,12 @@ $('edSave').onclick = async ()=>{
   d.vat        = num($('edVat').value);
   d.total      = num($('edTotal').value);
   d.project    = ($('edProject').value||'').trim();
+  d.category   = ($('edCategory').value||'').trim() || 'אחר';   // v5.2
   setTerms(d.supplier, parseInt($('edTerms').value)||0);
   d.edited     = true;                    // מסומן כתוקן ידנית - לא ידרוס בסריקה חוזרת
   d.needsReview = !!(cfg.threshold>0 && d.total!=null && d.total>=cfg.threshold);
 
-  docMeta[d.fp] = Object.assign(docMeta[d.fp]||{}, {project:d.project, edited:true});
+  docMeta[d.fp] = Object.assign(docMeta[d.fp]||{}, {project:d.project, category:d.category, edited:true});
   store.set(K.meta, docMeta);
   await saveDocs();
   render(); closeEdit(); buzz(12); toast('המסמך עודכן');
@@ -5026,7 +5094,7 @@ function showScanErrors(errs){
 /* ============================================================
    תצוגת תוצאות
    ============================================================ */
-let resSearch = '', resSort = 'date-desc', resProjectFilter = '', reviewOnlyOn = false, trendOn = false;
+let resSearch = '', resSort = 'date-desc', resProjectFilter = '', resCategoryFilter = '', reviewOnlyOn = false, trendOn = false;
 let hideDoneOn = false;   // פריט 49 - הסתר מסמכים שסומנו כטופלו
 let tablePage = 1;        // פריט 30 - "טען עוד" בתצוגת טבלה
 let openFolders = new Set();   // פריט 19 - אילו תיקיות ספק פתוחות, לפי שם - שורד render() חוזר
@@ -5045,6 +5113,7 @@ $('resSearch').oninput = ()=>{
 };
 $('resSort').onchange = ()=>{ resSort = $('resSort').value; render(); };
 $('resProject').onchange = ()=>{ resProjectFilter = $('resProject').value; render(); };
+$('resCategory').onchange = ()=>{ resCategoryFilter = $('resCategory').value; render(); };
 $('btnReviewOnly').onclick = ()=>{ reviewOnlyOn=!reviewOnlyOn; $('btnReviewOnly').classList.toggle('on',reviewOnlyOn); render(); };
 $('btnTrendToggle').onclick = ()=>{ trendOn=!trendOn; $('btnTrendToggle').classList.toggle('on',trendOn); render(); };
 $('btnViewMode').onclick = ()=>{
@@ -5062,6 +5131,7 @@ function activeFilterCount(){
   let n = 0;
   if(resSort !== 'date-desc') n++;
   if(resProjectFilter) n++;
+  if(resCategoryFilter) n++;
   if(reviewOnlyOn) n++;
   if(hideDoneOn) n++;
   return n;
@@ -5080,6 +5150,7 @@ $('filterSheet').onclick = (e)=>{ if(e.target.id==='filterSheet') $('filterSheet
 $('btnClearFilters').onclick = ()=>{
   resSort = 'date-desc'; $('resSort').value = 'date-desc';
   resProjectFilter = ''; $('resProject').value = '';
+  resCategoryFilter = ''; if($('resCategory')) $('resCategory').value = '';
   reviewOnlyOn = false; $('btnReviewOnly').classList.remove('on');
   hideDoneOn = false;   $('btnDoneOnly').classList.remove('on');
   render();
@@ -5109,7 +5180,7 @@ function toILS(d){
    תמיכה גם בחיפוש סכום: ">5000" או "<200" מסננים לפי סה"כ. */
 function docHaystack(d){
   return [d.supplier, d.docNum, d.docType, d.supplierId, d.subject,
-          d.from, d.project, d.origName, d.bodyText]
+          d.from, d.project, catFor(d), d.origName, d.bodyText]
          .map(x=>String(x||'')).join(' ').toLowerCase();
 }
 function visibleDocs(){
@@ -5130,6 +5201,7 @@ function visibleDocs(){
     }
   }
   if(resProjectFilter) list = list.filter(d=> (d.project||'')===resProjectFilter);
+  if(resCategoryFilter) list = list.filter(d=> catFor(d)===resCategoryFilter);
   if(reviewOnlyOn) list = list.filter(d=> d.needsReview);
   return list;
 }
@@ -5151,6 +5223,14 @@ function refreshProjectOptions(){
   const sel = $('resProject');
   sel.innerHTML = '<option value="">כל הפרויקטים</option>' + opts.map(p=>'<option value="'+esc(p)+'">'+esc(p)+'</option>').join('');
   sel.value = resProjectFilter;
+  // v5.2 — אפשרויות הקטגוריה: רק קטגוריות שבאמת מופיעות בנתונים, לפי סדר הטקסונומיה
+  const csel = $('resCategory');
+  if(csel){
+    const present = new Set(docs.map(d=>catFor(d)));
+    const cats = EXPENSE_CATS.filter(c=>present.has(c));
+    csel.innerHTML = '<option value="">כל הקטגוריות</option>' + cats.map(c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>').join('');
+    csel.value = resCategoryFilter;
+  }
 }
 /* פריט 41 — פילוח הוצאות לפי ספק.
    מגמת החודשים כבר הייתה קיימת; מה שחסר היה "לאן הכסף הולך".
@@ -5169,6 +5249,26 @@ function supplierChartHtml(){
       const share = all ? Math.round(v/all*100) : 0;
       return '<div class="trow">'+
         '<span class="tm" style="width:74px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(n)+'</span>'+
+        '<span class="tb" style="width:'+pct+'%"></span>'+
+        '<span class="tv">'+Math.round(v).toLocaleString('he-IL')+' · '+share+'%</span></div>';
+    }).join('') + '</div>';
+}
+/* v5.2 — פילוח לפי קטגוריית הוצאה. משלים את "לפי ספק": שם רואים
+   *אצל מי*, כאן רואים *על מה*. אותה שפת פסים, בלי ספריית גרפים. */
+function categoryChartHtml(){
+  const by = {};
+  docs.forEach(d=>{ const v = toILS(d); if(v==null) return; const c = catFor(d); by[c]=(by[c]||0)+v; });
+  const names = Object.keys(by).filter(n=>by[n]>0).sort((a,b)=>by[b]-by[a]);
+  if(names.length < 2) return '';   // פילוח של קטגוריה אחת חסר ערך
+  const max = Math.max.apply(null, names.map(n=>by[n]));
+  const all = names.reduce((t,n)=>t+by[n],0);
+  return '<div class="trend"><h3>על מה הכסף הולך (לפי קטגוריה)</h3>' +
+    names.map(n=>{
+      const v = by[n];
+      const pct = max ? Math.max(3, Math.round(v/max*100)) : 3;
+      const share = all ? Math.round(v/all*100) : 0;
+      return '<div class="trow">'+
+        '<span class="tm" style="width:88px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(n)+'</span>'+
         '<span class="tb" style="width:'+pct+'%"></span>'+
         '<span class="tv">'+Math.round(v).toLocaleString('he-IL')+' · '+share+'%</span></div>';
     }).join('') + '</div>';
@@ -5585,7 +5685,7 @@ function render(){
   const head=$('resHead'), body=$('resBody'), toolbar=$('resToolbar'), toolbar2=$('resToolbar2'), trendBox=$('trendBox'), missingBox=$('missingBox');
   const resTabOn = document.querySelector('nav button[data-v="res"]');
   if(resTabOn && resTabOn.classList.contains('on')) updateHeaderSub('res');   // פריט 46 - ספירה טרייה תוך כדי שהייה במסך
-  const sig = resSearch+'|'+resSort+'|'+resProjectFilter+'|'+reviewOnlyOn+'|'+hideDoneOn+'|'+cfg.viewMode;
+  const sig = resSearch+'|'+resSort+'|'+resProjectFilter+'|'+resCategoryFilter+'|'+reviewOnlyOn+'|'+hideDoneOn+'|'+cfg.viewMode;
   if(sig !== lastFilterSig){ tablePage = 1; lastFilterSig = sig; }
   updFilterBadge();   // משימה 3 - מונה המסננים תמיד תואם למצב האמיתי
   if(!docs.length){
@@ -5626,7 +5726,7 @@ function render(){
      ולכן חייבים לחווט אותו כאן ולא פעם אחת באתחול. */
   const mb = $('btnOpenMerge');
   if(mb) mb.onclick = ()=>{ renderMergeList(); $('mergeSheet').classList.add('show'); };
-  if(trendOn){ trendBox.style.display='block'; trendBox.innerHTML = trendHtml() + supplierChartHtml() + trendReportHtml(); }
+  if(trendOn){ trendBox.style.display='block'; trendBox.innerHTML = trendHtml() + supplierChartHtml() + categoryChartHtml() + trendReportHtml(); }
   else { trendBox.style.display='none'; trendBox.innerHTML=''; }
   /* פיצ'ר 6 — הכפתור נוצר מחדש עם ה-HTML, ולכן מחווט כאן ולא באתחול */
   const tx = $('btnTrendXlsx');
@@ -5847,6 +5947,7 @@ function sparklineSvg(arr){
           (d.needsReview? '<span class="flag">לבדיקה</span>' : '')+
           (d.edited? '<span class="flag edited">תוקן</span>' : '')+
           (d.project? '<span class="projTag">'+esc(d.project)+'</span>' : '')+
+          (catFor(d)!=='אחר'? '<span class="catTag">'+esc(catFor(d))+'</span>' : '')+
           (d.priceDeltaPct!=null? '<span class="delta '+(d.priceDeltaPct>0?'up':'down')+'">'+(d.priceDeltaPct>0?'▲':'▼')+Math.abs(Math.round(d.priceDeltaPct*100))+'%</span>' : '')+
           (d.srcSize? '<span class="fsize">'+fmtSize(d.srcSize)+'</span>' : '')+
           '<span class="lead"></span>'+
@@ -5927,6 +6028,7 @@ function xlsxBlob(){
     'סה"כ': d.total,
     'מטבע': d.currency,
     'פרויקט': d.project||'',
+    'קטגוריה': catFor(d),
     'מקור': d.kind==='pdf'?'קובץ מצורף':d.kind==='link'?'קישור חיצוני':'גוף המייל',
     'שם קובץ': d.fileName,
     'קישור': d.link,
@@ -5935,7 +6037,7 @@ function xlsxBlob(){
     'ודאות': d.conf
   }));
   const ws = XLSX.utils.json_to_sheet(rows);
-  ws['!cols']=[{wch:11},{wch:26},{wch:12},{wch:14},{wch:12},{wch:11},{wch:10},{wch:12},{wch:7},{wch:16},{wch:13},{wch:34},{wch:26},{wch:34},{wch:26},{wch:8}];
+  ws['!cols']=[{wch:11},{wch:26},{wch:12},{wch:14},{wch:12},{wch:11},{wch:10},{wch:12},{wch:7},{wch:16},{wch:14},{wch:13},{wch:34},{wch:26},{wch:34},{wch:26},{wch:8}];
   const wb = XLSX.utils.book_new();
   wb.Workbook = {Views:[{RTL:true}]};
   XLSX.utils.book_append_sheet(wb, ws, 'ריכוז');
@@ -6054,12 +6156,16 @@ function renderDue(){
   const el = $('dueBox'); if(!el) return;
   if(!docs.length){ el.innerHTML='<div class="plog">אין נתונים.</div>'; return; }
   const today = new Date(); today.setHours(0,0,0,0);
+  /* v5.2 — הלוח מכבד עכשיו סימון "שולם". חשבונית שסימנת ששולמה
+     יורדת מהחישוב, אחרת התזרים היה מציג חוב שכבר סגרת. */
   const items = docs
-    .filter(d=> d.total!=null && d.currency==='ILS' && !/קבלה/.test(d.docType||''))  // קבלה = כבר שולם
+    .filter(d=> d.total!=null && d.currency==='ILS'
+      && !/קבלה/.test(d.docType||'')   // קבלה = כבר שולם
+      && !docTag(d.fp).paid)            // סומן ידנית כשולם
     .map(d=>({d, due: dueDate(d)}))
     .filter(x=> x.due)
     .sort((a,b)=> a.due-b.due);
-  if(!items.length){ el.innerHTML='<div class="plog">אין חשבוניות פתוחות לתשלום.</div>'; return; }
+  if(!items.length){ el.innerHTML='<div class="plog">אין חשבוניות פתוחות לתשלום. ✓</div>'; return; }
 
   const bucket = x=>{
     const diff = Math.round((x.due-today)/86400000);
@@ -6098,12 +6204,12 @@ $('btnXlsx').onclick = ()=>{
 
 $('btnCsv').onclick = ()=>{
   if(!docs.length){ toast('אין נתונים'); return; }
-  const cols = ['תאריך','ספק','חפ','מספר_מסמך','סוג_מסמך','לפני_מעמ','מעמ','סהכ','פרויקט','שם_קובץ'];
+  const cols = ['תאריך','ספק','חפ','מספר_מסמך','סוג_מסמך','לפני_מעמ','מעמ','סהכ','פרויקט','קטגוריה','שם_קובץ'];
   const rows = docs.slice().sort((a,b)=> a.supplier.localeCompare(b.supplier,'he') || a.date.localeCompare(b.date));
   const csvEsc = v => { v = v==null?'':String(v); return /[",\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; };
   let csv = cols.join(',') + '\r\n';
   rows.forEach(d=>{
-    csv += [d.date, d.supplier, d.supplierId, d.docNum, d.docType, d.before, d.vat, d.total, d.project||'', d.fileName]
+    csv += [d.date, d.supplier, d.supplierId, d.docNum, d.docType, d.before, d.vat, d.total, d.project||'', catFor(d), d.fileName]
       .map(csvEsc).join(',') + '\r\n';
   });
   const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'}); // BOM כדי שאקסל יציג עברית נכון
