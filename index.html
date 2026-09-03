@@ -133,6 +133,9 @@ FAB נסוג בגלילה           | function wireFabScroll
 אייקוני SVG בניווט        | nav button i svg
 שיתוף מוואטסאפ            | function consumeSharedInbox
 עוזר אישי (צ'אט AI)       | async function askAssistant
+סיכומים מחושבים לעוזר     | function askContext
+שיחה רב-תורית             | let askHistory
+פעולה מתשובת העוזר        | function applyAskFilter
 סיור היכרות לכניסה ראשונה | function startTour
 דמיון שמות ספקים          | function strSim
 מיזוג כפילויות            | async function doMerge
@@ -831,11 +834,29 @@ html[data-theme="dark"] .docs-inner{background:rgba(24,24,28,.5);border-color:rg
 .fab svg{width:24px;height:24px}
 .askex{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
 .askex .chip{font-size:11.5px;min-height:32px;padding:6px 11px}
-.askout{margin-top:12px;min-height:20px;font-size:13px;line-height:1.6}
+/* v5.1 — תמליל שיחה במקום תשובה בודדת */
+.askmodal{display:flex;flex-direction:column;max-height:86vh}
+.askhead{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px}
+.askout{
+  margin-bottom:12px;font-size:13px;line-height:1.6;
+  overflow-y:auto;max-height:44vh;flex:1;
+}
+.askout:empty{margin-bottom:0}
+.askq{
+  background:var(--red-tint);border:1px solid var(--red);color:var(--red-dim);
+  border-radius:12px 12px 4px 12px;padding:8px 12px;margin:0 0 8px auto;
+  max-width:88%;width:fit-content;font-size:12.5px;font-weight:600;
+}
 .askans{
   background:var(--card-2);border:1px solid var(--line);
-  border-radius:12px;padding:12px 13px;color:var(--ink);
+  border-radius:12px 12px 12px 4px;padding:12px 13px;color:var(--ink);
+  margin-bottom:10px;max-width:94%;
 }
+.askans.err{background:var(--rose-tint);border-color:var(--rose);color:var(--rose)}
+.askans.pending{opacity:.75}
+.askacts{display:flex;gap:14px;margin-top:9px;padding-top:8px;border-top:1px solid var(--line)}
+.askfollow{display:flex;flex-wrap:wrap;gap:6px;margin:-2px 0 12px}
+.askfollow .chip{font-size:11px;min-height:30px;padding:5px 10px}
 .wa-share{
   margin-top:10px;padding:11px 13px;border-radius:12px;
   background:var(--green-tint);border:1px solid var(--line);
@@ -1601,7 +1622,7 @@ nav button.on{color:var(--red)}
 
   <details class="acc"><summary>ℹ גרסה</summary><div class="accbody">
     
-    <p class="hint" style="margin:0 0 10px"><span id="verTag">v5.0</span> · <span id="verDate"></span></p>
+    <p class="hint" style="margin:0 0 10px"><span id="verTag">v5.1</span> · <span id="verDate"></span></p>
     <button class="btn outline sm" id="btnCheckUpdate" style="width:100%">🔄 בדוק עדכון גרסה</button>
     <div class="plog" id="updLog" style="margin-top:8px"></div>
     <p class="hint" style="margin:8px 0 0">בודק מול השרת אם הועלתה גרסה חדשה, ומתקין אותה מיד. שימושי אם העלית קובץ חדש והאפליקציה עדיין מציגה את הישן.</p>
@@ -1685,19 +1706,29 @@ nav button.on{color:var(--red)}
 </div>
 
 <div class="modalbg" id="askSheet">
-  <div class="modal">
-    <h2>עוזר אישי</h2>
-    <div class="msub">שאל בשפה חופשית על המסמכים שכבר נסרקו.</div>
-    <div class="askex" id="askExamples">
-      <button class="chip" data-q="כמה הוצאתי החודש?">כמה הוצאתי החודש?</button>
-      <button class="chip" data-q="מי הספק הכי יקר שלי?">מי הספק הכי יקר?</button>
-      <button class="chip" data-q="אילו חשבוניות עדיין לא שולמו?">מה לא שולם?</button>
+  <div class="modal askmodal">
+    <div class="askhead">
+      <div>
+        <h2>עוזר אישי</h2>
+        <div class="msub">שאל בשפה חופשית. אפשר גם שאלות המשך.</div>
+      </div>
+      <button class="linklike" id="askClear" style="display:none">נקה שיחה</button>
     </div>
-    <label class="f"><span>השאלה שלך</span>
+    <div class="askex" id="askExamples">
+      <button class="chip" data-q="כמה הוצאתי החודש?">כמה החודש?</button>
+      <button class="chip" data-q="מי הספק הכי יקר שלי ובכמה?">הספק הכי יקר</button>
+      <button class="chip" data-q="אילו חשבוניות עדיין לא סומנו כשולמו?">מה לא שולם</button>
+      <button class="chip" data-q="אילו ספקים העלו מחירים לאחרונה?">מי העלה מחיר</button>
+      <button class="chip" data-q="יש חשד לתשלום כפול?">חשד לכפילות</button>
+      <button class="chip" data-q="כמה עלה לי כל פרויקט?">לפי פרויקט</button>
+      <button class="chip" data-q="מה ההוצאה החודשית הממוצעת שלי?">ממוצע חודשי</button>
+      <button class="chip" data-q="אילו מסמכים דורשים בדיקה?">דורש בדיקה</button>
+    </div>
+    <div id="askOut" class="askout" role="status" aria-live="polite"></div>
+    <label class="f" style="margin-bottom:8px"><span>השאלה שלך</span>
       <input class="inp" id="askInput" placeholder="למשל: כמה הוצאתי על חשמל במרץ?" aria-label="השאלה שלך">
     </label>
     <button class="btn" id="btnAsk">שאל</button>
-    <div id="askOut" class="askout" role="status" aria-live="polite"></div>
     <button class="btn ghost sm" id="askClose" style="width:100%;margin-top:10px">סגור</button>
   </div>
 </div>
@@ -1854,7 +1885,7 @@ let docMeta = {};        // fingerprint -> {project} (תיוג פרויקט שש
 let dupSkipped = 0;
 let junkSkipped = 0;   // קבצים שסוננו לפני AI (לוגואים, אייקונים)
 
-const VERSION = 'v5.0';
+const VERSION = 'v5.1';
 function $(id){ return document.getElementById(id); }
 /* v3.0 — toISOString מחזיר UTC. בישראל (UTC+2/+3) מסמך שהתקבל ב-01:00
    סומן ביום הקודם. localISO עובד לפי אזור הזמן של המכשיר. */
@@ -2602,9 +2633,15 @@ $('btnSaveNotify').onclick = ()=>{
   saveCfgNow(); toast('הגדרות ההתראות נשמרו');
 };
 
+/* ============================================================
+   הקשר לעוזר — v5.1
+   השינוי המהותי: לא שולחים רק 300 שורות גולמיות ומצפים שהמודל
+   יסכם אותן. מודלי שפה טועים בחשבון, וכאן מדובר בכסף אמיתי.
+   לכן *אנחנו* מחשבים את הסיכומים ב-JS ושולחים אותם מוכנים, והמודל
+   רק קורא ומנסח. השורות הגולמיות נשארות כדי שיוכל לענות על שאלות
+   ספציפיות ("מה מספר החשבונית של X").
+   ============================================================ */
 function askContext(){
-  // סיכום קומפקטי: שורה לכל מסמך. 300 מסמכים ≈ 15KB, בתוך גבולות
-  // הפרומפט בנוחות. חותכים את הישנים כי שאלות נוטות להיות על עכשיו.
   const list = docs.slice(-ASK_MAX_DOCS);
   const lines = list.map(d=>{
     const t = docTag(d.fp) || {};
@@ -2619,56 +2656,182 @@ function askContext(){
       t.done ? 'טופל' : ''
     ].join('|');
   });
-  return { lines, truncated: docs.length > list.length, used: list.length };
+
+  // --- סיכומים מחושבים ---
+  const bySup = {}, byMonth = {}, byProject = {};
+  let total = 0, unpaid = 0, unpaidCount = 0, needsReview = 0;
+  docs.forEach(d=>{
+    const v = toILS(d) || 0;
+    total += v;
+    bySup[d.supplier] = (bySup[d.supplier]||0) + v;
+    const m = String(d.date||'').slice(0,7);
+    if(/^\d{4}-\d{2}$/.test(m)) byMonth[m] = (byMonth[m]||0) + v;
+    if(d.project) byProject[d.project] = (byProject[d.project]||0) + v;
+    if(!docTag(d.fp).paid){ unpaid += v; unpaidCount++; }
+    if(d.needsReview) needsReview++;
+  });
+  const topSup = Object.entries(bySup).sort((a,b)=>b[1]-a[1]).slice(0,15);
+  const months = Object.entries(byMonth).sort((a,b)=> a[0].localeCompare(b[0])).slice(-12);
+  const projects = Object.entries(byProject).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const dups = dupSuspects();
+  const trends = supplierTrend().filter(r=> Math.abs(r.pct) >= 0.2).slice(0,8);
+
+  const fmt = n => Math.round(n).toLocaleString('he-IL');
+  const summary =
+    'סיכומים מחושבים (מדויקים - השתמש בהם, אל תחשב בעצמך):\n' +
+    '• סה"כ הכל: ' + fmt(total) + ' ₪ מתוך ' + docs.length + ' מסמכים\n' +
+    '• לא מסומן כשולם: ' + fmt(unpaid) + ' ₪ ב-' + unpaidCount + ' מסמכים\n' +
+    '• מסומנים לבדיקה: ' + needsReview + '\n' +
+    (cfg.budget>0 ? '• תקציב שנתי: ' + fmt(cfg.budget) + ' ₪ (נוצל ' + Math.round(total/cfg.budget*100) + '%)\n' : '') +
+    '\nסה"כ לפי ספק:\n' + topSup.map(([s,v])=> '• '+s+': '+fmt(v)+' ₪').join('\n') +
+    '\n\nסה"כ לפי חודש:\n' + months.map(([m,v])=> '• '+m+': '+fmt(v)+' ₪').join('\n') +
+    (projects.length ? '\n\nסה"כ לפי פרויקט:\n' + projects.map(([p,v])=> '• '+p+': '+fmt(v)+' ₪').join('\n') : '') +
+    (dups.length ? '\n\nחשד לכפילות: ' + dups.length + ' זוגות. לדוגמה: ' +
+        dups.slice(0,3).map(p=> p.a.supplier+' '+fmt(p.a.total)+'₪ ('+p.a.date+' מול '+p.b.date+')').join('; ') : '') +
+    (trends.length ? '\n\nשינויי מחיר מעל 20%:\n' + trends.map(r=>
+        '• '+r.supplier+': '+(r.pct>0?'עלה':'ירד')+' '+Math.abs(Math.round(r.pct*100))+'% (ממוצע '+fmt(r.pAvg)+' → '+fmt(r.rAvg)+' ₪)').join('\n') : '');
+
+  return { lines, summary, truncated: docs.length > list.length, used: list.length };
+}
+
+/* היסטוריית שיחה — מאפשרת שאלות המשך ("ומה עם החודש שעבר?").
+   מוגבלת ל-6 תורות כדי לא לנפח את הפרומפט; שאלות ישנות פחות
+   רלוונטיות מהקשר הנתונים עצמו. */
+let askHistory = [];
+const ASK_MAX_TURNS = 6;
+
+function askRender(){
+  const out = $('askOut');
+  if(!out) return;
+  askSyncChrome();   // תמיד עקבי עם מצב השיחה, לא תלוי במי קרא
+  if(!askHistory.length){ out.innerHTML = ''; return; }
+  out.innerHTML = askHistory.map((t,i)=>
+    '<div class="askq">'+esc(t.q)+'</div>'+
+    (t.pending
+      ? '<div class="askans pending"><span class="aistat">חושב…</span></div>'
+      : t.error
+        ? '<div class="askans err">'+esc(t.a)+'</div>'
+        : '<div class="askans">'+esc(t.a).replace(/\n/g,'<br>')+
+          '<div class="askacts">'+
+            (t.filter ? '<button class="linklike askfilter" data-i="'+i+'">הצג את המסמכים האלה</button>' : '')+
+            '<button class="linklike askcopy" data-i="'+i+'">העתק</button>'+
+          '</div></div>'+
+          (t.followups && t.followups.length
+            ? '<div class="askfollow">'+t.followups.map(f=>
+                '<button class="chip askfu" data-q="'+esc(f)+'">'+esc(f)+'</button>').join('')+'</div>'
+            : '')
+    )
+  ).join('');
+  out.scrollTop = out.scrollHeight;
+
+  out.querySelectorAll('.askcopy').forEach(b=>{
+    b.onclick = ()=>{
+      const t = askHistory[+b.dataset.i];
+      navigator.clipboard && navigator.clipboard.writeText(t.a);
+      haptic('ok'); toast('הועתק');
+    };
+  });
+  out.querySelectorAll('.askfilter').forEach(b=>{
+    b.onclick = ()=> applyAskFilter(askHistory[+b.dataset.i].filter);
+  });
+  out.querySelectorAll('.askfu').forEach(b=>{
+    b.onclick = ()=>{ $('askInput').value = b.dataset.q; askAssistant(b.dataset.q); };
+  });
+}
+
+/* הפיכת תשובה לפעולה: המודל יכול להחזיר filter, וכאן מתרגמים אותו
+   למסננים האמיתיים של מסך התוצאות. לא מנווטים לשום מקום חדש -
+   משתמשים במנגנון הסינון הקיים. */
+function applyAskFilter(f){
+  if(!f) return;
+  resSearch = f.supplier || f.text || '';
+  $('resSearch').value = resSearch;
+  reviewOnlyOn = !!f.needsReview;
+  $('btnReviewOnly').classList.toggle('on', reviewOnlyOn);
+  hideDoneOn = false; $('btnDoneOnly').classList.remove('on');
+  resProjectFilter = f.project || '';
+  if($('resProject')) $('resProject').value = resProjectFilter;
+  $('askSheet').classList.remove('show');
+  document.querySelector('nav button[data-v="res"]').click();
+  render();
+  haptic('select');
 }
 
 async function askAssistant(question){
+  question = String(question||'').trim();
   const out = $('askOut');
-  if(!question.trim()){ out.innerHTML = '<span style="color:var(--rose)">כתוב שאלה קודם.</span>'; return; }
+  if(!question){ toast('כתוב שאלה קודם'); return; }
   if(!cfg.gemini){
-    out.innerHTML = '<span style="color:var(--rose)">חסר Gemini API Key — לך להגדרות → מפתחות.</span>';
+    out.innerHTML = '<div class="askans err">חסר Gemini API Key — לך להגדרות ← מפתחות.</div>';
     return;
   }
   if(!docs.length){
-    out.innerHTML = '<span style="color:var(--rose)">אין עדיין מסמכים לשאול עליהם. הרץ סריקה קודם.</span>';
+    out.innerHTML = '<div class="askans err">אין עדיין מסמכים לשאול עליהם. הרץ סריקה קודם.</div>';
     return;
   }
 
-  const ctx = askContext();
-  out.innerHTML = '<span class="aistat">חושב…</span>';
+  const turn = {q: question, a: '', pending: true};
+  askHistory.push(turn);
+  if(askHistory.length > ASK_MAX_TURNS) askHistory = askHistory.slice(-ASK_MAX_TURNS);
+  askRender();
+  $('askInput').value = '';
   $('btnAsk').disabled = true;
 
+  const ctx = askContext();
+  const prior = askHistory.slice(0,-1).filter(t=>!t.pending && !t.error)
+    .map(t=> 'שאלה קודמת: '+t.q+'\nתשובתך: '+t.a).join('\n\n');
+
   const prompt =
-    'אתה עוזר לקבלן שיפוצים שמנהל חשבוניות. להלן רשימת המסמכים שלו.\n' +
-    'כל שורה: תאריך|ספק|סוג|מספר|סכום בשקלים|פרויקט|שולם|טופל\n' +
-    'שדה ריק = לא ידוע/לא מסומן.\n\n' +
+    'אתה עוזר לקבלן שיפוצים שמנהל חשבוניות. היום: ' + localISO(new Date()) + '\n\n' +
+    ctx.summary +
+    '\n\nרשימת מסמכים (תאריך|ספק|סוג|מספר|סכום ₪|פרויקט|שולם|טופל):\n' +
     ctx.lines.join('\n') +
-    '\n\nהיום: ' + localISO(new Date()) +
-    (ctx.truncated ? '\n(שים לב: מוצגים רק ' + ctx.used + ' המסמכים האחרונים)' : '') +
-    '\n\nשאלת המשתמש: ' + question +
-    '\n\nענה בעברית, קצר ולעניין, על סמך הנתונים בלבד. ' +
-    'אל תמציא מספרים שלא נמצאים ברשימה. אם אין מספיק מידע בנתונים - אמור זאת במפורש. ' +
-    'החזר JSON בלבד בפורמט: {"answer":"התשובה שלך כאן"}';
+    (ctx.truncated ? '\n(מוצגים ' + ctx.used + ' המסמכים האחרונים בלבד)' : '') +
+    (prior ? '\n\n--- ההקשר של השיחה עד כה ---\n' + prior : '') +
+    '\n\nשאלה חדשה: ' + question +
+    '\n\nכללים:\n' +
+    '1. ענה בעברית, קצר וישיר. אל תחזור על השאלה.\n' +
+    '2. לסכומים - השתמש במספרים מהסיכומים המחושבים למעלה. אל תחשב בעצמך.\n' +
+    '3. אל תמציא נתון שלא מופיע. אם אין מספיק מידע - אמור זאת במפורש.\n' +
+    '4. אם השאלה מתייחסת לקבוצת מסמכים שכדאי להציג, החזר גם filter.\n' +
+    '5. הצע 2 שאלות המשך רלוונטיות.\n\n' +
+    'החזר JSON בלבד:\n' +
+    '{"answer":"...","filter":{"supplier":"","project":"","needsReview":false},"followups":["",""]}\n' +
+    'השדה filter אופציונלי - השמט אותו אם לא רלוונטי.';
 
   try{
     const r = await gemini([{text: prompt}]);
-    let ans = '';
-    if(r && typeof r === 'object' && r.answer) ans = String(r.answer);
-    else if(typeof r === 'string') ans = r;
+    let ans = '', filter = null, followups = [];
+    if(r && typeof r === 'object'){
+      ans = String(r.answer || '');
+      if(r.filter && (r.filter.supplier || r.filter.project || r.filter.needsReview)) filter = r.filter;
+      if(Array.isArray(r.followups)) followups = r.followups.filter(x=>x && String(x).trim()).slice(0,2);
+    } else if(typeof r === 'string') ans = r;
     if(!ans) throw new Error('תשובה ריקה');
-    out.innerHTML = '<div class="askans">'+esc(ans).replace(/\n/g,'<br>')+'</div>'+
-      (ctx.truncated ? '<div class="hint" style="margin-top:6px">מבוסס על '+ctx.used+' המסמכים האחרונים מתוך '+docs.length+'.</div>' : '');
-    buzz(10);
+    Object.assign(turn, {a: ans, pending: false, filter, followups});
+    haptic('ok');
   }catch(e){
-    out.innerHTML = '<span style="color:var(--rose)">לא הצלחתי לענות: '+esc(e.message||'שגיאה')+'</span>';
+    Object.assign(turn, {a: 'לא הצלחתי לענות: ' + (e.message||'שגיאה'), pending: false, error: true});
+    haptic('warn');
   }
+  askRender();
   $('btnAsk').disabled = false;
 }
 
 $('fabAsk').onclick = ()=>{
   $('askSheet').classList.add('show');
+  askRender();
   setTimeout(()=> $('askInput').focus(), 120);
 };
+/* דוגמאות השאלות מיועדות להתחלה. ברגע שיש שיחה הן הופכות לרעש,
+   ובמקומן מופיע "נקה שיחה". */
+function askSyncChrome(){
+  const has = askHistory.length > 0;
+  const ex = $('askExamples'), cl = $('askClear');
+  if(ex) ex.style.display = has ? 'none' : 'flex';
+  if(cl) cl.style.display = has ? 'inline' : 'none';
+}
+$('askClear').onclick = ()=>{ askHistory = []; askRender(); $('askInput').focus(); };
 $('askClose').onclick = ()=> $('askSheet').classList.remove('show');
 $('askSheet').onclick = (e)=>{ if(e.target.id==='askSheet') $('askSheet').classList.remove('show'); };
 $('btnAsk').onclick = ()=> askAssistant($('askInput').value);
