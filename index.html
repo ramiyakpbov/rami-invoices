@@ -169,12 +169,13 @@ Enter=שמור / Esc=סגור     | function wireSettingsKeys
   --red:#D6161D;
   --red-dim:#94090E;
   --red-tint:rgba(237,28,36,.10);
-  --red-glass:rgba(214,22,29,.86);
-  --red-glass-dim:rgba(148,9,14,.86);
+  --red-glass:rgba(173,18,23,.72);
+  --red-glass-dim:rgba(120,7,11,.72);
   --green:#0F7A4A;
   --green-dim:#12703F;
   --green-tint:rgba(30,158,99,.12);
-  --green-glass:rgba(15,122,74,.86);
+  --green-glass:rgba(10,83,50,.72);
+  --green-glass-dim:rgba(7,64,38,.72);
   --rose:#B3261E;
   --rose-tint:rgba(179,38,30,.10);
   /* v3.4 — פלטת סוגי מסמך (פריט 52): חשבונית=כחול, קבלה=ירוק (כבר קיים),
@@ -210,12 +211,13 @@ html[data-theme="dark"]{
   --red:#FF2A32;
   --red-dim:#FF6B71;
   --red-tint:rgba(255,42,50,.14);
-  --red-glass:rgba(255,42,50,.82);
-  --red-glass-dim:rgba(200,20,28,.82);
+  --red-glass:rgba(255,42,50,.62);
+  --red-glass-dim:rgba(200,20,28,.60);
   --green:#2ECC80;
   --green-dim:#7BE0AE;
   --green-tint:rgba(46,204,128,.14);
-  --green-glass:rgba(46,204,128,.80);
+  --green-glass:rgba(46,204,128,.60);
+  --green-glass-dim:rgba(30,160,100,.58);
   --rose:#FF6B63;
   --rose-tint:rgba(255,107,99,.14);
   --blue:#5B9BFF; --blue-dim:#8FBBFF; --blue-tint:rgba(91,155,255,.16);
@@ -482,9 +484,13 @@ label.f span{display:block;font-size:var(--t-meta);color:var(--ink-dim);margin-b
   width:100%;min-height:48px;padding:12px;border-radius:12px;font-weight:600;font-size:15px;
   background:linear-gradient(180deg,var(--red-glass) 0%,var(--red-glass-dim) 130%);
   color:#fff;border:1px solid var(--glass-line);
-  backdrop-filter:blur(14px) saturate(160%);-webkit-backdrop-filter:blur(14px) saturate(160%);
+  backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);
   /* v4.5 — הצל היה ב-.28 ונתן לכפתור מראה זוהר/ניאון. צל רך
-     ונמוך יותר קורא כאיכותי במקום כרועש. */
+     ונמוך יותר קורא כאיכותי במקום כרועש.
+     v5.6 — הרקע רוכך ל-.70 והטשטוש הועמק, כדי שהכפתור יקרא
+     כזכוכית צבועה ולא כצבע מלא. הטקסט נשאר לבן עם צל עדין
+     שמבטיח קריאוּת גם כשמאחורי הכפתור יש תוכן בהיר. */
+  text-shadow:0 1px 2px rgba(0,0,0,.28);
   box-shadow:inset 0 1px 0 var(--glass-line), inset 0 -1px 0 rgba(0,0,0,.08), 0 3px 10px rgba(150,20,26,.16);
   transition:opacity .15s,transform .1s,box-shadow .15s;
   position:relative;overflow:hidden;
@@ -502,13 +508,39 @@ label.f span{display:block;font-size:var(--t-meta);color:var(--ink-dim);margin-b
   box-shadow:inset 0 1px 0 var(--glass-line);
 }
 .btn.mint{
-  background:linear-gradient(180deg,var(--green-glass) 0%,var(--green-dim) 130%);color:#fff;
+  background:linear-gradient(180deg,var(--green-glass) 0%,var(--green-glass-dim) 130%);color:#fff;
   border:1px solid var(--glass-line);
-  backdrop-filter:blur(14px) saturate(160%);-webkit-backdrop-filter:blur(14px) saturate(160%);
+  backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);
+  text-shadow:0 1px 2px rgba(0,0,0,.28);
   box-shadow:inset 0 1px 0 var(--glass-line), inset 0 -1px 0 rgba(0,0,0,.10), 0 4px 14px rgba(30,150,90,.24);
 }
 .btn.primary-lg{min-height:56px;font-size:16.5px;font-weight:700;border-radius:14px}
 .btn.sm{min-height:44px;padding:10px 14px;font-size:13.5px;width:auto}
+
+/* v5.6 — נצנוץ זכוכית בלחיצה.
+   פס אור עדין חוצה את הכפתור פעם אחת. משתמש ב-::after כי ::before
+   כבר תפוס ע"י אפקט הריפל הקיים, ו-overflow:hidden על .btn גוזר
+   אותו לצורת הכפתור. רץ רק ב-:active - לא לולאה, לא רועש. */
+.btn::after{
+  content:'';position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+  background:linear-gradient(105deg,transparent 38%,rgba(255,255,255,.34) 50%,transparent 62%);
+  transform:translateX(-120%);opacity:0;
+}
+.btn:active::after{animation:sheen .5s ease-out}
+@keyframes sheen{
+  0%{transform:translateX(-120%);opacity:0}
+  22%{opacity:1}
+  100%{transform:translateX(120%);opacity:0}
+}
+/* חשיפה מדורגת של שורות הצ'קליסט בסגירת חודש - נותן תחושה
+   שהמערכת "עוברת" על הבדיקות במקום להקפיץ הכל בבת אחת. */
+#mcBody .permstate{animation:riseIn .32s cubic-bezier(.2,.9,.3,1.1) both}
+#mcBody .permstate:nth-child(2){animation-delay:.04s}
+#mcBody .permstate:nth-child(3){animation-delay:.08s}
+#mcBody .permstate:nth-child(4){animation-delay:.12s}
+#mcBody .permstate:nth-child(5){animation-delay:.16s}
+#mcBody .permstate:nth-child(6){animation-delay:.20s}
+@keyframes riseIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
 
 /* צ'יפים בשורה אחת עם גלילה אופקית - לא נשברים לשורה שנייה */
 /* ---------- שעון הרצה / ETA ---------- */
@@ -953,7 +985,6 @@ html[data-theme="dark"] .sum div{background:rgba(32,32,37,.55);border-color:rgba
   animation:pop .25s cubic-bezier(.2,.9,.3,1.2);
 }
 html[data-theme="dark"] .modal{background:rgba(34,34,39,.9);border-color:rgba(255,255,255,.1)}
-@keyframes pop{from{opacity:0;transform:scale(.92) translateY(10px)}to{opacity:1;transform:none}}
 .modal h2{font-size:18px;margin-bottom:3px}
 .modal .msub{font-size:12px;color:var(--ink-dim);margin-bottom:14px}
 .mline{display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;border-bottom:1px dashed var(--line)}
@@ -1025,6 +1056,13 @@ html[data-theme="dark"] .modal{background:rgba(34,34,39,.9);border-color:rgba(25
 .allocTag{
   font-size:9.5px;padding:1px 6px;border-radius:5px;white-space:nowrap;font-weight:700;
   background:var(--rose-tint);border:1px solid var(--rose);color:var(--rose);
+  animation:allocPulse 2.6s ease-in-out 3;
+}
+/* פועם שלוש פעמים ונעצר. אזהרה שפועמת בלי סוף הופכת לרעש
+   שמפסיקים לראות - וזו בדיוק האזהרה שעולה כסף אם מתעלמים ממנה. */
+@keyframes allocPulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(220,60,80,0)}
+  50%{box-shadow:0 0 0 3px rgba(220,60,80,.16)}
 }
 .missingNote{
   border-inline-start:3px solid var(--rose);background:var(--rose-tint);
@@ -1665,7 +1703,7 @@ nav button.on{color:var(--red)}
 
   <details class="acc"><summary>ℹ גרסה</summary><div class="accbody">
     
-    <p class="hint" style="margin:0 0 10px"><span id="verTag">v5.5</span> · <span id="verDate"></span></p>
+    <p class="hint" style="margin:0 0 10px"><span id="verTag">v5.6</span> · <span id="verDate"></span></p>
     <button class="btn outline sm" id="btnCheckUpdate" style="width:100%">🔄 בדוק עדכון גרסה</button>
     <div class="plog" id="updLog" style="margin-top:8px"></div>
     <p class="hint" style="margin:8px 0 0">בודק מול השרת אם הועלתה גרסה חדשה, ומתקין אותה מיד. שימושי אם העלית קובץ חדש והאפליקציה עדיין מציגה את הישן.</p>
@@ -1938,7 +1976,7 @@ let docMeta = {};        // fingerprint -> {project} (תיוג פרויקט שש
 let dupSkipped = 0;
 let junkSkipped = 0;   // קבצים שסוננו לפני AI (לוגואים, אייקונים)
 
-const VERSION = 'v5.5';
+const VERSION = 'v5.6';
 function $(id){ return document.getElementById(id); }
 /* v3.0 — toISOString מחזיר UTC. בישראל (UTC+2/+3) מסמך שהתקבל ב-01:00
    סומן ביום הקודם. localISO עובד לפי אזור הזמן של המכשיר. */
