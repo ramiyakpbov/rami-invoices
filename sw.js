@@ -2,7 +2,7 @@
    אסטרטגיה: network-first לקליפה, כדי שגרסה חדשה תמיד תיתפס.
    קריאות ל-API של גוגל ו-Gemini לא נכנסות לקאש בכלל. */
 
-const CACHE = 'invoices-v5.2';
+const CACHE = 'invoices-v5.4';
 const SHELL = ['./', './index.html', './manifest.json', './logo.png', './version.json'];
 
 /* פיצ'ר 7 — כתיבה ל-IndexedDB מתוך ה-SW.
@@ -86,4 +86,78 @@ self.addEventListener('fetch', e => {
 // מאפשר לאפליקציה לבקש מעבר מיידי לגרסה החדשה
 self.addEventListener('message', e => {
   if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
+});
+
+/* ============================================================
+   v5.4 — תזכורת סריקה כשהאפליקציה סגורה.
+   ה-SW לא סורק בעצמו: הטוקן של גוגל פג אחרי שעה ואי אפשר לחדש
+   אותו כאן (ספריית GIS רצה רק בדף). לכן הוא רק בודק אם הגיע
+   המועד ושולח התראה שפותחת את האפליקציה.
+   מצב התזמון נקרא מ-IndexedDB כי ל-SW אין גישה ל-localStorage.
+   ============================================================ */
+function swIdbGet(key){
+  return swIdbOpen().then(db => new Promise((res, rej) => {
+    const t = db.transaction('kv', 'readonly');
+    const r = t.objectStore('kv').get(key);
+    r.onsuccess = () => res(r.result);
+    r.onerror   = () => rej(r.error);
+  }));
+}
+function swIdbPut(key, val){
+  return swIdbOpen().then(db => new Promise((res, rej) => {
+    const t = db.transaction('kv', 'readwrite');
+    t.objectStore('kv').put(val, key);
+    t.oncomplete = () => res();
+    t.onerror = () => rej(t.error);
+  }));
+}
+/* אותה לוגיקה כמו schedDue() בדף, אבל על המצב המשוקף.
+   בנוסף: לא מתריעים יותר מפעם ב-12 שעות, כדי שאירוע sync תכוף
+   לא יהפוך לספאם. */
+function swScanDue(s, now){
+  if (!s || !s.on) return false;
+  const parts = String(s.time || '09:00').split(':');
+  const hh = parseInt(parts[0], 10) || 0, mm = parseInt(parts[1], 10) || 0;
+  const d = new Date(now);
+  const todayAt = new Date(d.getFullYear(), d.getMonth(), d.getDate(), hh, mm, 0, 0).getTime();
+  if (now < todayAt) return false;
+  if (s.lastRun && s.lastRun >= todayAt) return false;
+  if (s.lastNotified && (now - s.lastNotified) < 12 * 60 * 60 * 1000) return false;
+  return true;
+}
+self.addEventListener('periodicsync', e => {
+  if (e.tag !== 'scan-reminder') return;
+  e.waitUntil((async () => {
+    try {
+      const s = await swIdbGet('schedState');
+      const now = Date.now();
+      if (!swScanDue(s, now)) return;
+      if (s.kinds && s.kinds.newDocs === false) return;
+      await self.registration.showNotification('זמן לסרוק חשבוניות', {
+        body: 'הקש כדי לפתוח את האפליקציה ולהתחיל סריקה.',
+        icon: './icon-192.png', badge: './icon-192.png',
+        dir: 'rtl', lang: 'he', tag: 'scan-reminder',
+        data: { action: 'scan' }
+      });
+      s.lastNotified = now;
+      await swIdbPut('schedState', s);
+    } catch (err) { /* שקט - לא מפילים את אירוע ה-sync */ }
+  })());
+});
+/* לחיצה על ההתראה: אם האפליקציה כבר פתוחה בטאב - מתמקדים בו,
+   אחרת פותחים אותה עם דגל שמפעיל סריקה מיד. */
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const wantScan = e.notification.data && e.notification.data.action === 'scan';
+  e.waitUntil((async () => {
+    const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const c of all) {
+      if ('focus' in c) {
+        if (wantScan) c.postMessage({ type: 'RUN_SCAN' });
+        return c.focus();
+      }
+    }
+    if (self.clients.openWindow)
+      return self.clients.openWindow(wantScan ? './index.html?scan=1' : './index.html');
+  })());
 });

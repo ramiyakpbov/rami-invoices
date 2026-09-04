@@ -1517,8 +1517,10 @@ nav button.on{color:var(--red)}
     <p class="hint">הרצה אוטומטית של הסריקה לפי לוח זמנים.</p>
     <div class="warn" style="font-size:11.5px;margin-bottom:10px">
       <b>מגבלה שחשוב להכיר:</b> דפדפן לא יכול להריץ סריקה כשהאפליקציה סגורה.
-      הסריקה תרוץ רק כשהאפליקציה פתוחה — ואם המועד עבר בזמן שהייתה סגורה,
-      היא תרוץ אוטומטית בפתיחה הבאה.
+      הסריקה עצמה רצה רק כשהאפליקציה פתוחה — הטוקן של גוגל פג אחרי שעה,
+      ואי אפשר לחדש אותו ברקע. מה שכן: כשהאפליקציה מותקנת למסך הבית,
+      תקבל <b>התראת תזכורת</b> במועד שבחרת גם אם היא סגורה, ולחיצה עליה
+      פותחת ומתחילה סריקה מיד. ואם פספסת — הסריקה תרוץ אוטומטית בפתיחה הבאה.
     </div>
     <label class="chk"><input type="checkbox" id="schedOn"> הפעל סריקה מתוזמנת</label>
     <div class="row2" style="margin-top:10px">
@@ -1534,6 +1536,7 @@ nav button.on{color:var(--red)}
     <button class="btn ghost sm" id="btnSaveSched" style="width:100%">שמור</button>
     <button class="btn outline sm" id="btnRunSchedNow" style="width:100%;margin-top:8px">▶ הרץ עכשיו לבדיקה</button>
     <div class="plog" id="schedLog" style="margin-top:8px"></div>
+    <div class="permstate" id="psyncLog" style="margin-top:8px"></div>
   </div></details>
   <details class="acc"><summary>🔔 התראות</summary><div class="accbody">
     <p class="hint">התראה כשנמצאים מסמכים חדשים או כשיש חריגה.</p>
@@ -1615,9 +1618,25 @@ nav button.on{color:var(--red)}
 
   <div class="section-title">💾 גיבוי וניהול</div>
 
+  <details class="acc" open><summary>🔐 ארכיון מלא (מוצפן)</summary><div class="accbody">
+
+    <p class="hint">גיבוי של <b>הכל</b>: המסמכים, התיוגים, הפרויקטים והקטגוריות שהגדרת ידנית, זיכרון המחירים ותנאי התשלום. הקובץ מוצפן בסיסמה — בלעדיה אי אפשר לפתוח אותו, וגם אני לא יכול לשחזר אותה. שמור אותו בכונן או בדרייב.</p>
+    <label class="f"><span>סיסמה להצפנה (6 תווים לפחות)</span>
+      <input class="inp" id="bkPass" type="password" autocomplete="new-password" placeholder="סיסמה">
+    </label>
+    <button class="btn outline sm" id="btnBkExport" style="width:100%">⬇ צור ארכיון מוצפן</button>
+
+    <div style="height:1px;background:var(--line);margin:14px 0"></div>
+
+    <p class="hint">שחזור מארכיון קיים. בחר קובץ, הזן את הסיסמה שלו, ואז בחר איך למזג.</p>
+    <label class="btn ghost sm" for="bkFile" style="width:100%;display:flex">⬆ בחר קובץ ארכיון</label>
+    <input type="file" id="bkFile" accept="application/json,.json" style="display:none">
+    <div class="plog" id="bkLog" style="margin-top:8px"></div>
+  </div></details>
+
   <details class="acc"><summary>💾 גיבוי הגדרות</summary><div class="accbody">
     
-    <p class="hint">שומר קובץ עם המפתחות וההגדרות שלך — כדי שלא תצטרך לחפש אותם שוב אם תעבור מכשיר, דפדפן, או כתובת אתר.</p>
+    <p class="hint">שומר קובץ עם המפתחות וההגדרות שלך — כדי שלא תצטרך לחפש אותם שוב אם תעבור מכשיר, דפדפן, או כתובת אתר. <b>לגיבוי מלא השתמש בארכיון המוצפן שלמעלה.</b></p>
     <button class="btn outline sm" id="btnExportCfg" style="width:100%">⬇ הורד גיבוי הגדרות</button>
     <label class="btn ghost sm" for="importCfgFile" style="width:100%;margin-top:8px;display:flex">⬆ שחזר מגיבוי</label>
     <input type="file" id="importCfgFile" accept="application/json" style="display:none">
@@ -1626,7 +1645,7 @@ nav button.on{color:var(--red)}
 
   <details class="acc"><summary>ℹ גרסה</summary><div class="accbody">
     
-    <p class="hint" style="margin:0 0 10px"><span id="verTag">v5.1</span> · <span id="verDate"></span></p>
+    <p class="hint" style="margin:0 0 10px"><span id="verTag">v5.4</span> · <span id="verDate"></span></p>
     <button class="btn outline sm" id="btnCheckUpdate" style="width:100%">🔄 בדוק עדכון גרסה</button>
     <div class="plog" id="updLog" style="margin-top:8px"></div>
     <p class="hint" style="margin:8px 0 0">בודק מול השרת אם הועלתה גרסה חדשה, ומתקין אותה מיד. שימושי אם העלית קובץ חדש והאפליקציה עדיין מציגה את הישן.</p>
@@ -1895,7 +1914,7 @@ let docMeta = {};        // fingerprint -> {project} (תיוג פרויקט שש
 let dupSkipped = 0;
 let junkSkipped = 0;   // קבצים שסוננו לפני AI (לוגואים, אייקונים)
 
-const VERSION = 'v5.2';
+const VERSION = 'v5.4';
 function $(id){ return document.getElementById(id); }
 /* v3.0 — toISOString מחזיר UTC. בישראל (UTC+2/+3) מסמך שהתקבל ב-01:00
    סומן ביום הקודם. localISO עובד לפי אזור הזמן של המכשיר. */
@@ -2606,6 +2625,72 @@ function schedDue(){
   if(s.lastRun && (Date.now() - s.lastRun) < schedIntervalMs(s.freq) - 3600000) return false;
   return true;
 }
+/* ============================================================
+   v5.4 — תזכורת סריקה ברקע (גם כשהאפליקציה סגורה).
+   מה זה כן: ה-Service Worker מתעורר מדי פעם, בודק אם הגיע מועד
+   הסריקה, ושולח התראה. לחיצה עליה פותחת את האפליקציה והסריקה
+   מתחילה מיד.
+   מה זה לא: הסריקה עצמה *לא* רצה ברקע. היא לא יכולה — הטוקן של
+   גוגל פג אחרי שעה, וחידוש שלו דורש את ספריית GIS שרצה רק בדף,
+   לא ב-SW. לכן ההתראה מזמינה אותך לפתוח, ולא מתיימרת לסרוק לבד.
+   מגבלות: עובד ב-Chrome/Edge על אנדרואיד, רק כשה-PWA מותקנת.
+   הדפדפן מחליט מתי להריץ בפועל, ולכן התזמון מקורב ולא מדויק.
+   ב-iOS ובפיירפוקס ה-API לא קיים כלל — שם נשארת ההשלמה בפתיחה.
+   ============================================================ */
+const PSYNC_TAG = 'scan-reminder';
+
+/* ה-SW לא יכול לקרוא את localStorage, ולכן משקפים לו את מצב
+   התזמון ל-IndexedDB — אותו DB שהוא כבר כותב אליו. */
+async function syncSchedToSW(){
+  const s = schedCfg();
+  try{
+    await idbSet('schedState', {
+      on: !!s.on, time: s.time || '09:00', freq: s.freq || 'daily',
+      lastRun: s.lastRun || 0, lastNotified: s.lastNotified || 0,
+      kinds: cfg.notifyKinds || {}
+    });
+  }catch(e){ /* לא קריטי — ההשלמה בפתיחה עדיין עובדת */ }
+}
+async function psyncSupported(){
+  return !!(navigator.serviceWorker && 'periodicSync' in ServiceWorkerRegistration.prototype);
+}
+async function psyncRegister(){
+  if(!(await psyncSupported())) return 'unsupported';
+  try{
+    const st = await navigator.permissions.query({name:'periodic-background-sync'});
+    if(st.state !== 'granted') return 'denied';
+    const reg = await navigator.serviceWorker.ready;
+    // minInterval הוא רצפה בלבד; הדפדפן מחליט מתי באמת להריץ
+    await reg.periodicSync.register(PSYNC_TAG, {minInterval: 12*60*60*1000});
+    return 'ok';
+  }catch(e){ return 'failed'; }
+}
+async function psyncUnregister(){
+  try{
+    const reg = await navigator.serviceWorker.ready;
+    if(reg.periodicSync) await reg.periodicSync.unregister(PSYNC_TAG);
+  }catch(e){}
+}
+/* מצב אמיתי למסך ההגדרות — בלי הבטחות שווא */
+async function psyncStatusText(){
+  if(!(await psyncSupported()))
+    return {cls:'bad', txt:'הדפדפן הזה לא תומך בהתראות רקע. הסריקה תרוץ בפתיחה הבאה של האפליקציה.'};
+  if(!notifyAllowed())
+    return {cls:'ask', txt:'צריך לאשר התראות כדי לקבל תזכורת כשהאפליקציה סגורה.'};
+  try{
+    const st = await navigator.permissions.query({name:'periodic-background-sync'});
+    if(st.state !== 'granted')
+      return {cls:'ask', txt:'כדי לקבל תזכורות ברקע צריך להתקין את האפליקציה למסך הבית.'};
+  }catch(e){ return {cls:'ask', txt:'לא ניתן לבדוק את הרשאת הרקע.'}; }
+  try{
+    const reg = await navigator.serviceWorker.ready;
+    const tags = reg.periodicSync ? await reg.periodicSync.getTags() : [];
+    if(tags.includes(PSYNC_TAG))
+      return {cls:'ok', txt:'✓ תזכורת רקע פעילה. הדפדפן קובע את העיתוי המדויק, לכן ההתראה עשויה להגיע באיחור.'};
+  }catch(e){}
+  return {cls:'ask', txt:'תזכורת הרקע עדיין לא נרשמה.'};
+}
+
 async function runScheduledScan(manual){
   const s = schedCfg();
   if(scanRunning){ if(manual) toast('סריקה כבר רצה'); return; }
@@ -2614,6 +2699,7 @@ async function runScheduledScan(manual){
   if(errs.length){ if(manual) toast('לא ניתן לסרוק: '+errs[0]); return; }
 
   s.lastRun = Date.now(); saveCfgNow();
+  syncSchedToSW();          // v5.4 — כדי שה-SW לא יתריע על מועד שכבר רץ
   const before = docs.length;
   toast('סריקה מתוזמנת התחילה');
   $('btnScan').click();
@@ -2651,6 +2737,15 @@ function applySchedUI(){
         (s.lastRun ? ' · ריצה אחרונה: ' + new Date(s.lastRun).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : ' · עוד לא רץ')
       : 'כבוי.';
   }
+  // v5.4 — מצב תזכורת הרקע, בכנות: מה באמת יקרה כשהאפליקציה סגורה
+  const pl = $('psyncLog');
+  if(pl){
+    if(!s.on){ pl.style.display='none'; }
+    else{
+      pl.style.display='block';
+      psyncStatusText().then(r=>{ pl.className = 'permstate ' + r.cls; pl.textContent = r.txt; });
+    }
+  }
   /* פריט 7 — מצב ההרשאה צבעוני וברור במקום שורת טקסט אפורה */
   const nl = $('notifyLog');
   const nbtn = $('btnNotifyPerm');
@@ -2670,12 +2765,21 @@ function applySchedUI(){
   if($('ntBudget')) $('ntBudget').checked = k.budget !== false;
   if($('ntDup')) $('ntDup').checked = k.dup !== false;
 }
-$('btnSaveSched').onclick = ()=>{
+$('btnSaveSched').onclick = async ()=>{
   const s = schedCfg();
   s.on = $('schedOn').checked;
   s.freq = $('schedFreq').value;
   s.time = $('schedTime').value || '09:00';
   saveCfgNow(); applySchedUI();
+  // v5.4 — משקפים ל-SW ורושמים/מבטלים את תזכורת הרקע
+  await syncSchedToSW();
+  if(s.on){
+    if(notifySupported() && Notification.permission === 'default') await askNotifyPermission();
+    await psyncRegister();
+  }else{
+    await psyncUnregister();
+  }
+  applySchedUI();
   toast(s.on ? 'סריקה מתוזמנת נשמרה' : 'סריקה מתוזמנת כובתה');
 };
 $('btnRunSchedNow').onclick = ()=> runScheduledScan(true);
@@ -2904,6 +3008,113 @@ $('askInput').onkeydown = (e)=>{
 document.querySelectorAll('#askExamples .chip').forEach(c=>{
   c.onclick = ()=>{ $('askInput').value = c.dataset.q; askAssistant(c.dataset.q); };
 });
+
+/* ============================================================
+   v5.3 — ארכיון מלא מוצפן (גיבוי ושחזור).
+   הבעיה שזה פותר: "גיבוי הגדרות" הקיים שומר רק את cfg, וייצוא ה-JSON
+   שומר מסמכים אבל *אין לו מסלול שחזור*. כלומר docMeta (הדריסות
+   הידניות שלך לפרויקט/קטגוריה), התגיות, זיכרון המחירים ותנאי התשלום
+   לא היו מגובים בשום מקום. אם המכשיר נאבד — הכל הלך.
+   כאן מגבים את *הכל* לקובץ אחד, ויש שחזור אמיתי.
+   הצפנה: AES-GCM 256 עם מפתח שנגזר מסיסמה ב-PBKDF2 (250k סיבובים,
+   SHA-256). הקובץ מכיל נתונים פיננסיים ומפתחות API, ולכן לא יורד
+   בפורמט גלוי. הסיסמה אינה נשמרת בשום מקום — אין דרך לשחזר בלעדיה.
+   ============================================================ */
+const BK_MAGIC = 'INVBK1';          // חתימת פורמט, מאפשרת שינוי גרסה בעתיד
+const BK_ITER  = 250000;
+
+function bkBytesToB64(buf){
+  const b = new Uint8Array(buf); let s = '';
+  for(let i=0;i<b.length;i+=0x8000) s += String.fromCharCode.apply(null, b.subarray(i,i+0x8000));
+  return btoa(s);
+}
+function bkB64ToBytes(b64){
+  const s = atob(b64); const out = new Uint8Array(s.length);
+  for(let i=0;i<s.length;i++) out[i] = s.charCodeAt(i);
+  return out;
+}
+async function bkDeriveKey(password, salt){
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(password),
+    'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    {name:'PBKDF2', salt, iterations:BK_ITER, hash:'SHA-256'},
+    base, {name:'AES-GCM', length:256}, false, ['encrypt','decrypt']);
+}
+/* אוסף את כל המצב שראוי לשרוד אובדן מכשיר.
+   bytes גולמיים לא נכללים (הם נמשכים מחדש מ-Gmail לפי msgId+attId),
+   וגם לא modelList שנטען מגוגל — שניהם רק מנפחים את הקובץ. */
+function bkCollect(){
+  const safeCfg = Object.assign({}, cfg);
+  delete safeCfg.modelList;
+  return {
+    _app: 'איתור חשבוניות', _version: VERSION, _exportedAt: new Date().toISOString(),
+    docs: docs.map(d=>{ const o = Object.assign({}, d); delete o.bytes; delete o.thumb; return o; }),
+    docMeta: docMeta,
+    cfg: safeCfg,
+    price:   store.get(K.price, {}),
+    terms:   store.get(K.terms, {}),
+    deleted: store.get(K.deleted, []),
+    seen:    store.get(K.seen, [])
+  };
+}
+async function bkExport(password){
+  const plain = new TextEncoder().encode(JSON.stringify(bkCollect()));
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv   = crypto.getRandomValues(new Uint8Array(12));
+  const key  = await bkDeriveKey(password, salt);
+  const ct   = await crypto.subtle.encrypt({name:'AES-GCM', iv}, key, plain);
+  const env = {
+    magic: BK_MAGIC, iter: BK_ITER, createdAt: new Date().toISOString(),
+    docCount: docs.length,                       // גלוי בכוונה, לזיהוי הקובץ ללא פענוח
+    salt: bkBytesToB64(salt), iv: bkBytesToB64(iv), data: bkBytesToB64(ct)
+  };
+  return new Blob([JSON.stringify(env)], {type:'application/json'});
+}
+async function bkDecrypt(text, password){
+  const env = JSON.parse(text);
+  if(env.magic !== BK_MAGIC) throw new Error('זה לא קובץ ארכיון של האפליקציה');
+  const salt = bkB64ToBytes(env.salt), iv = bkB64ToBytes(env.iv);
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(password),
+    'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    {name:'PBKDF2', salt, iterations: env.iter||BK_ITER, hash:'SHA-256'},
+    base, {name:'AES-GCM', length:256}, false, ['encrypt','decrypt']);
+  let plain;
+  try{
+    plain = await crypto.subtle.decrypt({name:'AES-GCM', iv}, key, bkB64ToBytes(env.data));
+  }catch(e){ throw new Error('סיסמה שגויה או קובץ פגום'); }
+  return JSON.parse(new TextDecoder().decode(plain));
+}
+/* שחזור. mode='replace' מוחק ומחליף; mode='merge' מוסיף רק מסמכים
+   שאינם קיימים (לפי fp) ומשאיר את הקיימים כמו שהם — כך שאפשר לאחד
+   שני מכשירים בלי לדרוס עבודה. */
+async function bkRestore(data, mode){
+  if(!data || !Array.isArray(data.docs)) throw new Error('הארכיון לא מכיל מסמכים');
+  if(mode === 'replace'){
+    docs = data.docs.slice();
+    docMeta = data.docMeta || {};
+    if(data.price)   store.set(K.price, data.price);
+    if(data.terms)   store.set(K.terms, data.terms);
+    if(data.deleted) store.set(K.deleted, data.deleted);
+    if(data.seen)    store.set(K.seen, data.seen);
+    if(data.cfg){ cfg = Object.assign(cfg, data.cfg); delete cfg.modelList; saveCfgNow(); }
+  }else{
+    const have = new Set(docs.map(d=>d.fp));
+    let added = 0;
+    data.docs.forEach(d=>{ if(!have.has(d.fp)){ docs.push(d); added++; } });
+    docMeta = Object.assign({}, data.docMeta || {}, docMeta);   // המקומי גובר
+    const p = store.get(K.price, {}); store.set(K.price, Object.assign({}, data.price||{}, p));
+    const t = store.get(K.terms, {}); store.set(K.terms, Object.assign({}, data.terms||{}, t));
+    data._added = added;
+  }
+  store.set(K.meta, docMeta);
+  await saveDocs();
+  loadCfg();
+  refreshProjectOptions();
+  refreshSupplierOptions();
+  render();
+  return data;
+}
 
 async function saveDocs(){
   try{
@@ -3239,6 +3450,64 @@ $('pickFile').onchange = (e)=>{ if(e.target.files.length) ingestFiles(e.target.f
    מגן פיזית מפני "המפתח נעלם": יש עותק חיצוני שאינו תלוי
    בדפדפן, בדומיין, או בזיכרון המכשיר.
    ============================================================ */
+/* --- v5.3: ארכיון מלא מוצפן --- */
+$('btnBkExport').onclick = async ()=>{
+  const pass = $('bkPass').value || '';
+  const log = $('bkLog');
+  if(pass.length < 6){ log.innerHTML='<span style="color:var(--rose)">צריך סיסמה של 6 תווים לפחות.</span>'; return; }
+  if(!docs.length && !Object.keys(docMeta||{}).length){
+    log.innerHTML='<span style="color:var(--rose)">אין עדיין נתונים לגיבוי.</span>'; return;
+  }
+  const btn = $('btnBkExport');
+  btn.disabled = true; btn.textContent = 'מצפין…';
+  try{
+    const blob = await bkExport(pass);
+    download(blob, 'ארכיון-חשבוניות-' + localISO(new Date()) + '.json');
+    $('bkPass').value = '';
+    log.innerHTML='<span style="color:var(--green)">✓ הארכיון ירד ('+docs.length+' מסמכים). שמור אותו במקום בטוח — בלי הסיסמה אין שחזור.</span>';
+    toast('הארכיון המוצפן ירד');
+  }catch(e){
+    log.innerHTML='<span style="color:var(--rose)">ההצפנה נכשלה: '+esc(e.message)+'</span>';
+  }
+  btn.disabled = false; btn.textContent = '⬇ צור ארכיון מוצפן';
+};
+$('bkFile').onchange = async (e)=>{
+  const file = e.target.files[0]; e.target.value = '';
+  if(!file) return;
+  const log = $('bkLog');
+  const pass = prompt('הזן את הסיסמה של הארכיון:');
+  if(pass === null) return;
+  log.innerHTML = 'מפענח…';
+  let data;
+  try{
+    data = await bkDecrypt(await file.text(), pass);
+  }catch(err){
+    log.innerHTML='<span style="color:var(--rose)">'+esc(err.message)+'</span>'; return;
+  }
+  // מציגים מה יש בארכיון *לפני* שנוגעים בנתונים הקיימים
+  const when = data._exportedAt ? new Date(data._exportedAt).toLocaleString('he-IL') : 'לא ידוע';
+  const ok = confirm(
+    'הארכיון נפתח בהצלחה.\n\n' +
+    'נוצר: ' + when + '\n' +
+    'מסמכים בארכיון: ' + data.docs.length + '\n' +
+    'מסמכים אצלך כעת: ' + docs.length + '\n\n' +
+    'אישור = החלפה מלאה (הנתונים הנוכחיים יימחקו).\n' +
+    'ביטול = מיזוג (יתווספו רק מסמכים חסרים).'
+  );
+  const mode = ok ? 'replace' : 'merge';
+  try{
+    await bkRestore(data, mode);
+    log.innerHTML = '<span style="color:var(--green)">✓ ' +
+      (mode==='replace' ? 'שוחזר במלואו — ' + docs.length + ' מסמכים.'
+                        : 'מוזג — נוספו ' + (data._added||0) + ' מסמכים חדשים (סה"כ ' + docs.length + ').') +
+      '</span>';
+    toast('השחזור הושלם');
+    haptic('ok');
+  }catch(err){
+    log.innerHTML='<span style="color:var(--rose)">השחזור נכשל: '+esc(err.message)+'</span>';
+  }
+};
+
 $('btnSaveCfg').onclick = saveCfg;
 $('btnExportCfg').onclick = ()=>{
   // v3.0 — מגבים את כל ההגדרות הקבועות, כולל הגדרות v3.0 החדשות.
@@ -6419,6 +6688,8 @@ function wireKeyboardA11y(root){
   // אם המשתמש הגיע מ"שתף" מוואטסאפ, זו לא הזדמנות להציג סיור -
   // הוא בא לעשות פעולה ספציפית ולא לקבל היכרות עם האפליקציה.
   const cameFromShare = /[?&]shared=1/.test(location.search);
+  // v5.4 — הגעה מהתראת התזכורת. נלכד כאן לפני שה-URL מנוקה.
+  const cameFromReminder = /[?&]scan=1/.test(location.search);
   loadCfg();
   // v3.0 — בעבר לוח ההגדרות היה נעול כברירת מחדל ב-HTML סטטי, בלי קשר
   // לכך שיש קוד או לא. משתמש חדש (בלי קוד) היה נתקע מול שער נעילה
@@ -6450,9 +6721,36 @@ function wireKeyboardA11y(root){
   /* משימה 6 — רק למי שבאמת לא ראה את הסיור, ולא כשהגיעו משיתוף
      (cameFromShare נלכד בראש init, לפני שinitShareTarget מנקה את ה-URL).
      השהיה קצרה כדי לא להתנגש עם הרינדור הראשוני של המסך. */
-  if(!store.get(K.tour, false) && !cameFromShare){
+  if(!store.get(K.tour, false) && !cameFromShare && !cameFromReminder){
     setTimeout(startTour, 700);
   }
+
+  /* v5.4 — הגעה מהתראת תזכורת.
+     לא מפעילים סריקה מיד: בפתיחה קרה הטוקן עדיין לא שוחזר וגוגל
+     לא נטענה. ממתינים עד שיש חיבור תקף, ומוותרים אחרי 20 שניות
+     כדי לא להיתקע בלולאה אם המשתמש מנותק. */
+  function scanWhenReady(){
+    const t0 = Date.now();
+    const tick = ()=>{
+      if(scanRunning) return;
+      if(token && window.google){
+        history.replaceState({}, '', location.pathname);
+        toast('מתחיל סריקה מהתזכורת');
+        $('btnScan').click();
+        return;
+      }
+      if(Date.now()-t0 > 20000){ toast('צריך להתחבר כדי לסרוק'); return; }
+      setTimeout(tick, 600);
+    };
+    setTimeout(tick, 900);
+  }
+  if(cameFromReminder) scanWhenReady();
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.addEventListener('message', e=>{
+      if(e.data && e.data.type === 'RUN_SCAN') scanWhenReady();
+    });
+  }
+  syncSchedToSW();   // משקפים את מצב התזמון ל-SW כבר בפתיחה
 
   // שחזור התחברות: טוקן שמור בתוקף -> משתמשים בו מיד.
   // אחרת מנסים חידוש שקט (עובד אם המשתמש כבר אישר בעבר, בלי מסך אישור).
