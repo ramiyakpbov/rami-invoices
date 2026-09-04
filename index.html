@@ -1704,7 +1704,7 @@ nav button.on{color:var(--red)}
 
   <details class="acc"><summary>ℹ גרסה</summary><div class="accbody">
     
-    <p class="hint" style="margin:0 0 10px"><span id="verTag">v5.7</span> · <span id="verDate"></span></p>
+    <p class="hint" style="margin:0 0 10px"><span id="verTag">v5.8</span> · <span id="verDate"></span></p>
     <button class="btn outline sm" id="btnCheckUpdate" style="width:100%">🔄 בדוק עדכון גרסה</button>
     <div class="plog" id="updLog" style="margin-top:8px"></div>
     <p class="hint" style="margin:8px 0 0">בודק מול השרת אם הועלתה גרסה חדשה, ומתקין אותה מיד. שימושי אם העלית קובץ חדש והאפליקציה עדיין מציגה את הישן.</p>
@@ -1977,7 +1977,7 @@ let docMeta = {};        // fingerprint -> {project} (תיוג פרויקט שש
 let dupSkipped = 0;
 let junkSkipped = 0;   // קבצים שסוננו לפני AI (לוגואים, אייקונים)
 
-const VERSION = 'v5.7';
+const VERSION = 'v5.8';
 function $(id){ return document.getElementById(id); }
 /* v3.0 — toISOString מחזיר UTC. בישראל (UTC+2/+3) מסמך שהתקבל ב-01:00
    סומן ביום הקודם. localISO עובד לפי אזור הזמן של המכשיר. */
@@ -2976,6 +2976,25 @@ function checkBudgetAlert(){
 }
 // בודק כל דקה. זול מאוד, ורק כשהאפליקציה פתוחה - בדיוק כפי שהוצהר.
 setInterval(()=>{ if(schedDue()) runScheduledScan(false); }, 60000);
+/* v5.8 — הבאג האמיתי: היה *רק* setInterval של 60 שניות ושום בדיקה
+   בפתיחה. מי שפתח את האפליקציה וסגר אותה תוך פחות מדקה — והמסך
+   הבטיח לו "תרוץ בפתיחה הבאה" — לא קיבל סריקה לעולם.
+   הבדיקה בפתיחה ממתינה שהטוקן וההגדרות ישוחזרו לפני שהיא מכריעה,
+   אחרת היא הייתה נכשלת מיד על "לא מחובר" בכל טעינה. */
+function schedStartupCheck(){
+  const t0 = Date.now();
+  const tick = ()=>{
+    if(!schedDue()) return;                       // אין מה לעשות
+    if(scanRunning) return;                       // כבר רצה
+    if(validateBeforeScan().length === 0){ runScheduledScan(false); return; }
+    if(Date.now()-t0 > 15000){                    // ויתרנו — נרשום למה
+      runScheduledScan(false);                    // ירשום את השגיאה ויציג אותה
+      return;
+    }
+    setTimeout(tick, 1000);
+  };
+  setTimeout(tick, 2500);                         // מרווח לשחזור טוקן וטעינת גוגל
+}
 
 function applySchedUI(){
   const s = schedCfg();
@@ -3421,6 +3440,9 @@ document.addEventListener('visibilitychange', ()=>{
     }
   } else {
     if(wakeLockRef === null && scanRunning) acquireWakeLock();
+    /* v5.8 — חזרה מהרקע. PWA מותקנת כמעט אף פעם לא "נטענת מחדש";
+       היא רק חוזרת לחזית, ולכן בדיקת הפתיחה לבדה לא הספיקה. */
+    if(!scanRunning && schedDue()) schedStartupCheck();
   }
 });
 window.addEventListener('pagehide', ()=>{ if(scanRunning) checkpoint(true); });
@@ -7056,6 +7078,7 @@ function wireKeyboardA11y(root){
     });
   }
   syncSchedToSW();   // משקפים את מצב התזמון ל-SW כבר בפתיחה
+  schedStartupCheck();   // v5.8 — השלמת סריקה שפוספסה, בלי לחכות דקה
   // שלב 0 — סגירת חודש: ברירת מחדל היא החודש שהסתיים
   if($('mcMonth')){
     $('mcMonth').value = monthKeyDefault();
