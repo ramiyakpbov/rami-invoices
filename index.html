@@ -1022,6 +1022,10 @@ html[data-theme="dark"] .modal{background:rgba(34,34,39,.9);border-color:rgba(25
   font-size:9.5px;padding:1px 6px;border-radius:5px;white-space:nowrap;
   background:var(--blue-tint);border:1px solid transparent;color:var(--blue-dim);
 }
+.allocTag{
+  font-size:9.5px;padding:1px 6px;border-radius:5px;white-space:nowrap;font-weight:700;
+  background:var(--rose-tint);border:1px solid var(--rose);color:var(--rose);
+}
 .missingNote{
   border-inline-start:3px solid var(--rose);background:var(--rose-tint);
   padding:9px 11px;border-radius:0 9px 9px 0;font-size:11.5px;color:var(--rose);margin-bottom:10px;line-height:1.5;
@@ -1259,6 +1263,14 @@ nav button.on{color:var(--red)}
 
 <!-- ========== ייצוא ========== -->
 <section class="view" id="v-exp">
+
+  <div class="section-title">📅 סגירת חודש</div>
+  <div class="card">
+    <h2>בדיקה לפני שליחה לרו"ח</h2>
+    <p class="hint">בוחרים חודש, עוברים על הצ'קליסט, ורק אז שולחים. המטרה שלא יישלח חודש חסר — ושלא יישלח חודש פעמיים.</p>
+    <label class="f"><span>חודש</span><input class="inp" id="mcMonth" type="month"></label>
+    <div id="mcBody"></div>
+  </div>
 
   <div class="section-title">☁ ענן</div>
   <div class="card">
@@ -1571,6 +1583,14 @@ nav button.on{color:var(--red)}
     <button class="btn ghost sm" id="btnSaveThreshold">שמור סף</button>
   </div></details>
 
+  <details class="acc"><summary>🧾 מספר הקצאה</summary><div class="accbody">
+
+    <p class="hint">חשבונית מס מעל הסכום הזה חייבת מספר הקצאה מרשות המסים — בלעדיו <b>מע"מ התשומות עלול לא להיות מוכר</b>. האפליקציה תסמן כל חשבונית כזו שחסר בה המספר. הסף יורד בשלבים לפי שנה, לכן הוא ניתן לעדכון כאן. ברירת המחדל היא 5,000 ₪ (2026) — <b>כדאי לאמת מול רואה החשבון</b>.</p>
+    <label class="f"><span>סף בש"ח</span><input class="inp num" id="cfgAllocThreshold" type="number" min="0" step="500" value="5000"></label>
+    <button class="btn ghost sm" id="btnSaveAlloc">שמור סף</button>
+    <div class="plog" id="allocLog" style="margin-top:8px"></div>
+  </div></details>
+
   <details class="acc"><summary>🧠 זיכרון עיבוד</summary><div class="accbody">
     
     <p class="hint">מיילים שכבר עובדו מדולגים בסריקה הבאה.</p>
@@ -1645,7 +1665,7 @@ nav button.on{color:var(--red)}
 
   <details class="acc"><summary>ℹ גרסה</summary><div class="accbody">
     
-    <p class="hint" style="margin:0 0 10px"><span id="verTag">v5.4</span> · <span id="verDate"></span></p>
+    <p class="hint" style="margin:0 0 10px"><span id="verTag">v5.5</span> · <span id="verDate"></span></p>
     <button class="btn outline sm" id="btnCheckUpdate" style="width:100%">🔄 בדוק עדכון גרסה</button>
     <div class="plog" id="updLog" style="margin-top:8px"></div>
     <p class="hint" style="margin:8px 0 0">בודק מול השרת אם הועלתה גרסה חדשה, ומתקין אותה מיד. שימושי אם העלית קובץ חדש והאפליקציה עדיין מציגה את הישן.</p>
@@ -1811,6 +1831,10 @@ nav button.on{color:var(--red)}
     <label class="f"><span>קטגוריית הוצאה</span>
       <select class="inp" id="edCategory"></select>
     </label>
+    <label class="f"><span>מספר הקצאה</span>
+      <input class="inp" id="edAlloc" inputmode="numeric" placeholder="ריק אם אין על המסמך">
+    </label>
+    <div class="hint" id="edAllocHint" style="display:none;margin:-6px 2px 10px"></div>
     <label class="f"><span>תנאי תשלום לספק זה (שוטף + ימים)</span>
       <select class="inp" id="edTerms">
         <option value="0">שוטף</option>
@@ -1914,7 +1938,7 @@ let docMeta = {};        // fingerprint -> {project} (תיוג פרויקט שש
 let dupSkipped = 0;
 let junkSkipped = 0;   // קבצים שסוננו לפני AI (לוגואים, אייקונים)
 
-const VERSION = 'v5.4';
+const VERSION = 'v5.5';
 function $(id){ return document.getElementById(id); }
 /* v3.0 — toISOString מחזיר UTC. בישראל (UTC+2/+3) מסמך שהתקבל ב-01:00
    סומן ביום הקודם. localISO עובד לפי אזור הזמן של המכשיר. */
@@ -1940,6 +1964,179 @@ function moneyCur(n, cur){
   return (Number(n)||0).toLocaleString('he-IL',{maximumFractionDigits:2}) + ' ' + sym;
 }
 function safeName(s){ return String(s||'').replace(/[\\\/:*?"<>|\r\n\t]/g,'-').replace(/\s+/g,' ').trim().slice(0,120) || 'ללא שם'; }
+/* ============================================================
+   שלב 0 — מספר הקצאה (רשות המסים).
+   למה זה כאן: על חשבונית מס מעל הסף, מע"מ התשומות לא יוכר בלי
+   מספר הקצאה. כלומר חשבונית בלי המספר הזה = כסף שיהודה משלם
+   ולא מקזז. הסף יורד בשלבים לפי שנה, ולכן הוא בהגדרות ולא קבוע
+   בקוד — כשהסף משתנה, משנים מספר במסך ולא צריך גרסה חדשה.
+   ברירת המחדל 5,000 ₪ נכונה ל-2026; יש לאמת מול רואה החשבון.
+   ============================================================ */
+const ALLOC_DEFAULT_THRESHOLD = 5000;
+function allocThreshold(){
+  const v = parseFloat(cfg.allocThreshold);
+  return (isFinite(v) && v > 0) ? v : ALLOC_DEFAULT_THRESHOLD;
+}
+/* רק חשבונית מס אמיתית דורשת מספר הקצאה. קבלה, דרישת תשלום
+   והזמנה — לא. סינון לפי סוג מונע ים של התראות שווא. */
+function allocApplies(d){
+  if(!d || d.currency !== 'ILS') return false;
+  if(d.total == null || d.total < allocThreshold()) return false;
+  return /חשבונית/.test(d.docType||'') && !/דרישת|הזמנה/.test(d.docType||'');
+}
+function allocNumOf(d){
+  const m = docMeta[d.fp];
+  if(m && m.allocNum) return m.allocNum;
+  return d.allocNum || '';
+}
+/* מסמך "בעייתי" = נדרש מספר הקצאה ואין. אלה שיעצרו את סגירת החודש. */
+function allocMissing(d){ return allocApplies(d) && !allocNumOf(d); }
+function allocMissingList(){ return docs.filter(allocMissing); }
+
+/* ============================================================
+   שלב 0 — סגירת חודש.
+   הבעיה שזה פותר: יש כבר ZIP, אקסל, דוח מע"מ וייצוא לרו"ח — אבל
+   אין שום מושג של "החודש הזה כבר נשלח". לכן אפשר לשלוח חודש
+   פעמיים, או לשלוח חודש שחסרות בו חשבוניות ולגלות רק בדיעבד.
+   כאן החודש מקבל מצב: פתוח → נבדק → נשלח (עם תאריך).
+   הנעילה נשמרת ב-cfg.closedMonths ולכן שורדת סריקות וגיבויים.
+   ============================================================ */
+function monthKey(d){ return String(d.date||'').slice(0,7); }
+function docsOfMonth(mk){ return docs.filter(d=> monthKey(d)===mk); }
+function closedMonths(){ cfg.closedMonths = cfg.closedMonths || {}; return cfg.closedMonths; }
+function isMonthClosed(mk){ return !!closedMonths()[mk]; }
+
+/* הצ'קליסט. כל בדיקה מחזירה רשימת מסמכים בעייתיים.
+   blocking=true עוצר את הסגירה; אחרת זו אזהרה בלבד. */
+function monthChecks(mk){
+  const list = docsOfMonth(mk);
+  const out = [];
+  out.push({
+    key:'alloc', blocking:true,
+    label:'חשבוניות מעל הסף ללא מספר הקצאה',
+    why:'מע"מ התשומות עלול לא להיות מוכר. בקש מהספק מסמך מתוקן.',
+    items: list.filter(allocMissing)
+  });
+  out.push({
+    key:'review', blocking:true,
+    label:'מסמכים שמחכים לבדיקה שלך',
+    why:'סומנו אוטומטית בגלל סכום גבוה או זיהוי לא ודאי.',
+    items: list.filter(d=> d.needsReview)
+  });
+  out.push({
+    key:'noproj', blocking:false,
+    label:'מסמכים בלי שיוך לפרויקט',
+    why:'בלי פרויקט אי אפשר לדעת רווחיות לפי עבודה.',
+    items: list.filter(d=> !d.project)
+  });
+  out.push({
+    key:'nocat', blocking:false,
+    label:'מסמכים בקטגוריה "אחר"',
+    why:'סיווג מדויק יותר עוזר לרואה החשבון ולפילוח שלך.',
+    items: list.filter(d=> catFor(d)==='אחר')
+  });
+  return out;
+}
+/* ספק שמופיע בקביעות בחודשים קודמים ונעדר החודש — כנראה חשבונית
+   שלא הגיעה. זה בדיוק סוג הפספוס שרואה החשבון היה תופס. */
+function missingSuppliers(mk){
+  const prev = [];
+  const [y,m] = mk.split('-').map(Number);
+  for(let i=1;i<=3;i++){
+    const d = new Date(y, m-1-i, 1);
+    prev.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'));
+  }
+  const here = new Set(docsOfMonth(mk).map(d=>d.supplier));
+  const count = {};
+  prev.forEach(pk=>{
+    new Set(docsOfMonth(pk).map(d=>d.supplier)).forEach(s=>{ count[s]=(count[s]||0)+1; });
+  });
+  // הופיע בלפחות 2 מתוך 3 החודשים הקודמים, ולא החודש
+  return Object.keys(count).filter(s=> count[s]>=2 && !here.has(s));
+}
+function renderMonthClose(){
+  const el = $('mcBody'); if(!el) return;
+  const mk = $('mcMonth').value;
+  if(!mk){ el.innerHTML = '<div class="plog">בחר חודש כדי להתחיל.</div>'; return; }
+  const list = docsOfMonth(mk);
+  const closed = closedMonths()[mk];
+  const total = list.reduce((s,d)=> s+(toILS(d)||0), 0);
+  const vat   = list.reduce((s,d)=> s+(Number(d.vat)||0), 0);
+  const checks = monthChecks(mk);
+  const miss = missingSuppliers(mk);
+  const blockers = checks.filter(c=> c.blocking && c.items.length);
+
+  let h = '';
+  if(closed){
+    h += '<div class="permstate ok" style="margin-bottom:10px">✓ נשלח לרו"ח ב-' +
+         new Date(closed.at).toLocaleDateString('he-IL') +
+         ' · ' + closed.count + ' מסמכים · ' + Math.round(closed.total).toLocaleString('he-IL') + ' ₪</div>';
+  }
+  h += '<div class="kv"><b>מסמכים</b><span>' + list.length + '</span></div>' +
+       '<div class="kv"><b>סה"כ</b><span>' + Math.round(total).toLocaleString('he-IL') + ' ₪</span></div>' +
+       '<div class="kv"><b>מתוכו מע"מ</b><span>' + Math.round(vat).toLocaleString('he-IL') + ' ₪</span></div>';
+
+  if(!list.length){
+    el.innerHTML = h + '<div class="plog" style="margin-top:10px">אין מסמכים בחודש הזה.</div>';
+    return;
+  }
+
+  h += '<div style="height:1px;background:var(--line);margin:12px 0"></div>';
+  checks.forEach(c=>{
+    const n = c.items.length;
+    const cls = n===0 ? 'ok' : (c.blocking ? 'bad' : 'ask');
+    const icon = n===0 ? '✓' : (c.blocking ? '✕' : '⚠');
+    h += '<div class="permstate '+cls+'" style="margin-bottom:6px">' +
+         icon + ' ' + esc(c.label) + ': ' + n +
+         (n ? '<br><small>' + esc(c.why) + '</small>' : '') + '</div>';
+  });
+  if(miss.length){
+    h += '<div class="permstate ask" style="margin-bottom:6px">⚠ ספקים קבועים שלא הופיעו החודש: ' +
+         esc(miss.slice(0,6).join(', ')) +
+         '<br><small>הופיעו ברוב החודשים האחרונים. ייתכן שחסרה חשבונית.</small></div>';
+  }
+
+  h += '<div style="height:1px;background:var(--line);margin:12px 0"></div>';
+  if(blockers.length){
+    h += '<div class="plog" style="color:var(--rose);margin-bottom:8px">יש ' + blockers.length +
+         ' בדיקות חוסמות. אפשר לסמן בכל זאת כנשלח, אבל עדיף לטפל קודם.</div>';
+  }
+  h += '<button class="btn outline sm" id="mcShow" style="width:100%">הצג את מסמכי החודש</button>';
+  h += closed
+    ? '<button class="btn ghost sm" id="mcReopen" style="width:100%;margin-top:8px">פתח מחדש את החודש</button>'
+    : '<button class="btn sm" id="mcClose" style="width:100%;margin-top:8px">✓ סמן כנשלח לרו"ח</button>';
+  el.innerHTML = h;
+
+  $('mcShow').onclick = ()=>{
+    resSearch=''; $('resSearch').value='';
+    resProjectFilter=''; resCategoryFilter='';
+    if($('resProject')) $('resProject').value='';
+    if($('resCategory')) $('resCategory').value='';
+    mcFilter = mk;
+    document.querySelector('nav button[data-v="res"]').click();
+    render(); haptic('select');
+  };
+  if($('mcClose')) $('mcClose').onclick = ()=>{
+    if(blockers.length && !confirm('יש בדיקות חוסמות שלא טופלו. לסמן בכל זאת כנשלח?')) return;
+    closedMonths()[mk] = {at: Date.now(), count: list.length, total: total};
+    saveCfgNow(); renderMonthClose(); render();
+    toast('החודש סומן כנשלח'); haptic('ok');
+  };
+  if($('mcReopen')) $('mcReopen').onclick = ()=>{
+    if(!confirm('לפתוח מחדש את ' + mk + '? השתמש בזה רק אם צריך לשלוח שוב.')) return;
+    delete closedMonths()[mk];
+    saveCfgNow(); renderMonthClose(); render();
+    toast('החודש נפתח מחדש');
+  };
+}
+let mcFilter = '';   // סינון זמני לחודש שנבחר בסגירת חודש
+
+function monthKeyDefault(){
+  const n = new Date();
+  const d = new Date(n.getFullYear(), n.getMonth()-1, 1);   // ברירת מחדל: החודש שהסתיים
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+}
+
 function fp(d){ return [d.supplier,d.docType,d.docNum,d.date,Math.round(d.total||0)].join('|').toLowerCase(); }
 function priceKey(supplier,docType){ return (supplier+'|'+docType).toLowerCase(); }
 
@@ -2011,6 +2208,7 @@ function loadCfg(){
   }
   sel.value = savedModel;
   $('cfgThreshold').value = cfg.threshold||0;
+  if($('cfgAllocThreshold')) $('cfgAllocThreshold').value = allocThreshold();
   applySpeed(cfg.speed||'normal', true);
   applyTheme(cfg.theme||'light');
   updMem();
@@ -3579,6 +3777,16 @@ $('btnSaveThreshold').onclick = ()=>{
   saveCfgNow();
   toast(cfg.threshold ? 'סף נשמר: '+money(cfg.threshold) : 'סף כובה');
 };
+$('btnSaveAlloc').onclick = ()=>{
+  cfg.allocThreshold = Math.max(0, parseInt($('cfgAllocThreshold').value)||0) || ALLOC_DEFAULT_THRESHOLD;
+  saveCfgNow();
+  render();
+  const n = allocMissingList().length;
+  $('allocLog').innerHTML = n
+    ? '<span style="color:var(--rose)">' + n + ' חשבוניות מעל הסף חסרות מספר הקצאה.</span>'
+    : '<span style="color:var(--green)">✓ לכל החשבוניות מעל הסף יש מספר הקצאה.</span>';
+  toast('הסף נשמר: ' + cfg.allocThreshold.toLocaleString('he-IL') + ' ₪');
+};
 $('btnTestKey').onclick = async ()=>{
   const key = $('cfgGemini').value.trim();
   const model = $('cfgModel').value;
@@ -3805,11 +4013,12 @@ function senderName(from){
    ============================================================ */
 const SCHEMA_PROMPT = `אתה מחלץ נתונים ממסמכים חשבונאיים ישראליים.
 החזר JSON בלבד, ללא טקסט נוסף וללא סימוני קוד, במבנה:
-{"is_doc":true|false,"doc_type":"חשבונית מס|קבלה|חשבונית מס קבלה|חשבונית|דרישת תשלום|הזמנה|אחר","supplier":"שם העסק המנפיק","supplier_id":"ח.פ או ע.מ או ריק","doc_number":"מספר המסמך","date":"YYYY-MM-DD","amount_before_vat":number|null,"vat":number|null,"amount_total":number|null,"currency":"ILS|USD|EUR","confidence":0-1}
+{"is_doc":true|false,"doc_type":"חשבונית מס|קבלה|חשבונית מס קבלה|חשבונית|דרישת תשלום|הזמנה|אחר","supplier":"שם העסק המנפיק","supplier_id":"ח.פ או ע.מ או ריק","doc_number":"מספר המסמך","allocation_number":"מספר הקצאה או ריק","date":"YYYY-MM-DD","amount_before_vat":number|null,"vat":number|null,"amount_total":number|null,"currency":"ILS|USD|EUR","confidence":0-1}
 כללים:
 - is_doc=false אם זה לא חשבונית/קבלה/דרישת תשלום (למשל ניוזלטר, פרסומת, אישור הזמנה בלבד).
 - supplier = מי הנפיק את המסמך (הספק), לא הלקוח.
 - amount_total = הסכום הסופי לתשלום כולל מע"מ.
+- allocation_number = "מספר הקצאה" של רשות המסים (נקרא גם "מספר הקצאת חשבונית"). מופיע כרצף ספרות, לרוב 9 ספרות, בנפרד ממספר המסמך. אם אין — מחרוזת ריקה. אל תחזיר את מספר המסמך בשדה הזה.
 - מספרים בלי פסיקים ובלי סימן מטבע.
 - אם ערך לא מופיע במסמך — null או מחרוזת ריקה. אל תמציא.`;
 
@@ -4596,6 +4805,9 @@ function push(job, d){
     supplier: sup,
     supplierId: d.supplier_id||'',
     docType: type, docNum: num, date: dt,
+    /* שלב 0 — מספר הקצאה של רשות המסים. בלעדיו על חשבונית מעל הסף
+       מע"מ התשומות לא מוכר, ולכן זה נשמר ומסומן בנפרד ממספר המסמך. */
+    allocNum: String(d.allocation_number||'').replace(/\D/g,''),
     before: d.amount_before_vat==null?null:Number(d.amount_before_vat),
     vat: d.vat==null?null:Number(d.vat),
     total: amt, currency: d.currency||'ILS',
@@ -5194,6 +5406,16 @@ function openEdit(fp){
   // v5.2 — בורר הקטגוריה. אם אין דריסה, מוצג הניחוש האוטומטי כברירת מחדל.
   $('edCategory').innerHTML = EXPENSE_CATS.map(c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>').join('');
   $('edCategory').value = catFor(d);
+  // שלב 0 — מספר הקצאה + אזהרה רק כשהוא באמת נדרש
+  $('edAlloc').value = allocNumOf(d);
+  const ah = $('edAllocHint');
+  if(ah){
+    if(allocMissing(d)){
+      ah.style.display = 'block';
+      ah.innerHTML = '<span style="color:var(--rose)">⚠ חשבונית מעל ' +
+        allocThreshold().toLocaleString('he-IL') + ' ₪ ללא מספר הקצאה — מע"מ התשומות עלול לא להיות מוכר. בקש מהספק מסמך עם מספר הקצאה.</span>';
+    }else{ ah.style.display = 'none'; }
+  }
   $('edTerms').value    = String(termsFor(d.supplier));
   /* פריט 25 — הצעת פרויקט לפי היסטוריה של אותו ספק. אם תמיד תייגת
      חשבוניות של ספק מסוים לפרויקט מסוים, זה יופיע כהצעה כשהשדה ריק.
@@ -5255,11 +5477,12 @@ $('edSave').onclick = async ()=>{
   d.total      = num($('edTotal').value);
   d.project    = ($('edProject').value||'').trim();
   d.category   = ($('edCategory').value||'').trim() || 'אחר';   // v5.2
+  d.allocNum   = ($('edAlloc').value||'').replace(/\D/g,'');    // שלב 0
   setTerms(d.supplier, parseInt($('edTerms').value)||0);
   d.edited     = true;                    // מסומן כתוקן ידנית - לא ידרוס בסריקה חוזרת
   d.needsReview = !!(cfg.threshold>0 && d.total!=null && d.total>=cfg.threshold);
 
-  docMeta[d.fp] = Object.assign(docMeta[d.fp]||{}, {project:d.project, category:d.category, edited:true});
+  docMeta[d.fp] = Object.assign(docMeta[d.fp]||{}, {project:d.project, category:d.category, allocNum:d.allocNum, edited:true});
   store.set(K.meta, docMeta);
   await saveDocs();
   render(); closeEdit(); buzz(12); toast('המסמך עודכן');
@@ -5401,6 +5624,7 @@ function activeFilterCount(){
   if(resSort !== 'date-desc') n++;
   if(resProjectFilter) n++;
   if(resCategoryFilter) n++;
+  if(mcFilter) n++;
   if(reviewOnlyOn) n++;
   if(hideDoneOn) n++;
   return n;
@@ -5420,6 +5644,7 @@ $('btnClearFilters').onclick = ()=>{
   resSort = 'date-desc'; $('resSort').value = 'date-desc';
   resProjectFilter = ''; $('resProject').value = '';
   resCategoryFilter = ''; if($('resCategory')) $('resCategory').value = '';
+  mcFilter = '';
   reviewOnlyOn = false; $('btnReviewOnly').classList.remove('on');
   hideDoneOn = false;   $('btnDoneOnly').classList.remove('on');
   render();
@@ -5469,6 +5694,7 @@ function visibleDocs(){
       list = list.filter(d=> docHaystack(d).includes(q));
     }
   }
+  if(mcFilter) list = list.filter(d=> monthKey(d)===mcFilter);
   if(resProjectFilter) list = list.filter(d=> (d.project||'')===resProjectFilter);
   if(resCategoryFilter) list = list.filter(d=> catFor(d)===resCategoryFilter);
   if(reviewOnlyOn) list = list.filter(d=> d.needsReview);
@@ -5954,7 +6180,7 @@ function render(){
   const head=$('resHead'), body=$('resBody'), toolbar=$('resToolbar'), toolbar2=$('resToolbar2'), trendBox=$('trendBox'), missingBox=$('missingBox');
   const resTabOn = document.querySelector('nav button[data-v="res"]');
   if(resTabOn && resTabOn.classList.contains('on')) updateHeaderSub('res');   // פריט 46 - ספירה טרייה תוך כדי שהייה במסך
-  const sig = resSearch+'|'+resSort+'|'+resProjectFilter+'|'+resCategoryFilter+'|'+reviewOnlyOn+'|'+hideDoneOn+'|'+cfg.viewMode;
+  const sig = resSearch+'|'+resSort+'|'+resProjectFilter+'|'+resCategoryFilter+'|'+mcFilter+'|'+reviewOnlyOn+'|'+hideDoneOn+'|'+cfg.viewMode;
   if(sig !== lastFilterSig){ tablePage = 1; lastFilterSig = sig; }
   updFilterBadge();   // משימה 3 - מונה המסננים תמיד תואם למצב האמיתי
   if(!docs.length){
@@ -6217,6 +6443,7 @@ function sparklineSvg(arr){
           (d.edited? '<span class="flag edited">תוקן</span>' : '')+
           (d.project? '<span class="projTag">'+esc(d.project)+'</span>' : '')+
           (catFor(d)!=='אחר'? '<span class="catTag">'+esc(catFor(d))+'</span>' : '')+
+          (allocMissing(d)? '<span class="allocTag">⚠ חסר מספר הקצאה</span>' : '')+
           (d.priceDeltaPct!=null? '<span class="delta '+(d.priceDeltaPct>0?'up':'down')+'">'+(d.priceDeltaPct>0?'▲':'▼')+Math.abs(Math.round(d.priceDeltaPct*100))+'%</span>' : '')+
           (d.srcSize? '<span class="fsize">'+fmtSize(d.srcSize)+'</span>' : '')+
           '<span class="lead"></span>'+
@@ -6298,6 +6525,7 @@ function xlsxBlob(){
     'מטבע': d.currency,
     'פרויקט': d.project||'',
     'קטגוריה': catFor(d),
+    'מספר הקצאה': allocNumOf(d),
     'מקור': d.kind==='pdf'?'קובץ מצורף':d.kind==='link'?'קישור חיצוני':'גוף המייל',
     'שם קובץ': d.fileName,
     'קישור': d.link,
@@ -6306,7 +6534,7 @@ function xlsxBlob(){
     'ודאות': d.conf
   }));
   const ws = XLSX.utils.json_to_sheet(rows);
-  ws['!cols']=[{wch:11},{wch:26},{wch:12},{wch:14},{wch:12},{wch:11},{wch:10},{wch:12},{wch:7},{wch:16},{wch:14},{wch:13},{wch:34},{wch:26},{wch:34},{wch:26},{wch:8}];
+  ws['!cols']=[{wch:11},{wch:26},{wch:12},{wch:14},{wch:12},{wch:11},{wch:10},{wch:12},{wch:7},{wch:16},{wch:14},{wch:14},{wch:13},{wch:34},{wch:26},{wch:34},{wch:26},{wch:8}];
   const wb = XLSX.utils.book_new();
   wb.Workbook = {Views:[{RTL:true}]};
   XLSX.utils.book_append_sheet(wb, ws, 'ריכוז');
@@ -6473,12 +6701,12 @@ $('btnXlsx').onclick = ()=>{
 
 $('btnCsv').onclick = ()=>{
   if(!docs.length){ toast('אין נתונים'); return; }
-  const cols = ['תאריך','ספק','חפ','מספר_מסמך','סוג_מסמך','לפני_מעמ','מעמ','סהכ','פרויקט','קטגוריה','שם_קובץ'];
+  const cols = ['תאריך','ספק','חפ','מספר_מסמך','סוג_מסמך','לפני_מעמ','מעמ','סהכ','פרויקט','קטגוריה','מספר_הקצאה','שם_קובץ'];
   const rows = docs.slice().sort((a,b)=> a.supplier.localeCompare(b.supplier,'he') || a.date.localeCompare(b.date));
   const csvEsc = v => { v = v==null?'':String(v); return /[",\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; };
   let csv = cols.join(',') + '\r\n';
   rows.forEach(d=>{
-    csv += [d.date, d.supplier, d.supplierId, d.docNum, d.docType, d.before, d.vat, d.total, d.project||'', catFor(d), d.fileName]
+    csv += [d.date, d.supplier, d.supplierId, d.docNum, d.docType, d.before, d.vat, d.total, d.project||'', catFor(d), allocNumOf(d), d.fileName]
       .map(csvEsc).join(',') + '\r\n';
   });
   const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'}); // BOM כדי שאקסל יציג עברית נכון
@@ -6751,6 +6979,12 @@ function wireKeyboardA11y(root){
     });
   }
   syncSchedToSW();   // משקפים את מצב התזמון ל-SW כבר בפתיחה
+  // שלב 0 — סגירת חודש: ברירת מחדל היא החודש שהסתיים
+  if($('mcMonth')){
+    $('mcMonth').value = monthKeyDefault();
+    $('mcMonth').onchange = renderMonthClose;
+    renderMonthClose();
+  }
 
   // שחזור התחברות: טוקן שמור בתוקף -> משתמשים בו מיד.
   // אחרת מנסים חידוש שקט (עובד אם המשתמש כבר אישר בעבר, בלי מסך אישור).
