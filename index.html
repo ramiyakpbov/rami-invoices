@@ -1704,7 +1704,7 @@ nav button.on{color:var(--red)}
 
   <details class="acc"><summary>ℹ גרסה</summary><div class="accbody">
     
-    <p class="hint" style="margin:0 0 10px"><span id="verTag">v5.8</span> · <span id="verDate"></span></p>
+    <p class="hint" style="margin:0 0 10px"><span id="verTag">v5.9</span> · <span id="verDate"></span></p>
     <button class="btn outline sm" id="btnCheckUpdate" style="width:100%">🔄 בדוק עדכון גרסה</button>
     <div class="plog" id="updLog" style="margin-top:8px"></div>
     <p class="hint" style="margin:8px 0 0">בודק מול השרת אם הועלתה גרסה חדשה, ומתקין אותה מיד. שימושי אם העלית קובץ חדש והאפליקציה עדיין מציגה את הישן.</p>
@@ -1977,7 +1977,7 @@ let docMeta = {};        // fingerprint -> {project} (תיוג פרויקט שש
 let dupSkipped = 0;
 let junkSkipped = 0;   // קבצים שסוננו לפני AI (לוגואים, אייקונים)
 
-const VERSION = 'v5.8';
+const VERSION = 'v5.9';
 function $(id){ return document.getElementById(id); }
 /* v3.0 — toISOString מחזיר UTC. בישראל (UTC+2/+3) מסמך שהתקבל ב-01:00
    סומן ביום הקודם. localISO עובד לפי אזור הזמן של המכשיר. */
@@ -7078,6 +7078,12 @@ function wireKeyboardA11y(root){
     });
   }
   syncSchedToSW();   // משקפים את מצב התזמון ל-SW כבר בפתיחה
+  /* v5.9 — הבאג שגרם ל"לא שומר": הנתונים כן נשמרו ונטענו, אבל
+     applySchedUI() נקרא רק ממטפלי אירועים ולעולם לא באתחול. לכן
+     אחרי כל רענון המסך הציג תיבה לא מסומנת ושעה 09:00, גם כשהיה
+     תזמון פעיל שמור. וגרוע מכך: לחיצה על "שמור" במצב הזה קראה את
+     התיבה הריקה וכיבתה את התזמון האמיתי. */
+  applySchedUI();
   schedStartupCheck();   // v5.8 — השלמת סריקה שפוספסה, בלי לחכות דקה
   // שלב 0 — סגירת חודש: ברירת מחדל היא החודש שהסתיים
   if($('mcMonth')){
