@@ -1586,6 +1586,7 @@ nav button.on{color:var(--red)}
     <button class="btn ghost sm" id="btnSaveSched" style="width:100%">שמור</button>
     <button class="btn outline sm" id="btnRunSchedNow" style="width:100%;margin-top:8px">▶ הרץ עכשיו לבדיקה</button>
     <div class="plog" id="schedLog" style="margin-top:8px"></div>
+    <div class="permstate" id="schedDiag" style="margin-top:8px"></div>
     <div class="permstate" id="psyncLog" style="margin-top:8px"></div>
   </div></details>
   <details class="acc"><summary>🔔 התראות</summary><div class="accbody">
@@ -1703,7 +1704,7 @@ nav button.on{color:var(--red)}
 
   <details class="acc"><summary>ℹ גרסה</summary><div class="accbody">
     
-    <p class="hint" style="margin:0 0 10px"><span id="verTag">v5.6</span> · <span id="verDate"></span></p>
+    <p class="hint" style="margin:0 0 10px"><span id="verTag">v5.7</span> · <span id="verDate"></span></p>
     <button class="btn outline sm" id="btnCheckUpdate" style="width:100%">🔄 בדוק עדכון גרסה</button>
     <div class="plog" id="updLog" style="margin-top:8px"></div>
     <p class="hint" style="margin:8px 0 0">בודק מול השרת אם הועלתה גרסה חדשה, ומתקין אותה מיד. שימושי אם העלית קובץ חדש והאפליקציה עדיין מציגה את הישן.</p>
@@ -1976,7 +1977,7 @@ let docMeta = {};        // fingerprint -> {project} (תיוג פרויקט שש
 let dupSkipped = 0;
 let junkSkipped = 0;   // קבצים שסוננו לפני AI (לוגואים, אייקונים)
 
-const VERSION = 'v5.6';
+const VERSION = 'v5.7';
 function $(id){ return document.getElementById(id); }
 /* v3.0 — toISOString מחזיר UTC. בישראל (UTC+2/+3) מסמך שהתקבל ב-01:00
    סומן ביום הקודם. localISO עובד לפי אזור הזמן של המכשיר. */
@@ -2929,16 +2930,31 @@ async function psyncStatusText(){
 
 async function runScheduledScan(manual){
   const s = schedCfg();
+  /* v5.7 — כישלון מתוזמן היה שקט לחלוטין: כל התנאים הבודקים היו
+     עטופים ב-if(manual), ולכן כשהסריקה רצה לבד ונכשלה (בדרך כלל
+     כי הטוקן פג) המשתמש לא ראה כלום והתזמון "לא עבד" בלי הסבר.
+     עכשיו כל כישלון נרשם ומוצג, גם כשאיש לא נוכח. */
+  const fail = (msg)=>{
+    s.lastError = {at: Date.now(), msg: msg};
+    saveCfgNow(); applySchedUI();
+    if(manual) toast(msg);
+    else if(notifyAllowed()) notify('הסריקה המתוזמנת לא רצה', msg, 'newDocs');
+  };
   if(scanRunning){ if(manual) toast('סריקה כבר רצה'); return; }
-  if(navigator.onLine === false){ if(manual) toast('אין חיבור — הסריקה המתוזמנת תרוץ מאוחר יותר'); return; }
+  if(navigator.onLine === false){ fail('אין חיבור לאינטרנט — ננסה שוב מאוחר יותר'); return; }
   const errs = validateBeforeScan();
-  if(errs.length){ if(manual) toast('לא ניתן לסרוק: '+errs[0]); return; }
+  if(errs.length){ fail(errs[0]); return; }
 
-  s.lastRun = Date.now(); saveCfgNow();
-  syncSchedToSW();          // v5.4 — כדי שה-SW לא יתריע על מועד שכבר רץ
+  /* lastRun נכתב רק אחרי שהסריקה באמת יצאה לדרך. קודם הוא נכתב
+     לפני כן, ולכן כישלון "שרף" את המועד והתזמון לא ניסה שוב היום. */
   const before = docs.length;
   toast('סריקה מתוזמנת התחילה');
   $('btnScan').click();
+  if(!scanRunning){ fail('הסריקה לא הצליחה להתחיל'); return; }
+  s.lastRun = Date.now();
+  delete s.lastError;
+  saveCfgNow(); applySchedUI();
+  syncSchedToSW();          // v5.4 — כדי שה-SW לא יתריע על מועד שכבר רץ
 
   // ממתינים לסיום כדי לדעת אם נמצא משהו חדש (בלי לגעת ב-finish עצמה)
   const t0 = Date.now();
@@ -2972,6 +2988,29 @@ function applySchedUI(){
       ? 'פעיל · ' + (s.freq==='weekly'?'שבועי':s.freq==='monthly'?'חודשי':'יומי') + ' בשעה ' + (s.time||'09:00') +
         (s.lastRun ? ' · ריצה אחרונה: ' + new Date(s.lastRun).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : ' · עוד לא רץ')
       : 'כבוי.';
+  }
+  /* v5.7 — שתי שורות אבחון שלא היו קיימות:
+     1. הסיבה לכישלון האחרון, אם היה
+     2. בדיקה חיה — האם התזמון *יכול* לרוץ עכשיו בכלל */
+  const el = $('schedDiag');
+  if(el){
+    if(!s.on){ el.style.display='none'; }
+    else{
+      el.style.display='block';
+      const errs = validateBeforeScan();
+      if(s.lastError){
+        el.className = 'permstate bad';
+        el.innerHTML = '✕ הסריקה המתוזמנת נכשלה ב-' +
+          new Date(s.lastError.at).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) +
+          '<br><small>' + esc(s.lastError.msg) + '</small>';
+      }else if(errs.length){
+        el.className = 'permstate ask';
+        el.innerHTML = '⚠ התזמון פעיל אבל הסריקה לא תוכל לרוץ:<br><small>' + esc(errs[0]) + '</small>';
+      }else{
+        el.className = 'permstate ok';
+        el.textContent = '✓ הכל מוכן — הסריקה תרוץ במועד.';
+      }
+    }
   }
   // v5.4 — מצב תזכורת הרקע, בכנות: מה באמת יקרה כשהאפליקציה סגורה
   const pl = $('psyncLog');
