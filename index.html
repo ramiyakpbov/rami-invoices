@@ -1705,7 +1705,7 @@ nav button.on{color:var(--red)}
 
   <details class="acc"><summary>ℹ גרסה</summary><div class="accbody">
     
-    <p class="hint" style="margin:0 0 10px"><span id="verTag">v6.0</span> · <span id="verDate"></span></p>
+    <p class="hint" style="margin:0 0 10px"><span id="verTag">v6.1</span> · <span id="verDate"></span></p>
     <button class="btn outline sm" id="btnCheckUpdate" style="width:100%">🔄 בדוק עדכון גרסה</button>
     <div class="plog" id="updLog" style="margin-top:8px"></div>
     <p class="hint" style="margin:8px 0 0">בודק מול השרת אם הועלתה גרסה חדשה, ומתקין אותה מיד. שימושי אם העלית קובץ חדש והאפליקציה עדיין מציגה את הישן.</p>
@@ -1729,6 +1729,7 @@ nav button.on{color:var(--red)}
     
     <p class="hint">נשמרים רק במכשיר הזה (localStorage). לא נשלחים לשום מקום מלבד גוגל.</p>
     <label class="f"><span>Google OAuth Client ID<button type="button" class="tip" data-tip="מזהה שיוצרים ב-Google Cloud Console תחת OAuth 2.0 Client IDs, מסוג Web application. משמש להתחברות ל-Gmail בלבד — לא לזיהוי חשבוניות.">?</button></span><input class="inp" id="cfgClient" data-save="btnSaveCfg" placeholder="....apps.googleusercontent.com"></label>
+    <div class="permstate" id="authDiag" style="display:none;margin-bottom:10px"></div>
     <label class="f"><span>Gemini API Key<button type="button" class="tip" data-tip="מפתח מ-Google AI Studio (aistudio.google.com). משמש רק לזיהוי תוכן המסמכים ע'י Gemini — נפרד לגמרי מה-Client ID.">?</button></span><input class="inp" id="cfgGemini" data-save="btnSaveCfg" type="password" placeholder="AIza..."></label>
     <label class="f"><span>מודל</span>
       <select class="inp" id="cfgModel" data-save="btnSaveCfg">
@@ -1978,7 +1979,7 @@ let docMeta = {};        // fingerprint -> {project} (תיוג פרויקט שש
 let dupSkipped = 0;
 let junkSkipped = 0;   // קבצים שסוננו לפני AI (לוגואים, אייקונים)
 
-const VERSION = 'v6.0';
+const VERSION = 'v6.1';
 function $(id){ return document.getElementById(id); }
 /* v3.0 — toISOString מחזיר UTC. בישראל (UTC+2/+3) מסמך שהתקבל ב-01:00
    סומן ביום הקודם. localISO עובד לפי אזור הזמן של המכשיר. */
@@ -2830,8 +2831,24 @@ function notify(title, body, kind){
   // kind מאפשר לכבד את בחירת סוגי ההתראות בהגדרות
   if(kind && cfg.notifyKinds && cfg.notifyKinds[kind] === false) return;
   if(!notifyAllowed()) return;
-  try{ new Notification(title, {body, icon:'icon-192.png', badge:'icon-192.png', dir:'rtl', lang:'he'}); }
-  catch(e){ /* חלק מהדפדפנים דורשים ServiceWorkerRegistration.showNotification */ }
+  /* v6.1 — הסיבה שלא הגיעו התראות באנדרואיד.
+     בכרום אנדרואיד הקונסטרוקטור new Notification() זורק
+     "Illegal constructor" ומחייב שימוש ב-ServiceWorkerRegistration.
+     הקוד הקודם עטף אותו ב-try/catch ריק, ולכן ההתראה פשוט נעלמה
+     בשקט בכל טלפון אנדרואיד — בדיוק המכשיר של יהודה.
+     עכשיו מנסים קודם דרך ה-SW, שעובד בכל הפלטפורמות. */
+  const opts = {body:body, icon:'icon-192.png', badge:'icon-192.png', dir:'rtl', lang:'he', tag:kind||'inv'};
+  if(navigator.serviceWorker && navigator.serviceWorker.ready){
+    navigator.serviceWorker.ready
+      .then(reg=> reg.showNotification(title, opts))
+      .catch(()=>{
+        try{ new Notification(title, opts); }
+        catch(e){ console.warn('התראה נכשלה:', e && e.message); }
+      });
+    return;
+  }
+  try{ new Notification(title, opts); }
+  catch(e){ console.warn('התראה נכשלה:', e && e.message); }
 }
 
 /* ============================================================
@@ -2859,8 +2876,15 @@ function schedDue(){
   if(now < todayAt) return false;
   // כבר רצנו אחרי המועד הזה
   if(s.lastRun && s.lastRun >= todayAt.getTime()) return false;
-  // ומספיק זמן עבר מהריצה הקודמת לפי התדירות
-  if(s.lastRun && (Date.now() - s.lastRun) < schedIntervalMs(s.freq) - 3600000) return false;
+  /* v6.1 — הבאג שחסם את הסריקה היומית.
+     קודם היה כאן מרווח מינימלי של כמעט 24 שעות מהריצה האחרונה,
+     גם ביומי. המשמעות: כל לחיצה על "הרץ עכשיו לבדיקה" חסמה את
+     הסריקה המתוזמנת ל-23 השעות הבאות — כלומר עצם הבדיקה שהתזמון
+     עובד היא זו שמנעה ממנו לעבוד.
+     ביומי התנאי מיותר: הבדיקה שלמעלה כבר מוודאת שלא רצנו אחרי
+     המועד של היום. המרווח נחוץ רק לשבועי/חודשי. */
+  if(s.freq !== 'daily' && s.lastRun &&
+     (Date.now() - s.lastRun) < schedIntervalMs(s.freq) - 3600000) return false;
   return true;
 }
 /* ============================================================
@@ -2953,10 +2977,14 @@ async function runScheduledScan(manual){
   toast('סריקה מתוזמנת התחילה');
   $('btnScan').click();
   if(!scanRunning){ fail('הסריקה לא הצליחה להתחיל'); return; }
-  s.lastRun = Date.now();
-  delete s.lastError;
-  saveCfgNow(); applySchedUI();
-  syncSchedToSW();          // v5.4 — כדי שה-SW לא יתריע על מועד שכבר רץ
+  /* v6.1 — "הרץ עכשיו לבדיקה" הוא בדיקה, לא הריצה של היום.
+     קודם הוא עדכן את lastRun ולכן ביטל את הסריקה המתוזמנת. */
+  if(!manual){
+    s.lastRun = Date.now();
+    delete s.lastError;
+    saveCfgNow(); applySchedUI();
+    syncSchedToSW();        // v5.4 — כדי שה-SW לא יתריע על מועד שכבר רץ
+  }
 
   // ממתינים לסיום כדי לדעת אם נמצא משהו חדש (בלי לגעת ב-finish עצמה)
   const t0 = Date.now();
@@ -3606,14 +3634,29 @@ function initToken(){
       client_id: cfg.client,
       scope: SCOPES,
       callback: async (r)=>{
-        if(r.error){ toast('ההתחברות נכשלה: '+r.error); return; }
+        /* v6.1 — קודם השגיאה עברה בטוסט חולף בלבד. כשההתחברות
+           נכשלת שוב ושוב זה חייב להישאר על המסך עם הסיבה. */
+        if(r.error){
+          const why = r.error==='popup_closed_by_user' ? 'חלון ההתחברות נסגר לפני האישור'
+                    : r.error==='access_denied' ? 'הבקשה נדחתה'
+                    : r.error;
+          authDiag('fail', why);
+          showDisconnected('ההתחברות נכשלה');
+          toast('ההתחברות נכשלה: '+why);
+          return;
+        }
         setToken(r.access_token, r.expires_in);
+        /* אימות שהטוקן באמת נשמר. אם האחסון חסום (למשל מצב פרטי או
+           חסימת אחסון של צד שלישי) הטוקן קיים בזיכרון אבל ייעלם
+           ברענון - וזה בדיוק "בכל רענון צריך להתחבר מחדש". */
+        const persisted = !!store.get(K.tok, null);
         try{
           const me = await api('https://www.googleapis.com/oauth2/v2/userinfo');
           userEmail = me.email||'';
           store.set(K.email, userEmail);
         }catch(e){ userEmail=''; }
         showConnected();
+        authDiag(persisted ? 'ok' : 'nopersist', persisted ? '' : 'הטוקן לא נשמר באחסון המקומי');
         toast('מחובר');
       }
     });
@@ -3634,6 +3677,49 @@ function loadStoredToken(){
   return false;
 }
 function clearToken(){ token=null; store.del(K.tok); }
+/* v6.1 — אבחון התחברות.
+   "בכל רענון צריך להתחבר מחדש" יכול לנבוע משלוש סיבות שונות לגמרי,
+   ובלי לדעת איזו מהן אי אפשר לתקן:
+   1. הטוקן פג. הוא תקף לשעה בלבד - זו התנהגות תקינה של גוגל.
+   2. הטוקן לא נשמר (אחסון חסום) - אז גם תוך דקה הוא ייעלם.
+   3. החידוש השקט נכשל - קורה בעיקר ב-PWA מותקנת (standalone),
+      שם חלון ההתחברות של גוגל נפתח בהקשר נפרד והתשובה לא תמיד
+      חוזרת לאפליקציה.
+   הפונקציה הזאת רושמת מה קרה בפועל כדי שאפשר יהיה להבחין. */
+function authDiag(status, msg){
+  cfg.authDiag = {at: Date.now(), status: status, msg: msg||'',
+                  standalone: isStandalone, storageOk: storageWorks()};
+  saveCfgNow();
+  renderAuthDiag();
+}
+function storageWorks(){
+  try{
+    localStorage.setItem('__t','1');
+    const ok = localStorage.getItem('__t')==='1';
+    localStorage.removeItem('__t');
+    return ok;
+  }catch(e){ return false; }
+}
+function renderAuthDiag(){
+  const el = $('authDiag'); if(!el) return;
+  const d = cfg.authDiag;
+  const parts = [];
+  if(!storageWorks()){
+    parts.push({cls:'bad', txt:'✕ האחסון המקומי חסום — הטוקן לא יכול להישמר, ולכן כל רענון ידרוש התחברות מחדש. בדוק שאינך בגלישה פרטית ושאתר זה מורשה לשמור נתונים.'});
+  }
+  if(isStandalone){
+    parts.push({cls:'ask', txt:'ℹ האפליקציה פועלת כמותקנת. אם ההתחברות נכשלת דווקא כאן אבל עובדת בדפדפן — פתח אותה פעם אחת בדפדפן, התחבר, ואז חזור לאפליקציה המותקנת.'});
+  }
+  if(d){
+    const when = new Date(d.at).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    if(d.status==='fail') parts.push({cls:'bad', txt:'✕ ניסיון אחרון ('+when+') נכשל: '+d.msg});
+    else if(d.status==='nopersist') parts.push({cls:'bad', txt:'✕ ההתחברות הצליחה ('+when+') אבל הטוקן לא נשמר — לכן היא לא תשרוד רענון.'});
+    else if(d.status==='expired') parts.push({cls:'ask', txt:'ℹ החיבור פג ('+when+'). טוקן של גוגל תקף לשעה בלבד — זו התנהגות רגילה.'});
+    else parts.push({cls:'ok', txt:'✓ ההתחברות האחרונה הצליחה ונשמרה ('+when+').'});
+  }
+  el.innerHTML = parts.map(p=>'<div class="permstate '+p.cls+'" style="margin-bottom:6px">'+esc(p.txt)+'</div>').join('');
+  el.style.display = parts.length ? 'block' : 'none';
+}
 function showDisconnected(reason){
   $('acct').innerHTML='<span style="color:var(--rose)">'+esc(reason||'לא מחובר')+'</span><span class="dot"></span>';
   $('acct').classList.add('clickable');
@@ -3658,7 +3744,9 @@ function silentAuth(){
   try{
     tokenClient.requestAccessToken({prompt:''});
     // אם תוך 4 שניות לא התקבל טוקן - החידוש השקט נכשל (אין סשן גוגל פעיל)
-    setTimeout(()=>{ if(!token) showDisconnected('החיבור פג — התחבר מחדש'); }, 4000);
+    /* v6.1 — 4 שניות היו קצרות מדי ברשת סלולרית איטית: החידוש
+       השקט הספיק להצליח, אבל המסך כבר הכריז "לא מחובר". */
+    setTimeout(()=>{ if(!token){ showDisconnected('החיבור פג — התחבר מחדש'); authDiag('expired',''); } }, 12000);
   }catch(e){ showDisconnected('החיבור פג — התחבר מחדש'); }
 }
 
@@ -7123,6 +7211,7 @@ function wireKeyboardA11y(root){
      תזמון פעיל שמור. וגרוע מכך: לחיצה על "שמור" במצב הזה קראה את
      התיבה הריקה וכיבתה את התזמון האמיתי. */
   applySchedUI();
+  renderAuthDiag();   // v6.1 — מציג מיד למה ההתחברות לא שרדה
   schedStartupCheck();   // v5.8 — השלמת סריקה שפוספסה, בלי לחכות דקה
   // שלב 0 — סגירת חודש: ברירת מחדל היא החודש שהסתיים
   if($('mcMonth')){
