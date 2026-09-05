@@ -1587,6 +1587,7 @@ nav button.on{color:var(--red)}
     <button class="btn outline sm" id="btnRunSchedNow" style="width:100%;margin-top:8px">▶ הרץ עכשיו לבדיקה</button>
     <div class="plog" id="schedLog" style="margin-top:8px"></div>
     <div class="permstate" id="schedDiag" style="margin-top:8px"></div>
+    <div id="schedHist" style="margin-top:10px"></div>
     <div class="permstate" id="psyncLog" style="margin-top:8px"></div>
   </div></details>
   <details class="acc"><summary>🔔 התראות</summary><div class="accbody">
@@ -1704,7 +1705,7 @@ nav button.on{color:var(--red)}
 
   <details class="acc"><summary>ℹ גרסה</summary><div class="accbody">
     
-    <p class="hint" style="margin:0 0 10px"><span id="verTag">v5.9</span> · <span id="verDate"></span></p>
+    <p class="hint" style="margin:0 0 10px"><span id="verTag">v6.0</span> · <span id="verDate"></span></p>
     <button class="btn outline sm" id="btnCheckUpdate" style="width:100%">🔄 בדוק עדכון גרסה</button>
     <div class="plog" id="updLog" style="margin-top:8px"></div>
     <p class="hint" style="margin:8px 0 0">בודק מול השרת אם הועלתה גרסה חדשה, ומתקין אותה מיד. שימושי אם העלית קובץ חדש והאפליקציה עדיין מציגה את הישן.</p>
@@ -1977,7 +1978,7 @@ let docMeta = {};        // fingerprint -> {project} (תיוג פרויקט שש
 let dupSkipped = 0;
 let junkSkipped = 0;   // קבצים שסוננו לפני AI (לוגואים, אייקונים)
 
-const VERSION = 'v5.9';
+const VERSION = 'v6.0';
 function $(id){ return document.getElementById(id); }
 /* v3.0 — toISOString מחזיר UTC. בישראל (UTC+2/+3) מסמך שהתקבל ב-01:00
    סומן ביום הקודם. localISO עובד לפי אזור הזמן של המכשיר. */
@@ -2936,6 +2937,7 @@ async function runScheduledScan(manual){
      עכשיו כל כישלון נרשם ומוצג, גם כשאיש לא נוכח. */
   const fail = (msg)=>{
     s.lastError = {at: Date.now(), msg: msg};
+    schedLogRun('fail', 0);
     saveCfgNow(); applySchedUI();
     if(manual) toast(msg);
     else if(notifyAllowed()) notify('הסריקה המתוזמנת לא רצה', msg, 'newDocs');
@@ -2962,10 +2964,29 @@ async function runScheduledScan(manual){
     if(!scanRunning || Date.now()-t0 > 30*60000){
       clearInterval(waitDone);
       const added = docs.length - before;
-      if(added > 0) notify('נמצאו '+added+' מסמכים חדשים', 'הסריקה המתוזמנת הסתיימה.', 'newDocs');
+      /* v6.0 — קודם נשלחה התראה רק כש-added>0. המשמעות: סריקה
+         שרצה בהצלחה ולא מצאה כלום הייתה שקטה לגמרי, ולא הייתה
+         שום דרך להבחין בינה לבין סריקה שלא רצתה בכלל. עכשיו כל
+         סיום מדווח, וגם נרשם ביומן ריצות שנשמר. */
+      schedLogRun(added >= 0 ? 'ok' : 'ok', added);
+      notify(
+        added > 0 ? 'נמצאו '+added+' מסמכים חדשים' : 'הסריקה הסתיימה — אין חדש',
+        added > 0 ? 'הסריקה המתוזמנת הסתיימה.' : 'לא נמצאו מסמכים חדשים בתיבה.',
+        'newDocs'
+      );
+      applySchedUI();
       checkBudgetAlert();
     }
   }, 4000);
+}
+/* יומן ריצות — חמש האחרונות. נותן הוכחה שהתזמון עובד גם כשההתראות
+   חסומות או שהמשתמש פשוט לא היה ליד המכשיר. */
+function schedLogRun(status, added){
+  const s = schedCfg();
+  s.runs = Array.isArray(s.runs) ? s.runs : [];
+  s.runs.unshift({at: Date.now(), status: status, added: added});
+  s.runs = s.runs.slice(0, 5);
+  saveCfgNow();
 }
 function checkBudgetAlert(){
   if(!cfg.budget || cfg.budget<=0) return;
@@ -3011,6 +3032,24 @@ function applySchedUI(){
   /* v5.7 — שתי שורות אבחון שלא היו קיימות:
      1. הסיבה לכישלון האחרון, אם היה
      2. בדיקה חיה — האם התזמון *יכול* לרוץ עכשיו בכלל */
+  /* v6.0 — יומן חמש הריצות האחרונות. ההוכחה הישירה שהתזמון עובד,
+     בלי תלות בהתראות. */
+  const hist = $('schedHist');
+  if(hist){
+    const runs = Array.isArray(s.runs) ? s.runs : [];
+    if(!runs.length){ hist.style.display='none'; }
+    else{
+      hist.style.display='block';
+      hist.innerHTML = '<b style="font-size:11px;color:var(--ink-dim)">ריצות אחרונות</b>' +
+        runs.map(r=>{
+          const when = new Date(r.at).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+          const txt = r.status==='fail' ? 'נכשלה'
+                    : (r.added>0 ? 'נמצאו '+r.added+' מסמכים' : 'ללא חדש');
+          const col = r.status==='fail' ? 'var(--rose)' : 'var(--ink-dim)';
+          return '<div style="font-size:11px;color:'+col+';margin-top:3px">'+when+' · '+txt+'</div>';
+        }).join('');
+    }
+  }
   const el = $('schedDiag');
   if(el){
     if(!s.on){ el.style.display='none'; }
